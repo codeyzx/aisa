@@ -1,0 +1,28 @@
+# act (nektos/act) defaults, read by BOTH `pnpm ci:local` and a bare `act`, so the
+# two can never mean different runs. The dynamic parts (event, cache toggle) live
+# in scripts/ci-local.ts; only stable, safe-by-default flags belong here.
+#
+# Runner image: `ubuntu-24.04` is the label ci.yml's `runs-on` uses, and act needs
+# to know which container stands in for GitHub's hosted runner. catthehacker's
+# `act-24.04` is the medium image carrying the common toolchain (git, curl, apt/
+# sudo for `playwright install --with-deps`). setup-node and setup-java still fetch
+# their own PINNED versions on top, so the shipped Node stays 24.18 and the JDK
+# stays the ci.yml pin regardless of what the base image ships — which is the whole
+# reason this cures the local toolchain skew.
+#
+# A TAG, not a digest — deliberately, and against this repo's usual pin-by-digest
+# habit. act is a ~90%-fidelity LOCAL convenience; the authority is GitHub's real
+# runners. A digest here would rot silently (no Renovate manager reads .actrc, no
+# tool prints a staleness notice the way Trivy does), buying false precision for a
+# tool whose fidelity is best-effort by design. Pin the things that ship; tag this.
+-P ubuntu-24.04=catthehacker/ubuntu:act-24.04
+
+# NEVER load this developer's local files into the job containers. act reads `.env`,
+# `.secrets` and `.vars` from the repo root BY DEFAULT — and this repo's `.env`
+# holds a real FIREBASE_PRIVATE_KEY and S3 creds. GitHub's runners never see that
+# file, so loading it here would both leak secrets into container logs AND make the
+# local run diverge from CI. ci.yml references no secrets or vars (grep-verified),
+# so pointing all three at /dev/null is loss-free and matches CI exactly.
+--env-file /dev/null
+--secret-file /dev/null
+--var-file /dev/null

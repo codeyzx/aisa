@@ -1,0 +1,38 @@
+# Normalize line endings on check-in and check out LF everywhere. This mirrors
+# oxfmt's `endOfLine: lf` (.oxfmtrc.json) and .editorconfig's `end_of_line = lf`
+# so the working tree, the formatter, and `pnpm format:check` cannot disagree
+# about EOLs — the same "can't diverge" property .vscode/settings.json is built
+# on, extended to Git itself.
+* text=auto eol=lf
+
+# Explicit text, for the cases where Git's content heuristic is unsure.
+*.ts    text
+*.tsx   text
+*.js    text
+*.mjs   text
+*.cjs   text
+*.json  text
+*.jsonc text
+*.md    text
+*.yml   text
+*.yaml  text
+*.css   text
+*.html  text
+*.sh    text eol=lf
+
+# Binary — never munge these bytes, never attempt a line-ending or merge diff.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.avif  binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.pdf   binary
+
+# Generated — collapse in GitHub diffs and keep out of the language stats.
+pnpm-lock.yaml linguist-generated=true

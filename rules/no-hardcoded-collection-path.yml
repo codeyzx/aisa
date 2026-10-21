@@ -1,0 +1,68 @@
+# docs/reference/contracts/data.md — "MUST NOT duplicate a collection path
+# string. The owning feature or infrastructure module exports the dependency-free
+# path constant" (`features/<entity>/<entity>.path.ts`), which
+# `<entity>.collection.ts` binds to the schema. There is no shared registry
+# object to reach through; that contract rules one out in the same breath —
+# "never a method off a shared `collections` object, and never a second spelling
+# of the path string".
+#
+# WHY IT IS THE RULE MOST WORTH HOLDING: this is the MUST NOT a hallucinating
+# agent is likeliest to violate — `db.collection('assets')` is the shape every
+# Firestore tutorial on the internet teaches, and it is what training data
+# reproduces. It also fails silently: a typo'd literal reads an empty
+# collection rather than throwing, so the symptom is "no results", not an
+# error. That is exactly the stated motivation.
+#
+# The rule matches a STRING LITERAL argument only, so a call that forwards a
+# constant or a parameter — `adminDb().collection(path)` inside
+# `lib/firebase/collections.ts` — is not flagged and needs no exemption. The rule
+# is a filter over what the system already models, not a copy of it.
+#
+# WHAT IT DOES NOT REACH: the typed accessors themselves. A literal handed to
+# `typedCollection('assets', Schema)` is the same duplicated path spelled one
+# level up, and this pattern cannot see it — the `collection-path-constant`
+# structure check covers that call shape.
+#
+# THE IGNORE LIST IS TWO ENTRIES, AND EACH CARRIES ITS REASON. It is a filter
+# over paths, not a parallel taxonomy — but it is still hand-kept, so it is
+# kept as short as the evidence allows:
+#
+#   - `scripts/**` — two kinds of file under it spell a literal on purpose.
+#     `scripts/migration/_template.ts` addresses `'__entities__'`, an unresolved
+#     copy-me token rather than a path. `scripts/structure/__fixtures__/**` holds
+#     the deliberately-broken samples that prove the structure checks bite. A
+#     script that addresses a REAL collection imports the owning constant, and
+#     one already does: `scripts/seed-emulator.ts` imports `ASSETS_COLLECTION`
+#     from `features/asset/asset.path.ts`, which is dependency-free and so drags
+#     in neither `server-only` nor the Admin env validation.
+#
+#   - `firestore.rules.test.ts` — drives collection names as DATA: it asserts a
+#     denied read on `'examples'`, a collection that exists nowhere else and has
+#     no constant to reach for, alongside the real ones. Its `db` comes from
+#     `initializeTestEnvironment` (a rules-testing client), not the Admin SDK.
+#
+# NOT ignored, deliberately: `**/*.test.ts` at large. `vitest.config.ts`
+# ALIASES `server-only` to `test/stubs/server-only.ts` precisely so the data
+# layer is reachable from tests — so a test CAN import the owning path constant,
+# and a blanket test exemption would silently excuse the ones that should
+# comply. The one test file that genuinely cannot is named above, on its own
+# merits.
+id: no-hardcoded-collection-path
+language: TypeScript
+severity: error
+ignores:
+  - 'scripts/**'
+  - 'firestore.rules.test.ts'
+message: >-
+  Hard-coded Firestore collection path. Import the path constant its owner
+  exports (`features/<entity>/<entity>.path.ts`) and reach the collection
+  through that feature's typed accessor (`<entity>.collection.ts`) — a literal
+  here is a second spelling of the path, and a typo'd one reads an empty
+  collection instead of throwing. See docs/reference/contracts/data.md.
+rule:
+  any:
+    - pattern: $DB.collection($PATH)
+    - pattern: $DB.collectionGroup($PATH)
+constraints:
+  PATH:
+    kind: string

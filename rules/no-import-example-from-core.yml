@@ -1,0 +1,35 @@
+# The example surface is DELETABLE. Core must not import from
+# `app/(app)/(examples)/`.
+#
+# WHY THIS IS A RULE AND NOT A README LINE: the property this rule buys is that a
+# downstream project can delete `app/(app)/(examples)/` wholesale and still build.
+# That property is invisible to every tool in the gate — a core file importing
+# an example typechecks, lints and builds perfectly green, and the breakage
+# only appears in someone else's repo, months later, when they delete the
+# examples the boilerplate told them to delete. The failure lands on the person
+# with the least context to diagnose it.
+#
+# The tree is clean today (zero hits), so this is a RATCHET on a property the
+# repo already has — not a repair of one it lost. That is the cheapest moment
+# to hold a boundary: before the first violation, when the rule costs nothing
+# to satisfy.
+#
+# The direction is deliberately one-way. Examples importing core is the whole
+# point of an example; core importing examples is the inversion that makes the
+# examples load-bearing. Hence `ignores` on the example surface itself.
+id: no-import-example-from-core
+language: TypeScript
+severity: error
+ignores:
+  - 'app/(app)/(examples)/**'
+message: >-
+  Core code must not import from `app/(app)/(examples)/`. The example surface is
+  deletable by contract — a downstream project deletes it and this import
+  breaks their build, not ours. Move what you need into `lib/` or `components/`.
+rule:
+  any:
+    - kind: import_statement
+    - kind: export_statement
+  has:
+    kind: string
+    regex: 'app/\(app\)/\(examples\)'

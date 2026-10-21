@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080">
+  <style>
+    .corner { fill: #0a0a0a }
+    @media (prefers-color-scheme: dark) {
+      .corner { fill: #fafafa }
+    }
+  </style>
+  <g class="corner">
+    <rect x="110" y="110" width="258" height="258" rx="34" />
+    <rect x="712" y="110" width="258" height="258" rx="34" />
+    <rect x="110" y="712" width="258" height="258" rx="34" />
+    <rect x="712" y="712" width="258" height="258" rx="34" />
+  </g>
+  <rect x="411" y="411" width="258" height="258" rx="34" fill="#ff4a1c" />
+</svg>

@@ -1,0 +1,100 @@
+# PRODUCTION EXAMPLE — one app container, run from a PUBLISHED IMAGE.
+# Developing locally? You want `compose.yaml`; it is the one that builds.
+#
+# This file is an example to adapt, not a drop-in: it names your image and your
+# env file, and it deliberately refuses to start until you have supplied both.
+# What it will NOT do, in any edited form:
+#
+#   - It does NOT build. A server runs an artifact somebody reviewed and pushed,
+#     not whatever is in the working tree. Adding a `build:` key here quietly
+#     reintroduces "it worked on the box I deployed from".
+#   - It does NOT run a storage backend. The local stack bundles SeaweedFS with a
+#     credential committed to this repo in plaintext; that is a fixture, not a
+#     product. Production points `S3_*` at a real bucket — R2, MinIO you operate,
+#     any S3 — and `lib/storage/s3.ts` never learns which.
+#   - It does NOT put `.env` into the CONTAINER. Container environment comes from
+#     `.env.production` and nothing else (`env_file:` below); `.env` is a
+#     developer's file, gitignored precisely because it is nobody else's.
+#
+# Read that last one precisely, because there is a half of it that is NOT true:
+# compose ALWAYS loads the project directory's `.env` for `${...}` INTERPOLATION,
+# `-f` or no `-f`. Driven: with a `.env` next to this file containing
+# `APP_IMAGE=ghcr.io/attacker/whatever:latest`, `docker compose -f
+# compose.prod.yaml config` exits 0 and resolves `image:` to exactly that. So a
+# stray `.env` on the server cannot reach the container's environment, but it CAN
+# decide which image runs. Interpolation reads `.env`; the container does not.
+#
+# Auth + Firestore are hosted Firebase and are not here either — the container
+# reaches them with a service-account credential at run time.
+#
+#   APP_IMAGE=ghcr.io/you/aixel-app@sha256:... docker compose -f compose.prod.yaml up -d
+
+# Its own project name. Without this, compose derives the name from the DIRECTORY
+# and both files claim the same one — so a `--remove-orphans` under either would
+# see the other's containers as strays and delete them. Two stacks, two names.
+name: aixel-app
+
+services:
+  app:
+    # PINNED BY DIGEST, and required rather than defaulted. A tag moves: `:latest`
+    # and even `:v1.4.2` can be repointed at other bytes after you tested them, so
+    # the build stamp `/api/health` reports would be telling the truth about an
+    # image you are no longer running (docs/reference/contracts/operations.md, "Build
+    # identity"). `image@sha256:...` cannot be repointed — the digest IS the bytes.
+    #
+    # No placeholder default on purpose. A default like `ghcr.io/your-org/app`
+    # would be a name someone else can register, and compose would happily pull
+    # and run it. Unset must FAIL, and it does — loudly, naming what to set.
+    #
+    # What `:?` checks is PRESENCE, not FORM. Compose has no way to assert the
+    # shape of a value: driven, `APP_IMAGE=ghcr.io/attacker/whatever:latest` is
+    # accepted and run. So the form is enforced where the deploy is cut instead —
+    # `pnpm image:check` refuses anything that is not `@sha256:<64 hex>`, reading
+    # `APP_IMAGE` the way compose does (exported environment, then `.env`). Run it
+    # in the job that runs this file. Nothing here can make you, so do not read
+    # the paragraph above as a guarantee this file makes.
+    image: ${APP_IMAGE:?set APP_IMAGE to your published image pinned by digest, e.g. ghcr.io/you/aixel-app@sha256:abc123...}
+    # `always`, not compose's default `no`: a server that reboots should come back
+    # without a human. Paired with the app's own boot-time fail-fast this is safe
+    # rather than a crash loop that hides a problem — `instrumentation.ts` exits 1
+    # on missing config, so a misconfigured container restarts visibly and its
+    # first `[boot]` log line names every missing var at once.
+    restart: always
+    # Secrets arrive here and NOWHERE else — never in this manifest, which is
+    # committed. `.env.production` is not tracked (`.gitignore` ignores `.env*`),
+    # which is exactly why the file is named this way rather than something
+    # readable like `production.env` that the ignore rule would miss.
+    #
+    # `required: true` so a missing file HALTS instead of starting a container
+    # with no Firebase credential. The app would refuse to boot anyway; failing at
+    # `compose up` names the cause instead of leaving you reading exit codes.
+    #
+    # The full key list, read off `lib/env/` and each capability's `config.ts`,
+    # is docs/reference/configuration.md. NEXT_PUBLIC_* do NOT belong in
+    # it: `next build` inlined them into the image already, and setting them here
+    # changes nothing a browser will ever see.
+    env_file:
+      - path: .env.production
+        required: true
+    ports:
+      # 127.0.0.1 because the container serves PLAIN HTTP. TLS is terminated by
+      # whatever sits in front (docs/reference/contracts/operations.md, "Reverse
+      # proxy and TLS"), so a 0.0.0.0 bind here publishes an unencrypted,
+      # session-cookie-carrying app to the internet — and Docker writes that
+      # into the host's NAT chain ahead of the firewall rules you thought were
+      # protecting it. A proxy on the same
+      # host reaches 127.0.0.1; a proxy in a container joins this compose network
+      # and uses the service name, needing no published port at all.
+      #
+      # Override the PORT when something else already holds 3000. The loopback
+      # bind is outside the override on purpose: exposing this off-box should be a
+      # deliberate edit to this file, not an env var somebody exports in CI.
+      - '127.0.0.1:${APP_HOST_PORT:-3000}:3000'
+    # Same 30s as the local stack, same reason: Next drains in-flight requests and
+    # pending `after()` work on SIGTERM, and a window shorter than your slowest
+    # request turns a redeploy into a truncated response. The container then exits
+    # 143 — that is a clean shutdown, not a crash (docs/reference/contracts/operations.md,
+    # "Signals and drain").
+    stop_grace_period: 30s
+    # No `healthcheck:` — the IMAGE declares one (`Containerfile`) and compose
+    # inherits it. Restating it here would be a second definition to keep in sync.

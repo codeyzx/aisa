@@ -1,0 +1,22 @@
+id: no-hardcoded-collection-path
+valid:
+  # The compliant shape: the path arrives as the constant its owner exports.
+  - |
+    const ref = adminDb().collection(ASSETS_COLLECTION)
+  - |
+    const group = adminDb().collectionGroup(LINE_ITEMS_COLLECTION)
+  # A forwarded parameter is not a second spelling — this is how the generic
+  # accessor in lib/firebase/collections.ts reaches a collection at all.
+  - |
+    const ref = adminDb().collection(path)
+  # A document id may be a literal. This rule is about COLLECTION paths.
+  - |
+    const doc = adminDb().collection(ASSETS_COLLECTION).doc('singleton')
+invalid:
+  - |
+    const ref = adminDb().collection('assets')
+  - |
+    const group = adminDb().collectionGroup('lineItems')
+  # Off a transaction handle, or any other name for the raw Admin database.
+  - |
+    const ref = db.collection('assets')

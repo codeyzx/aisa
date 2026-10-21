@@ -1,0 +1,34 @@
+{
+  "$schema": "vscode://schemas/settings/folder",
+
+  // Format on save with oxfmt — the SAME binary `pnpm format` runs, so the
+  // editor and `pnpm format:check` cannot disagree. That is the same property
+  // ci.yml is built on: "it passed on my machine" and "it passed in CI" must
+  // not be able to diverge.
+  //
+  // Scoped per language rather than set globally: these are the four oxfmt
+  // ownership is verified for here. A global default would silently claim
+  // every other file type in the repo too.
+  "editor.formatOnSave": true,
+  "[typescript]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+  "[typescriptreact]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+  "[javascript]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+  "[javascriptreact]": { "editor.defaultFormatter": "oxc.oxc-vscode" },
+
+  // Use the TypeScript the repo pins (^6), not the one VS Code bundles. VS
+  // Code ships an older tsc, and it would report diagnostics that disagree
+  // with `pnpm typecheck` — an editor that is wrong in the safe direction is
+  // still an editor teaching you to ignore it.
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "typescript.enablePromptUseWorkspaceTsdk": true,
+
+  // The example surface uses parenthesised route groups; keep them searchable
+  // but keep build output out of the way.
+  "search.exclude": {
+    "**/.next": true,
+    "**/node_modules": true,
+    "pnpm-lock.yaml": true
+  },
+
+  "files.eol": "\n"
+}

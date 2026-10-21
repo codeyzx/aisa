@@ -1,0 +1,164 @@
+// Dependency maintenance, tuned so the updates are REVIEWABLE rather than merely
+// frequent. An unreviewed update stream is worse than none: it trains the reader
+// to merge without looking, which is precisely how a compromised release gets in.
+//
+// The three properties this file buys, in order of importance:
+//
+//   1. NOTHING FLOATS. Actions and container bases are pinned to a digest, and
+//      Renovate is the thing that moves the digest. A tag is mutable — an
+//      attacker who can repoint `v4` can rewrite the gate that is supposed to
+//      catch them. This is why `helpers:pinGitHubActionDigests` is not optional
+//      here; the repo already pins every action by SHA and this keeps it true.
+//   2. THE NODE PIN MOVES AS ONE. Four files name a Node version and
+//      `pnpm node:check` FAILS if they disagree. Renovate would otherwise open
+//      four separate PRs, each of which is individually red — so they are grouped
+//      into a single PR that either passes as a whole or does not land.
+//   3. NOISE IS BOUNDED. Weekly, concurrency-capped, dev dependencies grouped.
+//      A starter that greets a forker with 40 open PRs has failed them.
+//
+// JSON5 rather than JSON so this reasoning can live next to the rules it
+// explains. Renovate reads `.github/renovate.json5` natively — no `extends` to
+// an external preset repo, which would be one more mutable thing to trust.
+{
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+
+  extends: [
+    'config:recommended',
+    // Every `uses:` gets a digest plus a `# vX.Y.Z` comment. The comment is what
+    // keeps the pin READABLE — a bare 40-char SHA tells a reviewer nothing about
+    // whether the jump is a patch or a major.
+    'helpers:pinGitHubActionDigests',
+    // Wait for a release to have existed for a few days. Most malicious or
+    // catastrophically broken publishes are yanked well inside this window, and
+    // nothing in a starter is urgent enough to need day-zero.
+    'security:minimumReleaseAgeNpm',
+  ],
+
+  // Semantic commits, because this repo's `git log` is read as a sequence of
+  // intents and a dependency bump is a `chore`.
+  semanticCommits: 'enabled',
+  semanticCommitType: 'chore',
+  semanticCommitScope: 'deps',
+
+  // Off-hours, once a week. Renovate's default is aggressive; a starter's
+  // dependency graph does not move fast enough to justify it.
+  schedule: ['before 6am on monday'],
+  timezone: 'Asia/Jakarta',
+
+  // Hard caps. These are the difference between a maintained repo and an
+  // abandoned one with a wall of red PRs.
+  prConcurrentLimit: 5,
+  prHourlyLimit: 2,
+
+  // A lockfile-only refresh, so transitive security fixes land without a
+  // manifest change to review.
+  lockFileMaintenance: {
+    enabled: true,
+    schedule: ['before 6am on the first day of the month'],
+  },
+
+  // Vulnerability fixes ignore the schedule and the concurrency cap. They are the
+  // one category where "reviewable" loses to "now".
+  // `schedule: null` is the whole point: it CLEARS the weekly window above, so a
+  // fix does not sit until Monday. (`prPriority` belongs on a packageRule, not
+  // here — `renovate-config-validator --strict` rejects it, which is why this
+  // file is validated rather than trusted.)
+  vulnerabilityAlerts: {
+    labels: ['security'],
+    schedule: null,
+  },
+  osvVulnerabilityAlerts: true,
+
+  packageRules: [
+    {
+      // THE LOAD-BEARING RULE. `.node-version`, `package.json#engines.node` and
+      // `Containerfile`'s `ARG NODE_VERSION` must hold the SAME value —
+      // `scripts/check-node-version.ts` fails the build when they drift, and that
+      // check exists because a floating runtime makes local evidence meaningless.
+      // Renovate sees these as unrelated managers, so without this grouping it
+      // opens a PR per pin and every one of them is red.
+      //
+      // `node` here is the DATASOURCE, which is what all three resolve to
+      // (node-version, npm engines, and the `node:` docker base alike).
+      groupName: 'node runtime (all pins must move together)',
+      matchDatasources: ['node-version', 'docker'],
+      matchPackageNames: ['node'],
+      // Never let a major arrive as a routine bump: a Node major is an
+      // architecture decision, and the handoff's rule is that every location
+      // upgrades in one deliberately verified commit.
+      matchUpdateTypes: ['minor', 'patch'],
+    },
+    {
+      // A Node MAJOR gets its own PR, is never auto-scheduled, and says out loud
+      // that it is not a dependency bump.
+      matchDatasources: ['node-version', 'docker'],
+      matchPackageNames: ['node'],
+      matchUpdateTypes: ['major'],
+      dependencyDashboardApproval: true,
+      labels: ['runtime-major'],
+      addLabels: ['needs-deliberate-verification'],
+    },
+    {
+      // The framework and its runtime move as one unit or not at all — a `next`
+      // bump with a stale `react` is a combination nobody tested.
+      groupName: 'next + react',
+      matchPackageNames: [
+        'next',
+        'react',
+        'react-dom',
+        '@types/react',
+        '@types/react-dom',
+      ],
+    },
+    {
+      // Firebase client and Admin SDK share wire formats and emulator behaviour.
+      groupName: 'firebase',
+      matchPackageNames: [
+        'firebase',
+        'firebase-admin',
+        'firebase-tools',
+        '@firebase/**',
+      ],
+    },
+    {
+      groupName: 'linting and formatting',
+      matchPackageNames: ['oxlint', 'oxfmt', '@ast-grep/cli'],
+    },
+    {
+      groupName: 'test tooling',
+      matchPackageNames: [
+        'vitest',
+        '@vitest/**',
+        'jsdom',
+        '@testing-library/**',
+        '@playwright/test',
+      ],
+    },
+    {
+      // Everything else in devDependencies: one PR, non-major only. These cannot
+      // affect the shipped artifact, so they do not each deserve a review.
+      groupName: 'dev dependencies (non-major)',
+      matchDepTypes: ['devDependencies'],
+      matchUpdateTypes: ['minor', 'patch'],
+    },
+    {
+      // A major in a RUNTIME dependency reaches production. It is reviewed alone,
+      // always, regardless of how quiet the changelog looks.
+      matchDepTypes: ['dependencies'],
+      matchUpdateTypes: ['major'],
+      dependencyDashboardApproval: true,
+    },
+    {
+      // Pin the base image by digest as well as tag. The `ARG NODE_VERSION`
+      // default is the human-readable pin; the digest is the reproducible one.
+      matchManagers: ['dockerfile'],
+      pinDigests: true,
+    },
+  ],
+
+  // One issue that lists everything pending, including the updates held behind
+  // `dependencyDashboardApproval`. Without it those updates are invisible rather
+  // than deferred, which is the same failure as a silent skip.
+  dependencyDashboard: true,
+  dependencyDashboardTitle: 'Dependency dashboard',
+}

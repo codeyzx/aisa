@@ -1,0 +1,396 @@
+# CI = a real quality gate, not a deploy-only job.
+#
+# THE ORGANISING RULE: this file CALLS PACKAGE SCRIPTS, it does not restate them.
+# Every step below is a command you can run locally by name, so "it passed on my
+# machine" and "it passed in CI" cannot mean two different chains. When a step
+# here needs logic, that logic goes in `scripts/` where it can be read, tested and
+# run by hand — never inlined as YAML that only ever executes on a runner.
+#
+# WHAT THIS GATE IS WORTH, AND WHEN. Two tiers: the `gate` job prevents mechanical
+# regressions and runs on EVERY pull request; the `artifact` job exercises the image
+# that actually ships and runs only at MERGE-TO-MAIN (its own comment explains the
+# minute-budget trade). Neither certifies the app is correct — driving it by hand
+# (emulator + browser, per the docs and the `verify` skill) remains mandatory and is
+# not something CI does for you. `pnpm ci:local` runs this whole file, both tiers, in
+# containers when you need the artifact half before a merge.
+#
+# THERE IS NO DEPLOY JOB, DELIBERATELY. A starter has no target, and a workflow
+# holding credentials for a project that does not exist is an attack surface in
+# exchange for nothing. Firestore rules and indexes deploy out of band —
+# `docs/how-to/deploy.md` owns that runbook. Wiring a deploy is a deliberate act the
+# forker performs once they have a real project, not a default they inherit.
+#
+# Actions are pinned to a commit SHA, not a tag: a tag is mutable, and a gate an
+# attacker can silently repoint is not a gate. Renovate moves these pins
+# (`.github/renovate.json5`). Every SHA here was either already in this file or
+# resolved from the GitHub API at the moment it was written — no pin is typed
+# from memory, because a plausible-looking wrong SHA fails in a way that reads
+# like a network problem. The `# vX.Y.Z` comment is what makes the pin readable;
+# it must be the tag that SHA actually belongs to, not the version someone hoped
+# to get.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    # A pure-docs merge to main should not spend the ~10-minute artifact job. This
+    # skips the WHOLE workflow only when EVERY changed path is docs — a mixed
+    # code+docs commit still runs in full. Scoped to `push` DELIBERATELY: pull
+    # requests carry no paths filter, so a required status check can never be left
+    # pending on a docs-only PR (the classic paths-ignore trap). The PR's own gate
+    # already ran docs:check, so re-running it on the merge commit adds nothing.
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+  pull_request:
+  # Manual trigger for the FULL run. The `artifact` job is otherwise merge-only, so
+  # this is how you exercise the container half on demand — vetting a branch before
+  # merge, or re-running after a flake — without pushing to main to force it.
+  workflow_dispatch:
+
+# A superseded run proves nothing about the new head — cancel it. This is now
+# safe on main as well: with the deploy job gone, there is nothing half-applied
+# that a cancellation could leave behind.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# runs-on reads repo variables AIXEL_CI_RUNNER, or AIXEL_CI_RUNNER_MAIN on main and master;
+# unset means GitHub-hosted. Runners: aixelindonesia aixel-vps, aixeldev/10-ci-runner.sh.
+jobs:
+  gate:
+    name: Quality gate
+    # Linux only: the deploy target is a Linux container (docs/how-to/deploy.md), so
+    # nothing that ships is ever executed on Windows or macOS. That matches the
+    # scope the docs state (docs/how-to/adapt-starter.md, "If you want Windows as
+    # a supported target") rather than a support claim nothing here backs up.
+    runs-on: ${{ (github.ref_name == 'main' || github.ref_name == 'master') && (vars.AIXEL_CI_RUNNER_MAIN || 'ubuntu-24.04') || (vars.AIXEL_CI_RUNNER || 'ubuntu-24.04') }}
+    # A wedged step (a stuck emulator, a network stall) would otherwise burn the
+    # 6-hour default per job — on a Free-plan budget that is the whole month gone in
+    # one hang. Generous headroom over a normal ~5-minute run, so it only ever fires
+    # on a genuine hang, never on a slow-but-healthy run.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # Nothing in this workflow pushes, so the GITHUB_TOKEN has no reason to be
+        # written into .git/config, where a later step — or a compromised transitive
+        # dependency running under `pnpm install` — could read it back out.
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      # `node-version-file`, never a literal: `.node-version` is the source that
+      # `pnpm node:check` holds every other pin against, and a number typed here
+      # would be a copy discoverable only after it had already drifted.
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.node-version'
+          cache: pnpm
+
+      # The Firestore emulator is a Java process — the ONLY thing here that needs
+      # a JDK. (The Auth emulator is Node and runs inside the firebase CLI, so it
+      # is unaffected by this pin.) The runner image ships a JDK, but that is an
+      # implicit dependency an image bump can remove — and its removal would
+      # surface as "rules tests failed", not "Java is missing".
+      #
+      # 25 is the current Temurin LTS. LTS and not `most_recent_feature_release`
+      # on purpose: this JDK exists to run someone else's JAR, so the conservative
+      # line the emulator is most likely to be tested against is the right one.
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      # --frozen-lockfile: a lockfile that does not match package.json fails
+      # here rather than being silently rewritten mid-run.
+      - run: pnpm install --frozen-lockfile
+
+      # The emulator JARs are a SEPARATE download from the npm package:
+      # `firebase-tools` ships the CLI, and the CLI fetches the Firestore and Auth
+      # emulators into this directory the first time it needs them. Both jobs run
+      # an emulator, so an uncached runner pays that download twice per CI run.
+      #
+      # Keyed on the lockfile with a PREFIX FALLBACK, and the fallback is the
+      # point: on a miss the key is stale but the directory is still a valid
+      # cache, and the CLI downloads only the versions it does not find. A stale
+      # restore therefore costs nothing and can never serve a wrong JAR — the
+      # version is part of each file's name.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: firebase-emulators-${{ runner.os }}-
+
+      # The whole static half in ONE canonical command: node:check, typecheck,
+      # templates:check, lint, lint:rules, format:check, docs:check,
+      # structure:check. Adding a check to `check:static` adds it to CI with no
+      # edit here — which is the entire point of calling scripts.
+      - run: pnpm check:static
+
+      - run: pnpm test:unit
+
+      # THE SKIPPED-SUITE HOLE. The firestore.rules tests skip without an
+      # emulator, and a skipped suite is GREEN — so without a real emulator they
+      # never execute while still looking tested.
+      #
+      # Two independent mechanisms close it, and either alone would be enough:
+      #   1. `test:integration` wraps the suite in `firebase emulators:exec`,
+      #      which exports the emulator hosts for the child and exits non-zero if
+      #      the emulator fails to start. A broken emulator is a red CI, not a
+      #      quiet skip.
+      #   2. firestore.rules.test.ts THROWS instead of skipping when `CI` is set
+      #      (GitHub sets it automatically). So if the wrapper is ever removed or
+      #      mangled, the file fails — the skip cannot come back by accident.
+      #
+      # `indexes:check` rides INSIDE that same script, and the coupling is the
+      # whole design: it reads the LIVE emulator's indexUsage endpoint, so it
+      # only knows about queries that actually ran against THIS instance. A
+      # separate step would meet a torn-down emulator, or a fresh one with zero
+      # observed queries — an empty report and a permanently red gate. To cover a
+      # new query shape, WIDEN THE DRIVING SUITE; never hand-write shapes in a
+      # smoke script, which is a hand-kept copy of what `paginate()` generates.
+      - run: pnpm test:integration
+
+      # `.next/cache` is Next's incremental-build cache; restoring it lets `build:ci`
+      # recompile only what changed rather than from cold. Keyed on the lockfile with
+      # a PREFIX FALLBACK, the same shape as the emulator cache: a run restores the
+      # warm base a prior build with these deps saved, and Next content-validates the
+      # cache so a stale entry is safe. `.next/cache` ONLY — never `.next/`, whose
+      # build OUTPUT going stale would be a correctness hazard, not a speedup.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: nextjs-${{ runner.os }}-
+
+      # `next build` needs no emulator, so this is independent of the step above.
+      # `build:ci` supplies the shared non-secret public fixture
+      # (scripts/public-env-fixture.ts) rather than switching validation off, so
+      # the real env validator still runs — a green build means something. There
+      # is no skip flag to reach for; the check can only be satisfied.
+      - run: pnpm build:ci
+
+      # Drift-guard: nothing the gate ran may leave the tree dirty. Today no
+      # generated file is tracked, so this is a tripwire rather than an active
+      # check — it is what makes the FIRST piece of committed codegen fail loudly
+      # on drift instead of rotting unnoticed.
+      #
+      # `add -A --intent-to-add` first: bare `git diff` cannot see UNTRACKED
+      # files, and a generator that emits a brand-new file is exactly the drift
+      # worth catching — the tripwire would have been blind to half its job.
+      - name: Codegen drift-guard
+        run: |
+          git add -A --intent-to-add
+          git diff --exit-code
+
+      # Indexes are declared here and NOTHING in this repo deploys them, by
+      # design (see the header). Firestore does not create a composite index on
+      # demand — it throws FAILED_PRECONDITION — and the emulator does not
+      # enforce them at all, so a missing index is invisible everywhere until
+      # production. Say that out loud on main rather than leaving it to be
+      # discovered there.
+      - name: Warn that declared indexes still need an out-of-band deploy
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          count=$(node -e "process.stdout.write(String((require('./firestore.indexes.json').indexes ?? []).length))")
+          if [ "$count" != "0" ]; then
+            echo "::warning file=firestore.indexes.json::${count} composite index(es) are declared and this workflow deploys none of them. Run the out-of-band deploy in docs/how-to/deploy.md against your real project, or Firestore will throw FAILED_PRECONDITION on the queries that need them."
+          fi
+
+      # Dependency scanning, scoped to what SHIPS. `--prod` excludes
+      # devDependencies deliberately: an advisory in a linter or a test runner is
+      # real, but it is not reachable by a user, and failing main on it teaches
+      # people to bypass the gate rather than to read it. High and critical only,
+      # for the same reason — a gate that reports everything gets read as noise
+      # and then not at all.
+      - name: Audit shipped dependencies (high/critical, blocking)
+        run: pnpm audit --prod --audit-level=high
+
+      # The dev half, visible but never blocking. Without this the `--prod` scope
+      # above would be indistinguishable from not scanning dev at all, which is
+      # the same "a silence reads as a pass" shape the emulator step exists to
+      # kill. `continue-on-error` makes the annotation appear without gating.
+      - name: Audit dev dependencies (advisory only, never blocks)
+        if: always()
+        continue-on-error: true
+        run: pnpm audit --dev --audit-level=high
+
+  artifact:
+    name: Production artifact
+    needs: gate
+    # MERGE-TO-MAIN ONLY (plus a manual `workflow_dispatch`), never on pull requests.
+    # This job builds the real image, installs a browser, drives the container E2E and
+    # scans the image — the ~10-minutes-and-growing half of CI. Running it on every PR
+    # push would multiply that by every commit on every branch and is what exhausts a
+    # Free-plan minute budget. The fast `gate` above still runs on every PR and blocks
+    # it, so a PR is never unverified; what waits for merge is only the container-shaped
+    # failure class (a missed `.next/static` copy, a signal that never reaches PID 1)
+    # that the gate cannot see anyway.
+    #
+    # THE TRADE, STATED: those container-only failures are caught at merge, on main,
+    # not before it. When that matters — cutting a deploy, or CI is unavailable and
+    # you have burned the month's minutes — run this SAME workflow locally with
+    # `pnpm ci:local` (docs/how-to/verify-change.md), which executes this ci.yml in
+    # containers (via act) on the shipped Node rather than on this runner.
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ${{ (github.ref_name == 'main' || github.ref_name == 'master') && (vars.AIXEL_CI_RUNNER_MAIN || 'ubuntu-24.04') || (vars.AIXEL_CI_RUNNER || 'ubuntu-24.04') }}
+    # Same runaway-job cap as the gate, widened for this job's real work: a cold cache
+    # here builds the image, installs a browser and drives a container E2E, which
+    # legitimately runs longer than the gate but never anywhere near this ceiling.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        # See the gate job: nothing here pushes either, so the token does not persist.
+        with:
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: '.node-version'
+          cache: pnpm
+
+      # The E2E flows sign in and read/write assets, so this job needs the same
+      # emulator the integration suite does — and therefore the same JDK. Keep
+      # this version identical to the gate job's: two jobs running the same
+      # emulator on different runtimes is a difference nobody meant to test.
+      - uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - run: pnpm install --frozen-lockfile
+
+      # Same cache, same key as the gate job. `needs: gate` means that job has
+      # already finished, so this restores what it saved rather than racing it.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: firebase-emulators-${{ runner.os }}-
+
+      # Chromium is ~130MB that `pnpm install` does NOT bring — Playwright puts
+      # browsers outside node_modules on purpose, which is exactly why the pnpm
+      # store cache above does not cover them.
+      #
+      # This caches the DOWNLOAD only; the `install` step below still runs, and
+      # must. `--with-deps` also installs system libraries via apt, which live
+      # outside this path and are not cacheable here — so the step is never
+      # skipped on a hit, it just has nothing left to fetch. Prefix fallback for
+      # the same reason as the emulators: browser builds are versioned
+      # directories, so a stale restore means a smaller download, never a wrong
+      # browser.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-${{ runner.os }}-
+
+      # `--with-deps` installs the system libraries Chromium needs. It belongs
+      # HERE and nowhere else: on a runner the machine is disposable, on a
+      # contributor's laptop it is a `sudo apt-get` they did not ask for. The
+      # local instruction is a plain `pnpm exec playwright install chromium`.
+      - name: Install the E2E browser
+        run: pnpm exec playwright install --with-deps chromium
+
+      # Layer-cache the image build (see scripts/_container.ts). setup-buildx gives a
+      # docker-container builder — the only driver that can export a `type=local`
+      # cache — and the cache restores the layers a prior merge build saved, so an
+      # unchanged deps layer skips `pnpm install` entirely. Both steps are `!env.ACT`:
+      # under `pnpm ci:local` the build falls back to plain `docker build`, so this
+      # GitHub-only machinery never runs there.
+      - name: Set up buildx for a cacheable image build
+        if: ${{ !env.ACT }}
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Restore the image build cache
+        if: ${{ !env.ACT }}
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: /tmp/.buildx-cache
+          key: buildx-${{ runner.os }}-${{ github.sha }}
+          restore-keys: buildx-${{ runner.os }}-
+
+      # Both steps below BUILD AND RUN THE REAL IMAGE — the artifact a deploy
+      # would ship, not `next start`. That is this job's reason to exist: every
+      # gate above passes happily on code that has never been containerised, and
+      # the failures that only appear in the image (a missed `.next/static` copy,
+      # a healthcheck that cannot resolve its own port, a signal that never
+      # reaches PID 1) are invisible to all of them.
+      #
+      # The SCRIPTS own the container lifecycle — build args, ports, networking,
+      # teardown — so the local and CI invocations are the same command with the
+      # same behaviour. Nothing about running the container is encoded here.
+      - name: Image smoke (non-root, assets, build identity, headers, health, shutdown)
+        run: pnpm smoke:image
+
+      # `test:e2e:ci` is the whole arrangement in one canonical command: it starts
+      # the emulators, seeds them, builds the image, runs the CONTAINER, waits on a
+      # `no-store` /api/health, drives the browser suite against it, and tears the
+      # container down. Running `pnpm test:e2e` here instead would drive nothing —
+      # the suite refuses to start without a target, deliberately.
+      - name: Browser E2E against the production container
+        run: pnpm test:e2e:ci
+
+      # The move-dance: the builds wrote `--cache-to` to `-new` so it never fought the
+      # restored `-cache` mid-build; promote it now, before actions/cache saves the
+      # path at post-job, so the next run restores THIS run's layers rather than
+      # forever re-saving the first run's. The guard tolerates a build that never
+      # produced `-new`.
+      - name: Promote the image build cache
+        if: ${{ !env.ACT }}
+        run: |
+          if [ -d /tmp/.buildx-cache-new ]; then
+            rm -rf /tmp/.buildx-cache
+            mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          fi
+
+      # Container scanning, on the same proportionality rule as the dependency
+      # audit: HIGH and CRITICAL only, and `--ignore-unfixed`, because an
+      # advisory with no available fix is not an action — it is a line item that
+      # holds the gate red until someone else ships a patch.
+      #
+      # Invoked as a container rather than as a marketplace action: one fewer
+      # third-party action in the supply chain, and a command a maintainer can
+      # run verbatim on their own machine. Pinned by DIGEST — a scanner you
+      # cannot pin is a scanner an attacker can replace.
+      #
+      # The image reference comes from the same module the two steps above build
+      # with (`scripts/_container.ts`), so this cannot end up scanning a tag
+      # nothing produced. Both steps ran already, so it exists by now.
+      # Trivy pulls its vulnerability DB (~tens of MB, an OCI artifact from ghcr) on
+      # every run, and anonymous ghcr pulls DO get rate-limited — a red gate that has
+      # nothing to do with the image. Persist the DB across runs. The key rotates by
+      # run id so each run saves the freshest DB and the prefix fallback restores the
+      # most recent one; a slightly stale DB is harmless — Trivy refreshes it when due.
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: trivy-db-${{ runner.os }}-
+
+      - name: Scan the image (high/critical, fixable only)
+        run: |
+          IMAGE=$(node -e "import('./scripts/_container.ts').then((m) => process.stdout.write(m.LOCAL_TAG))")
+          echo "Scanning $IMAGE"
+          # aquasec/trivy v0.72.0 — digest, not tag (see the header). Renovate's
+          # github-actions manager only reads `uses:`, so it CANNOT see this pin;
+          # it is upgraded by hand. Trivy's own "a newer version is available"
+          # notice is therefore the only thing that reports this line has gone
+          # stale — never silence it with --skip-version-check.
+          #
+          # `-v ~/.cache/trivy` mounts the cached DB (above) into the container's
+          # default cache dir, so the scanner reuses it instead of re-pulling.
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$HOME/.cache/trivy:/root/.cache/trivy" \
+            aquasec/trivy@sha256:cffe3f5161a47a6823fbd23d985795b3ed72a4c806da4c4df16266c02accdd6f \
+            image --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+            --exit-code 1 --no-progress "$IMAGE"

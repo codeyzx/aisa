@@ -1,0 +1,21 @@
+# EditorConfig — https://editorconfig.org
+# Values track .oxfmtrc.json (tabWidth 2, endOfLine lf, printWidth 80) and
+# .vscode/settings.json (files.eol \n) so an editor with no oxfmt plugin still
+# lands on the same shape oxfmt would produce.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# oxfmt's printWidth. Advisory (a ruler), scoped to the code it formats.
+[*.{ts,tsx,js,jsx,mjs,cjs}]
+max_line_length = 80
+
+# Markdown keeps trailing whitespace: two trailing spaces are a hard line break.
+[*.md]
+trim_trailing_whitespace = false

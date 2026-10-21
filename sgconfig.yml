@@ -1,0 +1,34 @@
+# ast-grep — the structural half of this repo's conventions.
+#
+# WHY THIS EXISTS: the majority of code here is written by Claude, so the
+# scaffolding is kept low-hallucination and machine-checkable. A convention only
+# a human can check is a convention that drifts, and this repo has the receipt —
+# `docs/reference/contracts/http-api.md` carries a "Known non-conforming routes" section,
+# which is prose apologising for a rule nothing enforces.
+#
+# WHAT BELONGS HERE, and what does not. oxlint owns the general JS/TS rules;
+# `rules/` owns only the STRUCTURAL claims oxlint cannot express — the ones
+# written as MUST / MUST NOT in `docs/reference/contracts/*.md`. If oxlint can say it,
+# it says it there, not here. Two tools asserting one fact is a second source
+# of truth for it.
+#
+# THE BOUNDARY THIS FILE DELIBERATELY DOES NOT HOLD: the client -> server-only
+# import boundary. It is optional here, and rightly so. Next vendors `server-only`
+# (node_modules/next/dist/compiled/server-only/) and aliases a throwing
+# `index.js` or a no-op `empty.js` by bundle layer, so the COMPILER already
+# enforces it and `pnpm build` is already in the gate. Proven, not assumed: an
+# `import 'server-only'` added to a 'use client' file fails the build with
+# "'server-only' cannot be imported from a Client Component module".
+# An ast-grep version would also have to be dishonest — ast-grep matches within
+# ONE file, so it could only know which paths are server-only from a hand-kept
+# path list. That list is a copy of a set `import 'server-only'` already models
+# per-module, and it caps itself silently the day a ninth module is added and
+# the list is not. See docs/reference/contracts/data.md.
+#
+# READ-ONLY BY CONTRACT: `ci.yml`'s codegen drift-guard runs
+# `git add -A --intent-to-add && git diff --exit-code`, so anything this scan
+# rewrites during the gate fails CI. Never add a fix/update flag to `lint:rules`.
+ruleDirs:
+  - rules
+testConfigs:
+  - testDir: rule-tests

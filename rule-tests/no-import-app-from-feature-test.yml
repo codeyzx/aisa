@@ -1,0 +1,11 @@
+id: no-import-app-from-feature
+valid:
+  - |
+    import { formatDate } from '@/lib/format/date'
+  - |
+    export { formatDate } from '../../lib/format/date'
+invalid:
+  - |
+    import { Dashboard } from '@/app/(app)/dashboard/page'
+  - |
+    export { Dashboard } from '../../app/(app)/dashboard/page'

@@ -1,0 +1,22 @@
+{
+  "$schema": "vscode://schemas/extensions",
+
+  // This repo's toolchain is oxc — `.oxlintrc.json` + `oxfmt`. There is NO
+  // ESLint and NO Prettier here, so `dbaeumer.vscode-eslint` and
+  // `esbenp.prettier-vscode` are deliberately NOT recommended: recommending a
+  // tool the repo does not have is how an editor ends up reporting diagnostics
+  // no gate agrees with.
+  "recommendations": [
+    // Oxlint + oxfmt, the same binaries `pnpm lint` / `pnpm format` run.
+    "oxc.oxc-vscode",
+    // Class sorting/completion for the Tailwind v4 setup.
+    "bradlc.vscode-tailwindcss"
+  ],
+
+  "unwantedRecommendations": [
+    // Not "wrong", just not this repo: both would fight oxfmt for the same
+    // files and produce a diff the gate rejects.
+    "esbenp.prettier-vscode",
+    "dbaeumer.vscode-eslint"
+  ]
+}

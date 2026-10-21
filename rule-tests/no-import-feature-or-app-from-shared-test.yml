@@ -1,0 +1,15 @@
+id: no-import-feature-or-app-from-shared
+valid:
+  - |
+    import { formatDate } from '@/lib/format/date'
+  - |
+    export { formatDate } from '../../lib/format/date'
+invalid:
+  - |
+    import { AssetSchema } from '@/features/asset/asset.schema'
+  - |
+    export { Dashboard } from '@/app/(app)/dashboard/page'
+  - |
+    import { AssetSchema } from '../../features/asset/asset.schema'
+  - |
+    export { Dashboard } from '../../app/(app)/dashboard/page'

@@ -1,0 +1,36 @@
+id: action-export-wraps-run-action
+valid:
+  - |
+    export async function createAssetAction() {
+      return runAction('example:write', async () => {})
+    }
+  - |
+    export async function createAssetFormAction() {
+      return runFormAction('example:write', async () => {})
+    }
+  # The const-arrow shape, properly wrapped — must NOT be flagged.
+  - |
+    export const createAssetAction = async () => {
+      return runAction('example:write', async () => {})
+    }
+  # The const-function-expression shape, properly wrapped.
+  - |
+    export const createAssetAction = async function () {
+      return runFormAction('example:write', async () => {})
+    }
+invalid:
+  - |
+    export async function createAssetAction() {
+      return createAsset()
+    }
+  # The gap this rule change closes: an unwrapped const-arrow action — a valid,
+  # browser-reachable RPC that the function-declaration-only matcher missed.
+  - |
+    export const createAssetAction = async () => {
+      return createAsset()
+    }
+  # And the unwrapped const-function-expression shape.
+  - |
+    export const createAssetAction = async function () {
+      return createAsset()
+    }

@@ -1,0 +1,20 @@
+id: no-import-example-from-core
+valid:
+  # The direction that is always allowed: core importing core.
+  - |
+    import { formatDate } from '@/lib/format/date'
+  # A path that merely CONTAINS the word example is not the example surface.
+  - |
+    import { sample } from '@/lib/examples/sample'
+  # Route groups other than `(examples)` are ordinary app code, and this rule is
+  # not the one that governs importing them — `no-import-app-from-feature` is.
+  - |
+    import { Dashboard } from '@/app/(app)/dashboard/page'
+invalid:
+  - |
+    import { AssetForm } from '@/app/(app)/(examples)/assets/_components/asset-form'
+  - |
+    export { AssetForm } from '../../app/(app)/(examples)/assets/_components/asset-form'
+  # Type-only is still a build-time edge into a directory the fork deletes.
+  - |
+    import type { AssetRow } from '@/app/(app)/(examples)/assets/_components/columns'

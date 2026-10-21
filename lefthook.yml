@@ -1,0 +1,76 @@
+# The local FAST PREVIEW of CI, split across the two moments code moves.
+# `ci.yml` is still the authority and the gate of record — for a team that opens
+# PRs, the shared runner is the only enforcement that cannot be bypassed with
+# `git commit --no-verify`, so this file is deliberately a fast SUBSET of the CI
+# chain, never a second opinion and never something CI does not also run. Its job
+# is to fail the obvious things on your own machine, before a push burns a CI
+# cycle waiting to tell you the same thing.
+#
+# The split is by cost, not by importance:
+#   - pre-commit runs only what can be scoped to `{staged_files}` and costs
+#     milliseconds (oxlint, oxfmt --check, ast-grep).
+#   - pre-push runs the whole-project checks that CANNOT be scoped to files —
+#     `check:static` (which includes `tsc --noEmit`) and `test:unit`. These are
+#     whole-project by nature, so they run once at the push boundary rather than
+#     on every atomic commit, where they would tax the exact commit-per-slice
+#     discipline they protect.
+# If you want the whole-project checks on pre-commit, move the pre-push jobs up.
+#
+# NOT here, and on purpose: `test:integration` (boots the emulator + JDK — too
+# slow for every push, and CI runs it faithfully), `build:ci`, and the whole
+# container `artifact` job. To run the FULL chain locally — literally this repo's
+# `ci.yml`, in containers, on the shipped Node so this machine's toolchain cannot
+# skew it — use `pnpm ci:local` (docs/how-to/verify-change.md). That is the
+# fallback when CI is unavailable or you have burned the month's minutes.
+#
+# ⚠️ THESE HOOKS NEVER MUTATE A FILE, AND THAT IS DELIBERATE.
+# `oxfmt --check`, never bare `oxfmt`. The lint-staged idiom (format, then
+# `git add` the result) is rejected here for two reasons:
+#   1. This tree is CONTENDED — sessions may write to it within seconds of each
+#      other. A formatter that rewrites on commit can pick up another session's
+#      in-flight edits and commit them as yours.
+#   2. It silently restages files, which defeats `git status --short` — the
+#      "confirm every path is yours" check concurrent work depends on.
+# A hook that reformats is convenient exactly until the one time it is not, and
+# that time costs someone else's work. Run `pnpm format` yourself.
+
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
+      run: pnpm exec oxlint {staged_files}
+
+    # --check, not a rewrite. See the header.
+    #
+    # The extension list must stay a SUPERSET of what `oxfmt` actually formats,
+    # or the hook reports "no files for inspection" on a file the gate will then
+    # reject — a skip that reads as a pass. That is not hypothetical: `json5` was
+    # missing here, `.github/renovate.json5` committed clean through the hook,
+    # and `pnpm format:check` failed on the very next run.
+    - name: format
+      glob: '*.{ts,tsx,js,jsx,mjs,cjs,json,json5,jsonc,md,yml,yaml}'
+      run: pnpm exec oxfmt --check {staged_files}
+
+    # The structural conventions. Scoped to staged files so it stays
+    # fast; the gate runs it across the tree.
+    - name: rules
+      glob: '*.{ts,tsx}'
+      run: pnpm exec ast-grep scan {staged_files}
+
+pre-push:
+  parallel: true
+  jobs:
+    # Whole-project by nature — see the header. This is the last point before the
+    # work leaves the machine, and the fast preview of the CI gate: `check:static`
+    # is the whole static chain (node:check, typecheck, templates:check, lint,
+    # lint:rules, format:check, docs:check, structure:check) and `test:unit` is the
+    # emulator-free suite. Both run here so a red push is caught locally instead of
+    # on a runner. What this preview does NOT cover — integration, build, container
+    # — is named in the header, with the `verify:container` fallback for the full
+    # chain.
+    - name: static
+      run: pnpm check:static
+
+    - name: unit
+      run: pnpm test:unit

@@ -1,0 +1,77 @@
+# dependencies
+/node_modules
+# pnpm's content-addressable store. It normally lives OUTSIDE the project
+# (~/.local/share/pnpm/store), but pnpm falls back to a project-local
+# `.pnpm-store/` when the configured store is on a different filesystem — exactly
+# what happens inside a container where $HOME and the workspace are separate
+# mounts (e.g. `pnpm ci:local` via act). It is a cache of package tarballs, never
+# source, so committing it is a huge accidental blob — and, left untracked, it
+# also trips the CI drift-guard and the project-layout generator.
+/.pnpm-store/
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# playwright (pnpm test:e2e) — per-run artifacts: traces, screenshots and the HTML
+# report. Screenshots of a signed-in session are real session state on disk, so
+# these are scratch by construction and must never be committed.
+/test-results/
+/playwright-report/
+/blob-report/
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+!.env.example
+
+# firebase emulator scratch
+*-debug.log
+.firebase/
+# Persisted emulator state for `pnpm dev` (--import/--export-on-exit). Real local
+# Firestore documents AND Auth accounts on disk — same reason /snapshots/ below is
+# ignored: committing a dump is a data leak with a .json extension.
+/.emulator-data/
+# Per-lane emulator configs. Running several verification lanes at once means
+# giving each one its own emulator port band, which means a `firebase.lane<n>.json`
+# per lane. The band a lane gets depends on what else is running on that host, so
+# these are per-machine scratch and committing one publishes one machine's
+# accident as everyone's config.
+firebase.lane*.json
+
+# Machine-local agent notes. `AGENTS.local.md` (and its `CLAUDE.local.md` symlink)
+# hold facts about ONE contributor's setup — their version manager, their port
+# collisions, their toolchain quirks. Those are real and worth writing down, but
+# they are not project decisions, and a starter that ships one contributor's
+# tooling as if it were the standard is how a local accident becomes a convention.
+*.local.md
+
+# snapshot / backup dumps — Firestore data exports (scripts/snapshot). A dump is
+# real documents on disk; committing one is a data leak with a .json extension.
+/snapshots/
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

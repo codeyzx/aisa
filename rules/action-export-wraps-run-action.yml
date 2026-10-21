@@ -1,0 +1,93 @@
+# docs/reference/contracts/data.md — every export in `lib/actions/*.action.ts`,
+# `features/**/*.action.ts`, and `app/**/_actions.ts` wraps `runAction` /
+# `runFormAction`, never a bare `'use server'` export.
+#
+# WHY THIS IS THE RULE WITH TEETH: `runAction` is where the capability check
+# lives. `features/asset/asset.action.ts` says so in its own comment —
+# "`runAction('example:write')` resolves the session and re-checks the
+# capability SERVER-SIDE on every call". These files are `'use server'`, so
+# every export is a browser-reachable RPC entry point. An export that skips
+# the wrapper skips the auth gate, and it does so while typechecking, linting
+# and building perfectly green. Nothing else in this repo catches it.
+#
+# WHY POSITIVE-AND-SCOPED rather than "flag `'use server'` outside
+# lib/actions/": the negative rule is a different claim and does not catch the
+# hazard. The hazard is an UNWRAPPED export in the RIGHT file — the one with a
+# security consequence.
+#
+# `_template.action.ts` is deliberately IN scope. It complies today, and a
+# template the rules do not check is a template that teaches drift.
+#
+# THE ONE EXCEPTION, AND THE BAR FOR THE NEXT ONE.
+# This rule checks a MECHANISM (does it wrap `runAction`?) as a proxy for a
+# PROPERTY (is it gated?). They agree everywhere except one place:
+# `lib/actions/impersonation.action.ts:stopImpersonationFormAction` carries
+# the repo's only `ast-grep-ignore` for this rule.
+#
+# It qualifies because the rule's own claim above — "an export that skips the
+# wrapper skips the auth gate" — is FALSE of it. It authenticates (`getSession`
+# -> `/login`) and authorizes (a valid signed ticket = proof an admin started
+# this). It CANNOT comply: `runFormAction`'s contract is a capability gate, and
+# a capability gate on that export is the bug, not the fix — while impersonating
+# the session IS the target and holds none of the admin's capabilities, so an
+# admin-gated exit is a locked door from the inside.
+#
+# So the bar for a second suppression is: **the export is gated, and the gate
+# cannot be a capability.** "It is inconvenient", "the check is elsewhere", or
+# "I verified it by hand" do not clear it. If you are reaching for this because
+# the rule is noisy, the rule is right and you are the finding.
+#
+# DO NOT widen `runFormAction` to accept an arbitrary guard: it would keep every
+# export "wrapped" and make the gate green, which is worse than a suppression.
+# `guard: () => true` cannot be grepped and reads as compliance; an
+# `ast-grep-ignore` line is greppable, is exactly one place, and has to carry an
+# argument. Prefer the visible hole to the invisible one.
+id: action-export-wraps-run-action
+language: TypeScript
+severity: error
+files:
+  - 'lib/actions/*.action.ts'
+  - 'features/**/*.action.ts'
+  - 'app/**/_actions.ts'
+message: >-
+  Exported action does not wrap `runAction` / `runFormAction`. Every export in an
+  action file (`lib/actions/*.action.ts`, `features/**/*.action.ts`,
+  `app/**/_actions.ts`) is a
+  `'use server'` RPC entry point, and the wrapper is where the capability check
+  runs — an unwrapped export is an unauthenticated one. See
+  docs/reference/contracts/data.md.
+# Matches BOTH exported action shapes a `'use server'` file can present:
+#   export [async] function NAME() { … }          — function_declaration
+#   export const NAME = [async] (…) => …          — arrow_function
+#   export const NAME = [async] function () { … }  — function_expression
+# The const-bound shapes are equally callable RPC entry points; a
+# function-declaration-only matcher walks straight past an unwrapped one.
+rule:
+  any:
+    - all:
+        - kind: function_declaration
+        - inside:
+            kind: export_statement
+        - not:
+            has:
+              stopBy: end
+              any:
+                - pattern: runAction($$$ARGS)
+                - pattern: runFormAction($$$ARGS)
+    - all:
+        - kind: variable_declarator
+        - has:
+            field: value
+            any:
+              - kind: arrow_function
+              - kind: function_expression
+        - inside:
+            kind: lexical_declaration
+            inside:
+              kind: export_statement
+        - not:
+            has:
+              stopBy: end
+              any:
+                - pattern: runAction($$$ARGS)
+                - pattern: runFormAction($$$ARGS)

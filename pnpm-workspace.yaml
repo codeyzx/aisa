@@ -1,0 +1,75 @@
+packages: []
+
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+  msw: false
+  '@firebase/util': true
+  protobufjs: true
+  re2: false
+  '@sentry/cli': false
+  # NOT true, though the package asks for it: pnpm writes .bin/ast-grep as a
+  # `node`-invoking shim while the bin target is still the JS fallback, and the
+  # postinstall then replaces that target with a native ELF. The shim is never
+  # regenerated, so `true` yields `SyntaxError: Invalid or unexpected token` on
+  # every call. The shipped fallback resolves the same binary at runtime and
+  # works; the cost is a stderr notice per invocation.
+  '@ast-grep/cli': false
+  # NOT true: lefthook's postinstall runs `lefthook install -f` against INIT_CWD,
+  # and every worktree shares one .git/hooks with the main checkout — so a
+  # worktree's `pnpm install` would rewrite the hooks every other worktree commits
+  # through. Run `lefthook install` once, deliberately, when landing lefthook.yml.
+  lefthook: false
+  # NOT true: the postinstall downloads a ~30MB nektos/act binary from GitHub
+  # releases, and only `pnpm ci:local` ever needs it. Left true, every contributor
+  # install AND the Containerfile deps layer (which installs devDeps to run
+  # `pnpm build`) would fetch a tool the app never runs. `scripts/ci-local.ts`
+  # fetches it on first use instead — the same deferred-setup shape as `lefthook`.
+  '@kie/act-js': false
+
+minimumReleaseAge: 10080
+
+# Security patches are the one case where the quarantine above works against us:
+# it holds a fix back for exactly as long as it holds a supply-chain attack back.
+# Each entry is an EXACT `name@version` — the waiver covers the one release that
+# answers the advisory and nothing else, so a later release of the same package
+# still serves its week. Delete an entry once its version is older than the
+# quarantine; leaving it in place silently widens the hole it was cut for.
+minimumReleaseAgeExclude:
+  # GHSA-v2hh-gcrm-f6hx — host confusion via literal backslash authority delimiter.
+  - fast-uri@3.1.4
+  # GHSA-8r6m-32jq-jx6q — repeated DOCTYPE declarations reset entity expansion limits.
+  - fast-xml-parser@5.10.1
+  # Four high advisories, all patched in next 16.2.11 and still inside the
+  # quarantine: GHSA-6gpp-xcg3-4w24 (middleware/proxy bypass), GHSA-m99w-x7hq-7vfj
+  # (Server Actions DoS), GHSA-p9j2-gv94-2wf4 (Server Actions SSRF), GHSA-89xv-2m56-2m9x.
+  # next fans its runtime out to @next/env + platform swc binaries, so each release
+  # that answers the advisory must be waived alongside the meta package.
+  - next@16.2.11
+  - '@next/env@16.2.11'
+  - '@next/swc-darwin-arm64@16.2.11'
+  - '@next/swc-darwin-x64@16.2.11'
+  - '@next/swc-linux-arm64-gnu@16.2.11'
+  - '@next/swc-linux-arm64-musl@16.2.11'
+  - '@next/swc-linux-x64-gnu@16.2.11'
+  - '@next/swc-linux-x64-musl@16.2.11'
+  - '@next/swc-win32-arm64-msvc@16.2.11'
+  - '@next/swc-win32-x64-msvc@16.2.11'
+
+# Transitive advisories whose PARENT's declared range cannot reach the patch.
+# Anything a normal range can already reach is fixed in the lockfile instead and
+# must not be listed here. Pinned exact so the bypass is auditable: when the
+# parent widens its range, delete the entry rather than bumping it.
+overrides:
+  # GHSA-f88m-g3jw-g9cj — sharp inherits four libvips CVEs below 0.35.0, but
+  # next@16.2.11 (latest) still declares `sharp: ^0.34.5`, so only an override
+  # reaches the fix. next uses sharp for production image optimization.
+  sharp: 0.35.3
+  # GHSA-6g55-p6wh-862q — postcss below 8.5.12 allows arbitrary file read via a
+  # crafted sourceMappingURL in a CSS comment. next@16.2.11 pins `postcss: 8.4.31`
+  # EXACTLY, so no range can reach the fix — only an override does. 8.5.19 is
+  # already resolved elsewhere in the tree (sentry's webpack plugin), so this
+  # dedupes to a version already present and past the release-age gate rather than
+  # pulling a new one. postcss is build-time CSS tooling, not in the standalone
+  # runtime, so this hardens the build surface rather than the shipped server.
+  postcss: 8.5.19

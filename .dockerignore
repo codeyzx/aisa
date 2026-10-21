@@ -1,0 +1,38 @@
+# Keep the build context small, and keep secrets out of it entirely.
+.git
+node_modules
+.next
+out
+build
+coverage
+
+# Never ship env files into the image: the builder skips validation and the runtime
+# gets its env injected, so a stray .env in the context is pure leak risk.
+.env*
+!.env.example
+
+*.pem
+*.tsbuildinfo
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+.firebase/
+*-debug.log
+
+# Playwright per-run artifacts. Excluded for the same reason `.env*` and `*.pem`
+# are, not merely to keep the context small: `trace: 'retain-on-failure'` records
+# the network log of a real sign-in — the session cookie and the seed password —
+# and `screenshot: 'only-on-failure'` writes a picture of the authenticated UI.
+# `Containerfile`'s `COPY . .` would bake those into the BUILDER layer, which the
+# shipped image does not carry but the local build cache does, and which travels
+# with any `--cache-to` export or `--target builder` push.
+test-results/
+playwright-report/
+blob-report/
+
+docs
+README.md
+AGENTS.md
+CLAUDE.md

@@ -1,0 +1,24 @@
+# The layering boundary, feature-tier half: `features/` is DOMAIN. It may import
+# `@/lib/*` (shared) and sibling features, but never `@/app/*` (delivery),
+# whether that path uses the alias or relative `../` segments.
+#
+# WHY: `app/` composes features — a feature that reaches back into a route
+# inverts the seam and couples the domain to a delivery path that a fork may
+# rename or delete. The break is invisible to typecheck/lint/build and only
+# shows when the route moves. Ratchets a property the tree already has.
+id: no-import-app-from-feature
+language: TypeScript
+severity: error
+files:
+  - 'features/**'
+message: >-
+  A feature must not import from `app/`. `app/` is the delivery tier and
+  composes features — a feature reaching into a route inverts the seam. Keep
+  shared needs in `lib/`.
+rule:
+  any:
+    - kind: import_statement
+    - kind: export_statement
+  has:
+    kind: string
+    regex: '(@/|(\.\./)+)app/'

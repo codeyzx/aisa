@@ -1,0 +1,35 @@
+# The layering boundary, shared-tier half: `lib/`, `components/`, and `hooks/`
+# are SHARED and DOMAIN-AGNOSTIC. They must never import from `@/features/*`
+# (domain) or `@/app/*` (delivery), whether the path uses the `@/` alias or
+# climbs from the shared directory with `../` segments.
+#
+# WHY A RULE AND NOT A README LINE: the property is that the shared tier stays
+# reusable across any fork's domain — swap the feature out, delete a route, and
+# lib/ still builds. A shared file importing `@/features` typechecks, lints and
+# builds perfectly green; the breakage only surfaces in someone else's repo when
+# they replace the domain. This ratchets a boundary the tree already holds (zero
+# hits today) — the cheapest moment to hold a line is before the first violation.
+#
+# THE TRAP, NAMED: do NOT "fix" a violation by copying domain code DOWN into
+# `lib/`. That is exactly how the `asset.*` files once lived in `lib/schemas`,
+# `lib/repos`, and `lib/export`. Keep domain in `features/`; push only genuinely
+# domain-agnostic helpers into `lib/`.
+id: no-import-feature-or-app-from-shared
+language: TypeScript
+severity: error
+files:
+  - 'lib/**'
+  - 'components/**'
+  - 'hooks/**'
+message: >-
+  Shared code (`lib/`, `components/`, `hooks/`) must not import from
+  `features/` or `app/` — it is domain-agnostic by contract. Keep domain code in
+  `features/`; push only genuinely generic helpers into `lib/`, never copy a
+  feature down.
+rule:
+  any:
+    - kind: import_statement
+    - kind: export_statement
+  has:
+    kind: string
+    regex: '(@/|(\.\./)+)(features|app)/'

@@ -11,8 +11,8 @@ import {
 describe('toSearchPrefixes', () => {
   it('emits every word-start prefix from MIN..word length, lowercased', () => {
     // `AST-0001` splits on punctuation into `ast` + `0001`.
-    expect(toSearchPrefixes(['AST-0001']).sort()).toEqual(
-      ['as', 'ast', '00', '000', '0001'].sort(),
+    expect(toSearchPrefixes(['AST-0001']).toSorted()).toEqual(
+      ['as', 'ast', '00', '000', '0001'].toSorted(),
     )
   })
 

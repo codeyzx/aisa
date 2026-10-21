@@ -51,6 +51,7 @@ function boxSortValue(raw: unknown): SortValue {
 function unboxSortValue(
   value: SortValue,
 ): string | number | boolean | Timestamp {
+  // oxlint-disable-next-line no-underscore-dangle -- `__ts` is the cursor token's wire key; renaming it breaks every cursor already issued
   if (typeof value === 'object') return Timestamp.fromMillis(value.__ts)
   return value
 }

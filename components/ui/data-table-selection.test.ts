@@ -202,7 +202,10 @@ describe('the scope mask — what it actually does', () => {
     )
     expect([...selectedIds(picked, 'status=retired')]).toEqual([])
 
-    expect([...selectedIds(picked, 'status=all')].sort()).toEqual(['a', 'b'])
+    expect([...selectedIds(picked, 'status=all')].toSorted()).toEqual([
+      'a',
+      'b',
+    ])
   })
 
   it('destroys the masked ids on the first write under the new scope', () => {

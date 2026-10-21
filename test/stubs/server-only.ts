@@ -14,4 +14,7 @@
 // Stubbing it costs nothing that matters. The guard is enforced at build time by
 // `next build`, which still resolves the real package and still fails; a test
 // process is not a bundle and has no client boundary to violate.
+// Under `isolatedModules` a file with no import or export is a global script,
+// which tsc rejects; this stub has nothing to export, so it exports nothing.
+// oxlint-disable-next-line unicorn/require-module-specifiers
 export {}

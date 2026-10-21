@@ -166,6 +166,7 @@ export function decodeCursor(
     typeof sortValue === 'boolean' ||
     (typeof sortValue === 'object' &&
       sortValue !== null &&
+      // oxlint-disable-next-line no-underscore-dangle -- `__ts` is the cursor token's wire key; renaming it breaks every cursor already issued
       isBoxedTimestamp((sortValue as { __ts?: unknown }).__ts))
   // A doc id is the last segment of a real document ref: always non-empty and
   // never containing `/`. A forged empty or slash-bearing id would reach

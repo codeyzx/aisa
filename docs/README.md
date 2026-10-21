@@ -85,6 +85,8 @@ The AISA data contract — every collection the Python services write and this a
 - [`qa/penerimaan-produksi.md`](qa/penerimaan-produksi.md) — acceptance against production
   through the API and WhatsApp webhook, with evidence ids and cleanup.
 - [`qa/asisten.md`](qa/asisten.md) — the Asisten's read tools and live answers.
+- [`qa/use-case.md`](qa/use-case.md) — the 14 AISA use cases, their status, and the evidence
+  for each.
 - [`AI_USAGE.md`](AI_USAGE.md) — how AI coding assistants were used and what people decided.
 - [`reference/contracts/aisa-firestore.md`](reference/contracts/aisa-firestore.md) — collection
   shapes and enum values. The Python Pydantic models are its source of truth; the dashboard

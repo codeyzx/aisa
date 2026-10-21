@@ -125,3 +125,72 @@ positional argument: 'job'`) karena perubahan `orchestrator.py` yang sedang dike
 Baris yang hanya bisa dibuktikan live (jawaban model, Memory Bank, pengiriman WA) sudah
 di-drive di produksi kecuali tampilan "mengetik…" di ponsel (AST-09, sebagian). Temuan 1 dan 2
 belum diperbaiki; Temuan 3 menunggu keputusan pemilik.
+
+## Uji UC5 & UC9
+
+UC5 (insight ringkasan) dicatat di [`api.md`](api.md#uji-uc5--uc9). Bagian ini untuk UC9:
+pertanyaan besar dana.
+
+Perubahan di `services/api/aisa/assistant/`: `search_proposals` dan `count_proposals` menerima
+`min_funding_idr` / `max_funding_idr` (rupiah penuh, kedua batas inklusif). Proposal yang tidak
+menyebut dana tidak ikut hasil dan jumlahnya dikembalikan sebagai `danaTidakDisebut`. Baris
+`get_overview` kini memuat `danaDiminta`. Batas `limit` `search_proposals` naik dari 25 ke 50
+(`get_history` tetap 25). Instruksi Asisten memetakan "di bawah Rp3 M" ke
+`max_funding_idr=2999999999` dan "lebih dari Rp10 M" ke `min_funding_idr=10000000001`, meminta
+jumlah dana tanpa sebutan dilaporkan terpisah, dan menulis dana seperti ringkasan (Rp2 M,
+Rp2,5 M, Rp750 jt; lengkap dengan titik ribuan bila bentuk singkat tidak tepat).
+
+Lingkungan: engine `projects/441293875661/locations/us-central1/reasoningEngines/7155459220723204096`,
+diperbarui 22.44, 22.50, dan 22.55 WIB (2026-10-21); pertanyaan langsung ke engine dengan
+`user_id` `qa-uc9`, sesi baru per pertanyaan, tanpa WhatsApp.
+
+Hitung ulang dari Firestore (9 proposal, `profile.fundingAskIdr`): Kelas Kode Rakyat Rp2 M,
+PT Hanum Fashion Rp2,5 M, Klinik Desa Sehat Rp3 M, Rantai Dingin Bahari Rp4 M, Sawah Pintar
+Nusantara Rp5 M, Kopi Teras Senja Rp15 M, Saku Hukum Rp24 M, Balkan Gourmet Rp24 M, Lumbung Ikan
+Pesisir tanpa dana.
+
+| Pertanyaan                                    | Panggilan tool                                             | Jawaban (dua putaran, 22.44 dan 22.50 WIB)                                                                                                                                                              | Hasil |
+| --------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| "Berapa yang minta di bawah Rp3 M?"           | `search_proposals(max_funding_idr=2999999999[, limit=50])` | 2 proposal: _Kelas Kode Rakyat_ (edtech) · Rp2 M · Sangat cocok; _PT Hanum Fashion_ (fashion) · Rp2,5 M · Tidak cocok; 1 proposal tidak menyebut dana. Klinik Desa Sehat (tepat Rp3 M) benar tidak ikut | Lulus |
+| "Proposal mana yang minta lebih dari Rp10 M?" | `search_proposals(limit=50, min_funding_idr=10000000001)`  | 3 proposal: _Kopi Teras Senja_ (f&b) · Rp15 M · Sangat cocok; _Saku Hukum_ (f&b) · Rp24 M · Tidak cocok; _Balkan Gourmet_ (f&b) · Rp24 M · Tidak cocok; 1 proposal tidak menyebut dana                  | Lulus |
+
+Semua angka di jawaban ada di hasil tool giliran itu; satu-satunya beda adalah format
+(2500000000 → Rp2,5 M). Hasil lengkap tersimpan di
+`/tmp/claude-1000/-home-codeyzx-work-hackathon-aisa/59e19ace-403c-486b-b5ce-fe6136dd8397/scratchpad/uc9-run1.json`
+dan `…/uc9-run2.json` (tidak di-commit).
+
+Tes otomatis: `tests/test_assistant_tools.py` menambah filter dana di bawah/di atas/rentang,
+batas inklusif (tepat Rp10 M masuk untuk `min=10 M`, keluar untuk `min=10 M + 1`), kombinasi
+dengan kategori, `danaTidakDisebut` dihitung setelah filter lain dan tidak muncul tanpa filter
+dana, `count_proposals` dengan filter dana, dan `danaDiminta` di `get_overview`. Tes batas
+`limit` diubah dari 25 ke 50 karena batas itu sengaja dinaikkan untuk jawaban daftar.
+
+## Uji UC10
+
+Temuan dari `docs/qa/use-case.md`: urutan prioritas tanpa label "💡 Saran AI", penilaian risiko
+yang hanya diberi label di bagian pertanyaan founder, dan angka karangan ("85 gerai", padahal
+data 86; "92% penempatan kerja", tidak ada di data).
+
+Perbaikan di instruksi (`services/api/aisa/assistant/agent.py`): urutan prioritas, penilaian
+risiko, rekomendasi, pendapat, dan pertanyaan founder adalah saran; jawaban dibagi menjadi fakta
+data tanpa label dan SELURUH penilaian di bawah satu label "💡 _Saran AI (bukan dari data
+proposal):_". Setiap angka, nama, dan kutipan harus tersalin persis dari hasil tool di giliran
+itu; detail yang tidak ada di baris `search_proposals`/`get_overview` diambil lewat
+`get_proposal_detail` atau tidak disebut; angka tidak boleh diperkirakan, dibulatkan, atau
+dihitung baru (selisih, persentase). Istilah "nilai" untuk angka 1–5 per kriteria.
+
+Pertanyaan langsung ke engine, `user_id` `qa-uc10`, sesi baru per pertanyaan, tanpa WhatsApp.
+Angka di jawaban dicocokkan otomatis dengan teks hasil tool giliran itu.
+
+| Putaran (WIB)                    | Pertanyaan                 | Label                                                             | Angka                                                                                                                                                                                                               | Hasil |
+| -------------------------------- | -------------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 22.44 (aturan label + verbatim)  | Prioritas belum ditanggapi | Daftar fakta tanpa label, seluruh urutan prioritas di bawah label | Hanya skor dari `search_proposals` (format koma)                                                                                                                                                                    | Lulus |
+| 22.44                            | Risiko Kelas Kode Rakyat   | Data kriteria tanpa label, seluruh risiko di bawah label          | "13 dari 64 peserta … (sekitar 20%)" tidak ada di hasil tool: dihitung dan diperkirakan model                                                                                                                       | Gagal |
+| 22.50 (+ larangan angka turunan) | Risiko Kelas Kode Rakyat   | Sama, label di atas seluruh risiko                                | Semua dari `get_proposal_detail` (64, 51, 37, Rp5,2 juta, 1.150, 10%, Rp4 juta, Rp9 juta)                                                                                                                           | Lulus |
+| 22.55 (+ istilah "nilai")        | Risiko Kelas Kode Rakyat   | Sama                                                              | Sama; kriteria ditulis "Traksi (nilai 5)" (putaran 22.50 masih "skor 5")                                                                                                                                            | Lulus |
+| 22.55                            | Prioritas belum ditanggapi | Seluruh urutan dan alasannya di bawah label                       | Memanggil `get_proposal_detail` untuk Kopi Teras Senja dan Kelas Kode Rakyat; "86 gerai" dan "EBITDA Rp1,8 miliar" tersalin dari kutipan hal. 5 dan hal. 8; "sektor f&b di luar fokus" sesuai `cekKecocokan.sector` | Lulus |
+
+Hasil lengkap: `/tmp/claude-1000/-home-codeyzx-work-hackathon-aisa/59e19ace-403c-486b-b5ce-fe6136dd8397/scratchpad/uc10-run1.json`,
+`…/uc10-run2.json`, `…/uc10-run3.json` (tidak di-commit). Kepatuhan model pada instruksi tidak
+bisa dibuktikan pytest; tiga putaran ini adalah buktinya, dan pertanyaan lain bisa saja masih
+melanggar.

@@ -68,7 +68,7 @@ Informasi yang tidak ada diberi nilai 1 dan ditandai **"tidak disebut"**. Skor d
 
 Ringkasan berisi proposal **yang belum ditanggapi**, dikelompokkan per kategori, **tanpa saran tindak lanjut**:
 
-Salam pembuka mengikuti jam kirim (Selamat pagi/siang/sore/malam), dengan nama manajer bila diatur. Insight ditulis 1–2 kalimat dan selalu diawali label "Yang menarik:".
+Salam pembuka mengikuti jam kirim (Selamat pagi/siang/sore/malam), dengan nama manajer bila diatur. Setiap ringkasan memuat tepat satu insight, 1–2 kalimat, diawali label "Yang menarik:". Faktanya dipilih dan dihitung kode: tren sektor minggu ini dibanding minggu lalu bila ada sektor dengan minimal 3 proposal; bila tidak, fakta pertama yang berlaku dari urutan tetap: berapa proposal baru yang masuk Sangat cocok/Cocok, rata-rata skor kualitas minggu ini dibanding minggu lalu, jumlah "Berkualitas, di luar fokus" atau Perlu dicek manual yang belum ditanggapi, proposal belum ditanggapi dengan skor tertinggi, lalu berapa proposal yang sudah ditanggapi. Insight hanya kosong bila belum ada proposal sama sekali.
 
 > _Selamat pagi, Bu Rina. Sejak Senin pukul 17.00 masuk 100 proposal baru. Ada 100 proposal yang belum Ibu tanggapi._
 >
@@ -98,7 +98,7 @@ Manajer menandai proposal lewat WhatsApp atau dashboard:
 
 ### 6. Asisten
 
-Contoh: "Fintech yang sangat cocok", "Yang berkualitas tapi di luar fokus", "Kenapa skor Panen Kita segitu?", "Bandingkan Tani Maju dan SawahKu", "Buatkan pertanyaan untuk founder Tani Maju". Jawaban data hanya dari data AISA, saran berbasis pengetahuan umum ditandai jelas, dan AISA tidak mengirim pesan ke founder.
+Contoh: "Fintech yang sangat cocok", "Yang berkualitas tapi di luar fokus", "Kenapa skor Panen Kita segitu?", "Bandingkan Tani Maju dan SawahKu", "Buatkan pertanyaan untuk founder Tani Maju", "Berapa yang minta di bawah Rp3 M?". Jawaban data hanya dari data AISA: setiap angka, nama, dan kutipan disalin dari hasil tool pada giliran itu, tanpa menaksir atau menghitung angka baru. Prioritas, penilaian risiko, rekomendasi, dan draft pesan adalah saran, dan seluruh bagian itu berada di bawah label "💡 Saran AI". AISA tidak mengirim pesan ke founder.
 
 ### 7. Dashboard
 
@@ -145,7 +145,8 @@ Bobot berasal dari **rata-rata dua benchmark**, dengan rujukan tambahan dari sur
 | Model bisnis & keuangan | Kebutuhan dana 5 + lainnya 5   | Unit economics 5 + kesiapan dana 3 + risiko 2 | **10%**   |
 
 - **Penyesuaian:** manajer bisa mengubah bobot di halaman **Pengaturan** dashboard sesuai tesis dananya; setiap perubahan dicatat dengan alasan dan versinya di Riwayat.
-- **Kalibrasi:** 10–20 deck lama dinilai 2–3 analis dengan matriks yang sama, lalu dashboard menampilkan tingkat kesepakatan AI dengan analis. Di prototype, bagian ini masih berupa tempat kosong karena datanya belum ada.
+- **Kalibrasi dari koreksi manajer:** proposal dihitung "ditinjau manajer" setelah diberi tanggapan atau koreksi kategori. AI "sepakat" bila manajer membiarkan kategori AI. Pengaturan menampilkan tingkat kesepakatan ("AI sepakat dengan manajer pada X dari Y proposal yang ditinjau") dan daftar koreksi beserta arahnya (naik/turun) dan alasannya, sebagai bahan untuk menyesuaikan bobot dan patokan. Koreksi tidak pernah mengubah kategori atau skor AI yang tersimpan.
+- **Kalibrasi analis:** 10–20 deck lama dinilai 2–3 analis dengan matriks yang sama, lalu dashboard menampilkan tingkat kesepakatan AI dengan analis. Bagian ini masih kosong karena datanya belum ada.
 - **Keterbatasan:** kedua sumber adalah metode angel dan investor tahap awal, bukan standar resmi VC, dan pemetaan ke 5 kriteria AISA adalah interpretasi tim.
 
 ---

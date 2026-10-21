@@ -120,9 +120,9 @@ Region: Cloud Run dan Firestore `asia-southeast2` (Jakarta); Agent Runtime `us-c
 - Pembuat ringkasan tidak boleh mengubah angka. Kode mengecek bahwa setiap angka di teks cocok dengan data; bila tidak, pakai template tanpa AI.
 - Perintah (undang/pantau/arsipkan, koreksi kategori, STOP, LANJUT) **dikenali dengan kode**; tidak ada model Orchestrator. Pesan lain diteruskan ke Asisten, kecuali saat dijeda: dibalas "AISA sedang dijeda".
 - Kode memeriksa setiap kutipan Penilai di halaman yang disebut; bila tidak ada kutipan sebuah kriteria yang terverifikasi, nilainya dibatasi 2 dan kriteria ditandai `citationsUnverified`.
-- Insight dibatasi 1–2 kalimat dan label "Yang menarik:" dipastikan oleh kode.
-- Asisten **hanya punya tools baca**: cari proposal dengan filter, hitung, detail proposal, bandingkan, riwayat, tren. Tidak ada tool tulis.
-- Saran Asisten yang tidak berasal dari data proposal diberi label sebagai saran AI.
+- Insight dibatasi 1–2 kalimat dan label "Yang menarik:" dipastikan oleh kode. Kode selalu memilih satu fakta (tren sektor dulu, lalu urutan cadangan di overview §4), sehingga setiap ringkasan memuat insight selama ada proposal.
+- Asisten **hanya punya tools baca**: gambaran semua proposal, cari proposal dengan filter (termasuk dana minimum/maksimum), hitung, detail proposal, bandingkan, riwayat, tren, aturan. Tidak ada tool tulis.
+- Setiap angka dalam jawaban disalin dari hasil tool pada giliran itu. Prioritas, risiko, rekomendasi, dan draft pesan seluruhnya berada di bawah label "💡 Saran AI".
 
 ---
 

@@ -219,3 +219,36 @@ teks tampilan.
 Kegagalan DSB-03 di putaran pertama belum dijelaskan; ia tidak menyentuh kode yang diubah (kursi
 manajer, tombol unggah tetap tampil) dan tidak muncul lagi dalam tiga putaran berikutnya. Bila muncul
 lagi, perlakukan sebagai flaky yang perlu diselidiki, bukan sebagai lulus.
+
+## Uji UC7 — koreksi manajer sebagai bahan kalibrasi
+
+Pengaturan → Kalibrasi kini membaca `proposals` langsung (read-only, tanpa `aisa-api`). Aturannya,
+juga tertulis di layar: proposal **ditinjau manajer** bila punya `response` atau `correction`;
+**AI sepakat** bila yang ditinjau tidak dikoreksi ke kategori lain (koreksi kembali ke kategori AI
+dihitung sepakat, sama dengan aturan lencana "dikoreksi" di daftar). Arah koreksi dibaca pada skala
+Sangat cocok → Tidak cocok: **naik** ke arah Sangat cocok, **turun** ke arah Tidak cocok. Subbagian
+"Kalibrasi analis" (10–20 deck lama dinilai analis) tetap bertanda "belum ada data".
+
+Kueri: `responded == true` dan `correction != null`, digabung per ID — dua filter satu field, tanpa
+indeks komposit dan tanpa jendela 500 proposal. Dijalankan di emulator yang di-seed lalu
+`pnpm indexes:check`: "No query requiring a composite index ran" (exit 1 menurut desain skrip saat
+tidak ada indeks komposit yang dibutuhkan); `firestore.indexes.json` tidak diubah.
+
+**Seed berubah.** Panen Kita (sudah diundang) kini juga dikoreksi Sangat cocok → Cocok, jadi seed
+punya 3 ditinjau (Panen Kita, AplikasiX, Pasar Ikan), 2 koreksi (1 naik, 1 turun), sepakat 1 dari 3
+(33,3%). Karena itu harapan dua spec ikut berubah: `proposal-list.spec.ts` DSB-11 (Panen Kita pindah
+dari filter Sangat cocok ke Cocok) dan `tren-aktivitas-riwayat.spec.ts` DSB-50 (Riwayat 22 → 23
+baris). Keduanya belum dijalankan ulang di putaran ini. Hari ini tidak berubah: Panen Kita sudah
+ditanggapi.
+
+| Kasus                | Hasil | Bukti                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| -------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DSB-99 (E2E, seed)   | Lulus | angka dihitung ulang dari emulator shard: ditinjau 3, dikoreksi 2, "Naik kategori 1 · Turun kategori 1", "… 1 dari 3 … (33,3%)", 2 baris tabel bertaut ke detail, keadaan kosong tidak tampil                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Unit `calibrate`     | Lulus | `features/aisa/aisa.calibration.test.ts`: tanpa tinjauan → tanpa persentase (bukan 0%); koreksi ke kategori AI = sepakat; urutan terbaru dulu                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| Produksi (baca saja) | Lulus | revisi `aisa-dashboard-00007-g4f`, image `aisa-dashboard:20261021-223716`, 21 Okt 2026 22.41 WIB. Layar: ditinjau 3, dikoreksi 1, naik 1 · turun 0, "AI sepakat dengan manajer pada 2 dari 3 proposal yang ditinjau (66,7%)", satu baris Kopi Teras Senja Tidak cocok → Sangat cocok (naik), skor 100,0, taut `/proposal/upload-9c721028b7267b5f`. Hitung ulang Firestore produksi (`google-cloud-firestore`): reviewed 3, corrected 1, agreed 2, 66,7%, naik 1, turun 0 — sama. Tidak ada tombol tulis yang diklik. Screenshot: `/tmp/claude-1000/-home-codeyzx-work-hackathon-aisa/59e19ace-403c-486b-b5ce-fe6136dd8397/scratchpad/kalibrasi-prod.png` |
+
+| Perintah                                                                                                      | Exit | Hasil                                                                 |
+| ------------------------------------------------------------------------------------------------------------- | ---- | --------------------------------------------------------------------- |
+| `pnpm test:e2e:fast --shards 2 e2e/acceptance/kalibrasi.spec.ts e2e/acceptance/pengaturan-tulis.spec.ts`      | 0    | 10/10: 10 sesuai harapan, 0 tak terduga, 0 flaky, 0 dilewati, 51 dtk  |
+| `pnpm verify`                                                                                                 | 0    | unit 517/517, integrasi 16/16, build lolos                            |
+| `gcloud builds submit` (build `45e79b40-6a60-4113-9685-f4b6134a5079`) lalu `gcloud run deploy aisa-dashboard` | 0    | SUCCESS 1m29s; revisi `aisa-dashboard-00007-g4f` melayani 100% trafik |

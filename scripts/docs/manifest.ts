@@ -184,6 +184,7 @@ export const docsManifest: DocEntry[] = [
     normative: false,
   },
   { path: 'docs/qa/asisten.md', type: 'reference', normative: false },
+  { path: 'docs/qa/use-case.md', type: 'reference', normative: false },
 
   // Generated reference facts.
   ...generatedReferenceDocs,

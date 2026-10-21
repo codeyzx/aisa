@@ -156,3 +156,44 @@ perilaku yang benar:
 
 `cd services/api && uv run pytest -q`: 222 passed, 0 xfailed, exit 0. Belum di-deploy ke
 produksi saat uji ini ditulis.
+
+## Uji UC5 & UC9
+
+Lingkungan: `aisa-api` revisi `aisa-api-00009-z94`, image
+`asia-southeast2-docker.pkg.dev/hackathon-primestep-09/aisa/aisa-api:20261021-223549`
+(Cloud Build `5e590104-5730-4844-b10c-71df676cb36f`), Rabu 2026-10-21 sekitar 22.40 WIB.
+
+### UC5 — setiap ringkasan membawa satu insight
+
+Aturan baru di `services/api/aisa/digest.py`: tren sektor minggu ini vs minggu lalu tetap
+pilihan pertama (ambang `MIN_INSIGHT_COUNT = 3`). Bila tidak ada, kode memakai fakta pertama
+yang berlaku dari urutan tetap: (a) berapa dari proposal baru sejak ringkasan terakhir yang masuk
+Sangat cocok/Cocok, beserta sektor terbanyak bila tidak seri; (b) rata-rata skor kualitas minggu
+ini vs minggu lalu bila keduanya punya ≥ 3 proposal berskor; (c) jumlah Berkualitas, di luar
+fokus dan Perlu dicek manual yang belum ditanggapi; (d) proposal belum ditanggapi dengan skor
+tertinggi; (e) berapa dari semua proposal yang sudah ditanggapi. Tanpa proposal sama sekali tidak
+ada insight. Model Insight hanya merangkai kalimat dan tetap melewati cek angka; bila gagal,
+kalimat kode yang dipakai.
+
+| Baris                                                       | Bukti                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Hasil |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| Unit: tiap fallback, urutan, tanpa data                     | `tests/test_digest_insight.py` 12 tes: (a) dengan/tanpa sektor seri dan sebelum ringkasan pertama, (b) naik/turun/sama dan ambang 3, (c), (d), (e), 0 proposal → tanpa insight, urutan sektor > a > b > c > d, cek angka memakai JSON kandidat                                                                                                                                                                                                                   | Lulus |
+| Run: fallback terkirim, angka karangan model ditolak        | `tests/test_digest_run.py` RKS-09 (kalimat model dipakai), RKS-10 (model menulis "3 dari 7" → kalimat kode "2 dari 2 proposal baru masuk Sangat cocok atau Cocok."), RKS-11 (pratinjau menampilkan kandidat fallback)                                                                                                                                                                                                                                            | Lulus |
+| Produksi: `POST /digest/run?slot=17.00&dryRun=true` (kunci) | 200. Teks berakhir `Yang menarik: minggu ini ada 3 proposal f&b, minggu lalu belum ada.`; `insightCandidates` `[{"sektor": "f&b", "mingguIni": 3, "mingguLalu": 0}]`; `wouldSkip: true` (slot 17.00 hari ini sudah terkirim), tidak ada pesan WA                                                                                                                                                                                                                 | Lulus |
+| Produksi: angka pratinjau = hitung ulang Firestore          | Hitung ulang terpisah (`proposals`, 9 dokumen): belum ditanggapi 7 = Sangat cocok 2 (Kopi Teras Senja 100, Kelas Kode Rakyat 85,6), Cocok 2, Tidak cocok 2, Perlu dicek manual 1; baru sejak `digests/2026-10-21-0900` (`sentAt` 20.40 WIB) 2; f&b minggu ini 3, minggu lalu 0 — identik                                                                                                                                                                         | Lulus |
+| Produksi: fallback pada data yang sama                      | Data produksi saat ini memenuhi aturan sektor, jadi fallback tidak tampil di pratinjau. `digest.collect` dijalankan lokal (baca saja) ke Firestore produksi: bila sektor diam, fallback yang terpilih adalah (c) `ada 1 proposal Perlu dicek manual yang belum ditanggapi.` — sesuai 1 Perlu dicek manual di atas. (a) tidak berlaku karena 2 proposal baru (Saku Hukum, PT Hanum Fashion) keduanya Tidak cocok; (b) tidak berlaku karena minggu lalu 0 proposal | Lulus |
+
+Fallback belum terlihat di pesan WhatsApp sungguhan: slot hari ini sudah terkirim dan uji ini
+tidak mengirim pesan. Ringkasan 09.00 berikutnya akan memakai aturan baru.
+
+### UC9 — pertanyaan dana
+
+Filter dana diuji di `tests/test_assistant_tools.py`; jawaban Asisten di produksi dicatat di
+[`asisten.md`](asisten.md#uji-uc5--uc9).
+
+### Gate
+
+- `cd services/api && uv run pytest -q`: exit 0, 286 lolos, 0 gagal (sebelum perubahan: 265).
+- `uvx ruff check aisa/digest.py aisa/assistant tests/test_digest.py tests/test_assistant_tools.py tests/test_digest_run.py tests/test_digest_insight.py`:
+  36 temuan, semuanya sudah ada sebelum perubahan (UP045/UP017/I001/RUF100/RET501/BLE001);
+  berkas tes baru bersih.

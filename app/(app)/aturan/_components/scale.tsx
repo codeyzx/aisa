@@ -13,10 +13,10 @@ import { num } from './helpers'
 const BIN = 4
 
 const SOFT: Record<Category, string> = {
-  sangat_cocok: 'bg-category-1/15 border-category-1',
-  cocok: 'bg-category-2/15 border-category-2',
-  kurang_cocok: 'bg-category-3/15 border-category-3',
-  tidak_cocok: 'bg-category-4/20 border-category-4',
+  sangat_cocok: 'bg-category-1-fill/15 border-category-1-fill',
+  cocok: 'bg-category-2-fill/15 border-category-2-fill',
+  kurang_cocok: 'bg-category-3-fill/15 border-category-3-fill',
+  tidak_cocok: 'bg-category-4-fill/20 border-category-4-fill',
 }
 
 /**
@@ -76,7 +76,8 @@ export function Scale({
                       <div
                         key={part.category}
                         className={cn(
-                          'w-full first:rounded-b-[2px] last:rounded-t-[3px]',
+                          // A card-coloured edge between stacked kategori fills.
+                          'w-full border-card not-last:border-t-2 first:rounded-b-[2px] last:rounded-t-[3px]',
                           CATEGORY_DOT[part.category],
                         )}
                         style={{ height: `${(part.count / max) * 100}%` }}

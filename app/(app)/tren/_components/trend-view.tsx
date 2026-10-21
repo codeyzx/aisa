@@ -13,18 +13,14 @@ import {
 } from 'recharts'
 
 import { CATEGORY_LABEL } from '@/features/aisa/aisa.labels'
-import { CATEGORIES, type Category } from '@/features/aisa/aisa.schema'
+import { CATEGORIES } from '@/features/aisa/aisa.schema'
 import { LOCALE } from '@/lib/format/locale'
 import { formatDecimal, formatNumber } from '@/lib/format/number'
 
+import { CATEGORY_FILL } from '../../_components/badges'
+
 import type { TrendData } from '../trend-data'
 
-const COLOR: Record<Category, string> = {
-  sangat_cocok: 'var(--category-1)',
-  cocok: 'var(--category-2)',
-  kurang_cocok: 'var(--category-3)',
-  tidak_cocok: 'var(--category-4)',
-}
 const INITIAL = { width: 320, height: 200 }
 const MANUAL_COLOR = 'var(--muted-foreground)'
 const MANUAL_LABEL = 'Perlu dicek manual'
@@ -75,7 +71,10 @@ export function TrendCharts({
         <div className="a-legend">
           {CATEGORIES.map((category) => (
             <span key={category}>
-              <span className="a-sw" style={{ background: COLOR[category] }} />
+              <span
+                className="a-sw"
+                style={{ background: CATEGORY_FILL[category] }}
+              />
               {CATEGORY_LABEL[category]}
             </span>
           ))}
@@ -118,7 +117,10 @@ export function TrendCharts({
                   dataKey={category}
                   name={CATEGORY_LABEL[category]}
                   stackId="proposal"
-                  fill={COLOR[category]}
+                  fill={CATEGORY_FILL[category]}
+                  // A card-coloured outline leaves a gap between stacked fills.
+                  stroke="var(--card)"
+                  strokeWidth={1}
                 />
               ))}
               <Bar

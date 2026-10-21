@@ -50,6 +50,7 @@ import { formatDecimal, formatNumber, formatScore } from '@/lib/format/number'
 import { cn } from '@/lib/utils'
 
 import {
+  CATEGORY_FILL,
   CategoryBadge,
   DECISION_LABEL,
   ScoreBar,
@@ -60,13 +61,6 @@ import { dayLabel } from '../../_components/daily-window'
 import { ProposalTrendChart } from './proposal-trend-chart'
 import { Timeline } from './timeline'
 import { TREND_WEEKS, weeklyTrend } from './weekly-trend'
-
-const COLOR: Record<Category, string> = {
-  sangat_cocok: 'var(--category-1)',
-  cocok: 'var(--category-2)',
-  kurang_cocok: 'var(--category-3)',
-  tidak_cocok: 'var(--category-4)',
-}
 
 /** The categories "Disarankan untuk Anda" and "Paling cocok" draw from. */
 const RECOMMENDED: ReadonlySet<Category> = new Set(['sangat_cocok', 'cocok'])
@@ -455,16 +449,23 @@ export function DashboardOverview({
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-4">
-            <div className="flex h-3 overflow-hidden rounded-full bg-muted">
-              {CATEGORIES.map((category) => (
-                <span
-                  key={category}
-                  style={{
-                    width: `${share(counts[category])}%`,
-                    background: COLOR[category],
-                  }}
-                />
-              ))}
+            {/* The 2px gaps show the card, so neighbouring kategori fills never
+                touch; proposals without a kategori are their own muted segment. */}
+            <div className="flex h-3 gap-0.5 overflow-hidden rounded-full">
+              {CATEGORIES.filter((category) => counts[category] > 0).map(
+                (category) => (
+                  <span
+                    key={category}
+                    style={{
+                      width: `${share(counts[category])}%`,
+                      background: CATEGORY_FILL[category],
+                    }}
+                  />
+                ),
+              )}
+              {uncategorized || !pending.length ? (
+                <span className="flex-1 bg-muted" />
+              ) : null}
             </div>
             <ul
               className="space-y-1"
@@ -480,7 +481,7 @@ export function DashboardOverview({
                       <span
                         aria-hidden
                         className="size-2.5 rounded-[3px]"
-                        style={{ background: COLOR[category] }}
+                        style={{ background: CATEGORY_FILL[category] }}
                       />
                       {CATEGORY_LABEL[category]}
                     </span>

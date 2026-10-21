@@ -26,7 +26,7 @@ import type { WeeklyTrend } from './weekly-trend'
 
 const config = {
   total: { label: 'Proposal masuk', color: 'var(--chart-2)' },
-  sangatCocok: { label: 'Sangat cocok', color: 'var(--category-1)' },
+  sangatCocok: { label: 'Sangat cocok', color: 'var(--category-1-fill)' },
 } satisfies ChartConfig
 
 const angka = (value: number) => formatDecimal(value, { max: 1 })

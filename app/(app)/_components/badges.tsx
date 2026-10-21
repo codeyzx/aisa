@@ -45,8 +45,10 @@ export const CRITERION_COLOR: Record<Criterion, string> = {
   bisnis: 'bg-criterion-bisnis',
 }
 
-// Category colours read the `--category-*` tokens (text contrast ≥ 4.5:1); the
-// text label always travels with the colour, so colour is never the only cue.
+// Category colours: text reads `--category-N` (≥ 4.5:1 on its soft background
+// and on the card); dots, bars and chart fills read `--category-N-fill` (≥ 3:1
+// on the card). The text label always travels with the colour, so colour is
+// never the only cue.
 const CATEGORY_STYLE: Record<Category, string> = {
   sangat_cocok: 'border-category-1/30 bg-category-1-soft text-category-1',
   cocok: 'border-category-2/30 bg-category-2-soft text-category-2',
@@ -55,10 +57,18 @@ const CATEGORY_STYLE: Record<Category, string> = {
 }
 
 export const CATEGORY_DOT: Record<Category, string> = {
-  sangat_cocok: 'bg-category-1',
-  cocok: 'bg-category-2',
-  kurang_cocok: 'bg-category-3',
-  tidak_cocok: 'bg-category-4',
+  sangat_cocok: 'bg-category-1-fill',
+  cocok: 'bg-category-2-fill',
+  kurang_cocok: 'bg-category-3-fill',
+  tidak_cocok: 'bg-category-4-fill',
+}
+
+/** The same fills as CSS values, for chart libraries that take a colour string. */
+export const CATEGORY_FILL: Record<Category, string> = {
+  sangat_cocok: 'var(--category-1-fill)',
+  cocok: 'var(--category-2-fill)',
+  kurang_cocok: 'var(--category-3-fill)',
+  tidak_cocok: 'var(--category-4-fill)',
 }
 
 export function CategoryBadge({
@@ -144,12 +154,12 @@ type Thresholds = Pick<
 export function scoreTone(score: number, thresholds: Thresholds | null) {
   if (!thresholds) return { bar: 'bg-primary', text: 'text-foreground' }
   if (score >= thresholds.sangatCocok)
-    return { bar: 'bg-category-1', text: 'text-category-1' }
+    return { bar: 'bg-category-1-fill', text: 'text-category-1' }
   if (score >= thresholds.cocok)
-    return { bar: 'bg-category-2', text: 'text-category-2' }
+    return { bar: 'bg-category-2-fill', text: 'text-category-2' }
   if (score >= thresholds.kurangCocok)
-    return { bar: 'bg-category-3', text: 'text-category-3' }
-  return { bar: 'bg-category-4', text: 'text-category-4' }
+    return { bar: 'bg-category-3-fill', text: 'text-category-3' }
+  return { bar: 'bg-category-4-fill', text: 'text-category-4' }
 }
 
 export function ScoreBar({

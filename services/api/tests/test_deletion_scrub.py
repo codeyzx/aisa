@@ -109,3 +109,11 @@ def test_delete_scrubs_name_in_unlinked_job_titles_and_steps(seeded):
     assert seeded.get("jobs/twin")["title"] == f"Menilai proposal {NAME}"
     assert seeded.get("jobs/twin/steps/001")["action"] == f"Nilai {NAME}"
     assert seeded.get("jobs/longer")["title"] == f"Perintah: undang {NAME}2"
+
+
+def test_deleting_the_same_id_again_keeps_the_earlier_deletion_reason(seeded):
+    domain.delete_proposal("p1", "permintaan founder", Via.dashboard)
+    seed_proposal(seeded, "p1", NAME, category="cocok", score=68.1)  # same PDF uploaded again
+    domain.delete_proposal("p1", "QA cleanup", Via.dashboard)
+    rows = [h for h in seeded.all("history").values() if h.get("action") == "proposal_dihapus"]
+    assert sorted(h["reason"] for h in rows) == ["QA cleanup", "permintaan founder"]

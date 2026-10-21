@@ -247,6 +247,10 @@ def delete_proposal(pid: str, reason: str, via: Via) -> dict:
                 filter=FieldFilter("proposalIds", "array_contains", pid)).stream():
             yield "delete", s.reference, None
         for s in fs.collection("history").where(filter=eq("proposalId", pid)).stream():
+            # An earlier deletion of the same id (the same PDF uploaded again) is already
+            # nameless; scrubbing it again would erase that deletion's reason from the audit.
+            if s.get("action") == "proposal_dihapus":
+                continue
             yield "update", s.reference, scrubbed_history()
         # Bulk responses list names in the detail without a proposalId.
         for s in fs.collection("history").where(filter=eq("action", "tanggapan_massal")).stream():

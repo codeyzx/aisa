@@ -4,6 +4,7 @@ Row IDs (PWA-) are the ones in docs/qa/api.md."""
 from __future__ import annotations
 
 import time
+from contextlib import nullcontext
 from datetime import timedelta
 
 import pytest
@@ -173,3 +174,14 @@ def test_pwa_o14_lanjut_resumes_keeps_last_stop_and_runs_queue(seeded, env):
 def test_pwa_o15_unpaused_question_goes_to_the_asisten(seeded, asked):
     assert handle("berapa proposal minggu ini?") == "jawaban"
     assert asked == ["berapa proposal minggu ini?"]
+
+
+def test_asisten_failure_on_whatsapp_still_replies_with_the_fallback(seeded, env):
+    def broken(phone, text, on_event):
+        raise RuntimeError("agent down")
+
+    env.setattr(assistant_client, "_ask_local", broken)
+    env.setattr(assistant_client, "_Heartbeat", lambda phone, stopped: nullcontext())
+    assert handle("berapa proposal minggu ini?") == assistant_client.UNAVAILABLE_REPLY
+    (j,) = jobs(seeded)
+    assert j["kind"] == "asisten" and j["status"] == "gagal"

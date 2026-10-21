@@ -386,10 +386,18 @@ class _Heartbeat:
 
 # ---------- public ----------
 
+UNAVAILABLE_REPLY = "Maaf, asisten sedang tidak bisa dihubungi. Coba lagi sebentar."
+
+
+class Unavailable(Exception):
+    """The Asisten failed to answer; its `asisten` job is already recorded as failed.
+    Each caller decides how to show it: WhatsApp sends UNAVAILABLE_REPLY as a message, the
+    dashboard returns an error so the panel can offer a retry."""
+
 
 def ask(phone: str, text: str, notify: bool = False) -> str | None:
-    """The Asisten's reply, or None when STOP cancelled it (nothing must be sent).
-    `notify` shows the typing indicator and the wait message in the manager's chat."""
+    """The Asisten's reply, or None when STOP cancelled it (nothing must be sent). Raises
+    Unavailable when the agent fails. `notify` shows the typing indicator and the wait message in the manager's chat."""
     remote = bool(settings().assistant_engine_id)
     # The label names the model the agent was deployed with (ASSISTANT_MODEL, the same
     # variable agent.py reads), not rules.models.asisten, which changes nothing at runtime.
@@ -415,7 +423,7 @@ def ask(phone: str, text: str, notify: bool = False) -> str | None:
     except Exception as e:
         rec.answer(status="gagal", error=str(e)[:500])
         job.finish(JobStatus.gagal)
-        return "Maaf, asisten sedang tidak bisa dihubungi. Coba lagi sebentar."
+        raise Unavailable from e
     rec.answer()
     job.finish(JobStatus.selesai)
     return answer.strip() or NO_ANSWER

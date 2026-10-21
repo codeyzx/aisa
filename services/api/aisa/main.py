@@ -260,5 +260,9 @@ def api_assistant_ask(body: AskIn) -> dict:
         raise HTTPException(422, "pertanyaan kosong")
     if db.is_paused():
         return {"answer": DASHBOARD_PAUSED_REPLY}
-    answer = assistant_client.ask(body.session, text)
+    try:
+        answer = assistant_client.ask(body.session, text)
+    except assistant_client.Unavailable:
+        # An error, not an answer, so the panel shows it with a retry instead of as a reply.
+        raise HTTPException(503, assistant_client.UNAVAILABLE_REPLY) from None
     return {"answer": DASHBOARD_CANCELLED_REPLY if answer is None else answer}

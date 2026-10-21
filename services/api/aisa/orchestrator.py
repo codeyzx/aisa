@@ -153,7 +153,10 @@ def handle(phone: str, text: str) -> str | None:
         # STOP pauses all AI work, the Asisten included; commands still run.
         if db.is_paused():
             return PAUSED_REPLY
-        return assistant_client.ask(phone, text, notify=True)
+        try:
+            return assistant_client.ask(phone, text, notify=True)
+        except assistant_client.Unavailable:
+            return assistant_client.UNAVAILABLE_REPLY
     job = JobLog(JobKind.perintah, "Orchestrator", command_title(cmd))
     try:
         with job.code_step(f"Jalankan perintah {type(cmd).__name__.lower()}", "kode",

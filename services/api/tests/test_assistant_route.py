@@ -81,3 +81,16 @@ def test_answer_cancelled_by_stop_says_so(client, env):
     env.setattr(ac, "ask", lambda session, text: None)
     r = ask(client, {"session": SESSION, "text": "halo"})
     assert r.status_code == 200 and r.json() == {"answer": main.DASHBOARD_CANCELLED_REPLY}
+
+
+def test_agent_failure_is_a_503_and_a_failed_asisten_job(client, fs, env, sent):
+    def broken(session, text, on_event):
+        raise RuntimeError("agent down")
+
+    env.setattr(ac, "_ask_local", broken)
+    r = ask(client, {"session": SESSION, "text": "halo"})
+    # An error, not an answer: the panel shows it with "Coba lagi" instead of as a reply bubble.
+    assert r.status_code == 503 and r.json() == {"detail": ac.UNAVAILABLE_REPLY}
+    (job,) = fs.all("jobs").values()
+    assert job["kind"] == "asisten" and job["status"] == "gagal"
+    assert sent == []

@@ -153,8 +153,8 @@ Named so each absence reads as a decision rather than a gap.
 
 - **No Vercel.** Container self-host is the target —
   [the deployment model](deployment-model.md).
-- **No nonce-based CSP.** Only `frame-ancestors` and the headers that are true without a
-  nonce ship; the reasoning is owned by [http-api](../reference/contracts/http-api.md).
+- **No nonce-based CSP.** Only `frame-ancestors`, `frame-src` and the headers that are
+  true without a nonce ship; the reasoning is owned by [http-api](../reference/contracts/http-api.md).
 - **No live-production safety for migrations by convention alone.** Reaching production is
   a migration's whole purpose — the inverse of the seeder's guard — so the runner is
   dry-run by default and refuses to apply until the operator types the target project id

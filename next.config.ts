@@ -40,7 +40,21 @@ const securityHeaders = [
   // Clickjacking. `frame-ancestors` is the CSP directive that supersedes
   // X-Frame-Options, and it is safe to ship alone — it needs no nonce and no
   // script policy, so it does not force dynamic rendering.
-  { key: 'Content-Security-Policy', value: "frame-ancestors 'none'" },
+  //
+  // `frame-src` is the other direction: which origins THIS app may embed. The
+  // proposal page's "Pratinjau deck" panel frames exactly two — the signed GCS
+  // link of an uploaded deck (served inline as a PDF from
+  // storage.googleapis.com) and Drive's `/preview` viewer for a Form deck. Any
+  // other frame is refused. Like `frame-ancestors` it needs no nonce. Firebase
+  // Auth's own helper iframe (`<authDomain>/__/auth/iframe`, which the SDK may
+  // load ahead of time on mobile) is refused too, and is not needed: sign-in is
+  // `signInWithEmailAndPassword`. The fork that adds `signInWithPopup` (see
+  // Cross-Origin-Opener-Policy below) must also add its auth domain here.
+  {
+    key: 'Content-Security-Policy',
+    value:
+      "frame-ancestors 'none'; frame-src https://storage.googleapis.com https://drive.google.com",
+  },
   // Defence in depth for the same thing: frame-ancestors is unsupported in some
   // older browsers, and this is the one X-Frame-Options still buys.
   { key: 'X-Frame-Options', value: 'DENY' },

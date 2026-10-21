@@ -384,7 +384,8 @@ public hostname, or leave `Host` as the public hostname. A proxy that rewrites
 ## Security headers
 
 A **static** baseline in `next.config.ts`'s `headers()`, applied to `/:path*` —
-pages and route handlers alike: `Content-Security-Policy: frame-ancestors 'none'`,
+pages and route handlers alike: `Content-Security-Policy: frame-ancestors 'none';
+frame-src https://storage.googleapis.com https://drive.google.com`,
 `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
 `Permissions-Policy`, `Cross-Origin-Opener-Policy`,
 `Cross-Origin-Resource-Policy`, `Strict-Transport-Security`, `X-Robots-Tag`.
@@ -399,6 +400,14 @@ that adds `signInWithPopup` must revisit `Cross-Origin-Opener-Policy` (that flow
 talks back through `window.opener`, which the header severs), and a fork that
 serves `/_next/static` from a CDN host relaxes `Cross-Origin-Resource-Policy` to
 `same-site`.
+
+**`frame-src` lists the only two origins this app embeds**: the signed GCS link of an
+uploaded deck and Drive's `/preview` viewer for a Form deck, both shown in the proposal
+page's "Pratinjau deck" panel. Every other frame is refused, including the helper iframe
+Firebase Auth may load ahead of time on mobile — harmless while sign-in is
+`signInWithEmailAndPassword`, so the `signInWithPopup` fork above must also add its auth
+domain to `frame-src`. A preview link on any other host is blocked inside the panel by
+the browser; the panel's **Buka di tab baru** still opens it.
 
 `Cache-Control: no-store` is **not** here: it belongs to the envelope, not to the
 baseline, and is set in `lib/api/response.ts` so no route can forget it.

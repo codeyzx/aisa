@@ -90,7 +90,8 @@ const EXPECTED_SIGTERM_EXIT = 143
  * Keep in sync with `securityHeaders` in next.config.ts.
  */
 const EXPECTED_SECURITY_HEADERS: Record<string, string> = {
-  'content-security-policy': "frame-ancestors 'none'",
+  'content-security-policy':
+    "frame-ancestors 'none'; frame-src https://storage.googleapis.com https://drive.google.com",
   'x-frame-options': 'DENY',
   'x-content-type-options': 'nosniff',
   'referrer-policy': 'strict-origin-when-cross-origin',

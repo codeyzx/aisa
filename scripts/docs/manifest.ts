@@ -210,6 +210,11 @@ export const docsManifest: DocEntry[] = [
     type: 'reference',
     normative: false,
   },
+  {
+    path: 'docs/qa/panduan-uji/05-biaya-ai.md',
+    type: 'reference',
+    normative: false,
+  },
 
   // Generated reference facts.
   ...generatedReferenceDocs,

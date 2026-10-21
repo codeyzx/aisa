@@ -17,12 +17,13 @@ apa yang seharusnya terlihat, dan apa artinya bila hasilnya berbeda.
 
 ## Urutan yang disarankan
 
-| Berkas                                                                                   | Isi                                                                                                         | Kode use case                  |
-| ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------ |
-| [`01-masuk-dashboard-tren.md`](01-masuk-dashboard-tren.md)                               | Masuk dan keluar, sidebar, header (cari ⌘K, notifikasi, tema, menu akun), Dashboard, Tren                   | UC-DSB                         |
-| [`02-proposal.md`](02-proposal.md)                                                       | Daftar proposal, filter, CSV, aksi massal, unggah deck, detail, keputusan, koreksi, hapus data              | UC-PRP                         |
-| [`03-aktivitas-riwayat-aturan-pengaturan.md`](03-aktivitas-riwayat-aturan-pengaturan.md) | Aktivitas AI, Riwayat, Aturan penilaian, Pengaturan (termasuk STOP/LANJUT)                                  | UC-AKT, UC-RWY, UC-ATR, UC-SET |
-| [`04-tanya-aisa-whatsapp-form.md`](04-tanya-aisa-whatsapp-form.md)                       | Tanya AISA di dashboard, perintah dan pertanyaan lewat WhatsApp, ringkasan 09.00/17.00, Google Form founder | UC-AST, UC-WA, UC-FRM          |
+| Berkas                                                                                   | Isi                                                                                                                       | Kode use case                  |
+| ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| [`01-masuk-dashboard-tren.md`](01-masuk-dashboard-tren.md)                               | Masuk dan keluar, sidebar, header (cari ⌘K, notifikasi, tema, menu akun), Dashboard, Tren                                 | UC-DSB                         |
+| [`02-proposal.md`](02-proposal.md)                                                       | Daftar proposal, filter, CSV, aksi massal, unggah deck, detail, keputusan, koreksi, hapus data                            | UC-PRP                         |
+| [`03-aktivitas-riwayat-aturan-pengaturan.md`](03-aktivitas-riwayat-aturan-pengaturan.md) | Aktivitas AI, Riwayat, Aturan penilaian, Pengaturan (termasuk STOP/LANJUT)                                                | UC-AKT, UC-RWY, UC-ATR, UC-SET |
+| [`04-tanya-aisa-whatsapp-form.md`](04-tanya-aisa-whatsapp-form.md)                       | Tanya AISA di dashboard, perintah dan pertanyaan lewat WhatsApp, ringkasan 09.00/17.00, Google Form founder               | UC-AST, UC-WA, UC-FRM          |
+| [`05-biaya-ai.md`](05-biaya-ai.md)                                                       | Biaya AI: total dan biaya per proposal, kalkulator AISA vs cek manual, rincian per agent, biaya per hari, cara menghitung | UC-BYA                         |
 
 ## Mencatat hasil
 

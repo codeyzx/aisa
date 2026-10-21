@@ -8,7 +8,7 @@ import type { AisaApiOutcome } from './outcome'
 export type { AisaApiOutcome } from './outcome'
 
 /** Bounded so a hung API cannot hold a server action open indefinitely. */
-const TIMEOUT_MS = 30_000
+const DEFAULT_TIMEOUT_MS = 30_000
 
 /** FastAPI answers `{detail: string}` or `{detail: [{msg, loc}]}` on failure. */
 function detailText(body: unknown): string | null {
@@ -37,6 +37,8 @@ export async function callAisaApi<T>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
   body?: unknown,
+  /** A route that legitimately runs long (the Asisten's model turns) widens this. */
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<AisaApiOutcome<T>> {
   const { baseUrl, apiKey } = getAisaApiConfig()
   const headers: Record<string, string> = { 'X-AISA-Key': apiKey }
@@ -54,9 +56,20 @@ export async function callAisaApi<T>(
       headers,
       ...(payload === undefined ? {} : { body: payload }),
       cache: 'no-store',
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: AbortSignal.timeout(timeoutMs),
     })
   } catch (error) {
+    // A timeout means the API took the request and is still working on it, so
+    // it must not read as "unreachable" — the work may still land.
+    if (error instanceof DOMException && error.name === 'TimeoutError') {
+      log.warn('[aisa-api] timed out', { path, timeoutMs })
+      return {
+        ok: false,
+        status: null,
+        error:
+          'aisa-api belum menjawab dalam batas waktu. Prosesnya mungkin masih berjalan; coba lagi sebentar lagi.',
+      }
+    }
     log.warn('[aisa-api] unreachable', { path, error })
     return {
       ok: false,

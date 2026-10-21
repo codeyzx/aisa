@@ -327,3 +327,33 @@ export async function uploadDeckAction(
     )
   })
 }
+
+const AskTextSchema = z.string().trim().min(1).max(4000)
+const ConversationIdSchema = z.string().regex(/^[A-Za-z0-9]{1,40}$/)
+
+/**
+ * "Tanya AISA": one question to the same Asisten the manager reaches over
+ * WhatsApp (read-only tools). The session id is built here from the signed-in
+ * user's uid, never taken whole from the client, so a dashboard conversation
+ * never mixes with another user's or with a manager phone's WhatsApp session.
+ * `conversationId` names one conversation of that user: "Percakapan baru"
+ * starts a new one, so the Asisten does not carry the old context into it.
+ */
+export async function askAssistantAction(
+  conversationId: string,
+  text: string,
+): ApiAction<{ answer: string }> {
+  return runAction(AISA_READ, async (session) =>
+    callAisaApi<{ answer: string }>(
+      'POST',
+      '/api/assistant/ask',
+      {
+        session: `dashboard-${session.uid}-${ConversationIdSchema.parse(conversationId)}`,
+        text: AskTextSchema.parse(text),
+      },
+      // aisa-api waits up to 180s for the Asisten's turn; wait slightly longer
+      // so the API's own outcome, not an abort here, is what the panel shows.
+      190_000,
+    ),
+  )
+}

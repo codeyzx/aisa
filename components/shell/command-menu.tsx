@@ -40,6 +40,22 @@ interface CommandMenuProps {
 
 const RULES_HREF = '/aturan'
 
+/**
+ * Every typed word must appear in the item, in any order. cmdk's default is a
+ * fuzzy subsequence score, under which "kopi" matched a startup whose text
+ * merely held k…o…p…i in order.
+ */
+function matchesEveryWord(value: string, search: string): number {
+  const text = value.toLowerCase()
+  return search
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((word) => text.includes(word))
+    ? 1
+    : 0
+}
+
 /** Global search (⌘K / Ctrl+K): the pages this role can open, every loaded proposal, and a few commands. */
 export function CommandMenu({ pages, proposals }: CommandMenuProps) {
   const [open, setOpen] = useState(false)
@@ -82,11 +98,15 @@ export function CommandMenu({ pages, proposals }: CommandMenuProps) {
       </button>
       <CommandDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => {
+          setOpen(next)
+          // A closed search starts empty next time, however it was closed.
+          if (!next) setSearch('')
+        }}
         title="Pencarian"
         description="Cari halaman, proposal, atau perintah"
       >
-        <Command>
+        <Command filter={matchesEveryWord}>
           <CommandInput
             placeholder="Ketik untuk mencari…"
             value={search}
@@ -162,7 +182,7 @@ export function CommandMenu({ pages, proposals }: CommandMenuProps) {
                 onSelect={() => run(() => setTheme(dark ? 'light' : 'dark'))}
               >
                 {dark ? <SunIcon /> : <MoonIcon />}
-                {dark ? 'Pakai tema terang' : 'Pakai tema gelap'}
+                {dark ? 'Gunakan mode terang' : 'Gunakan mode gelap'}
               </CommandItem>
             </CommandGroup>
           </CommandList>

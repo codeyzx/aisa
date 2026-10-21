@@ -67,8 +67,33 @@ export interface Answer {
 /** Proposal id `/intake/upload` answers with; a seeded queued upload. */
 export const UPLOAD_ANSWER_ID = 'upload-seedlogistiknusa'
 
+/**
+ * The links `GET /api/proposals/{id}/deck-url` answers with. They point at the
+ * real hosts the dashboard's `frame-src` allows, so a spec intercepts them with
+ * `page.route` (see `proposal-detail.spec.ts`) instead of reaching Google: the
+ * container's CSP must not be loosened to admit a loopback mock.
+ */
+export function deckLinkFor(proposalId: string) {
+  if (proposalId.startsWith('form-')) {
+    const drive = `https://drive.google.com/file/d/drive-${proposalId.slice('form-'.length)}`
+    return {
+      url: `${drive}/view`,
+      previewUrl: `${drive}/preview`,
+      expiresIn: null,
+    }
+  }
+  const signed = `https://storage.googleapis.com/aisa-e2e/decks/${proposalId}.pdf?X-Goog-Signature=e2e`
+  return { url: signed, previewUrl: signed, expiresIn: 900 }
+}
+
 /** What each real route answers on success, shaped like `main.py`'s. */
 function defaultAnswer(method: string, path: string, body: unknown): Answer {
+  const deck = /^\/api\/proposals\/([^/]+)\/deck-url$/.exec(path)
+  if (method === 'GET' && deck)
+    return {
+      status: 200,
+      body: deckLinkFor(decodeURIComponent(deck[1] as string)),
+    }
   const proposal = /^\/api\/proposals\/([^/]+)(\/response|\/correction)?$/.exec(
     path,
   )

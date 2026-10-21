@@ -137,3 +137,29 @@ test('DSB-63 a viewer gets no Unggah pitch deck button', async ({ page }) => {
     ).toHaveCount(0)
   }
 })
+
+test('DSB-64 a viewer can preview a deck, which only reads', async ({
+  page,
+  aisaApi,
+}) => {
+  // `getDeckUrlAction` is gated on `aisa:read`, the capability a viewer holds:
+  // reading the deck the AI quoted is part of reading the proposal.
+  await page.route('https://storage.googleapis.com/**', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/pdf',
+      body: '%PDF-1.4\n%%EOF\n',
+    }),
+  )
+  await page.goto('/proposal/upload-seedklinikdesa')
+  await page
+    .getByRole('button', { name: 'Buka pratinjau deck di halaman 2' })
+    .first()
+    .click()
+  await expect(
+    page.getByRole('dialog', { name: 'Pratinjau deck' }).locator('iframe'),
+  ).toHaveAttribute('src', /#page=2$/u)
+  expect(aisaApi.calls.map(({ method, path }) => `${method} ${path}`)).toEqual([
+    'GET /api/proposals/upload-seedklinikdesa/deck-url',
+  ])
+})

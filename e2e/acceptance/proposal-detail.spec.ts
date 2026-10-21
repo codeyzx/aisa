@@ -9,6 +9,7 @@ import type { Locator, Page } from '@playwright/test'
 
 import { expect, signInAs, test } from './fixtures.ts'
 import { card } from './locators.ts'
+import { deckLinkFor } from './mock-aisa-api.ts'
 
 function criterion(page: Page, key: string): Locator {
   return page.locator(`li[data-criterion="${key}"]`)
@@ -288,4 +289,191 @@ test('DSB-28 a responded proposal shows who responded, when, through what and th
   await expect(
     keputusan.getByRole('button', { name: /^Pantau/u }),
   ).toBeEnabled()
+})
+
+/**
+ * The preview frames the real hosts `deckLinkFor` answers with, so each spec
+ * intercepts them: a hit proves the browser was allowed to frame that origin
+ * under the shipped `frame-src`, without the suite reaching Google.
+ */
+async function interceptDeckHosts(page: Page): Promise<string[]> {
+  const framed: string[] = []
+  await page.route('https://storage.googleapis.com/**', async (route) => {
+    framed.push(route.request().url())
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/pdf',
+      body: '%PDF-1.4\n%%EOF\n',
+    })
+  })
+  await page.route('https://drive.google.com/**', async (route) => {
+    framed.push(route.request().url())
+    await route.fulfill({
+      status: 200,
+      contentType: 'text/html',
+      body: '<p>Drive</p>',
+    })
+  })
+  return framed
+}
+
+const previewPanel = (page: Page) =>
+  page.getByRole('dialog', { name: 'Pratinjau deck' })
+
+test('DSB-31 Pratinjau deck opens the uploaded deck in a panel and keeps a fresh link on reopen', async ({
+  page,
+  aisaApi,
+}) => {
+  const framed = await interceptDeckHosts(page)
+  const link = deckLinkFor('upload-seedklinikdesa')
+  await page.goto('/proposal/upload-seedklinikdesa')
+
+  // Nothing is asked of the API until the panel opens.
+  await expect(
+    page.getByRole('button', { name: 'Pratinjau deck', exact: true }),
+  ).toBeVisible()
+  expect(aisaApi.calls).toEqual([])
+
+  await page
+    .getByRole('button', { name: 'Pratinjau deck', exact: true })
+    .click()
+  const panel = previewPanel(page)
+  await expect(panel).toBeVisible()
+  await expect(
+    panel.getByText('Klinik_Desa_pitchdeck.pdf', { exact: true }),
+  ).toBeVisible()
+  await expect(panel.getByText('· 12 halaman', { exact: true })).toBeVisible()
+  const frame = panel.locator('iframe')
+  await expect(frame).toHaveAttribute('src', link.previewUrl)
+  await expect(frame).toHaveAttribute(
+    'title',
+    'Pitch deck Klinik_Desa_pitchdeck.pdf',
+  )
+  await expect(
+    panel.getByRole('link', { name: 'Buka di tab baru' }),
+  ).toHaveAttribute('href', link.url)
+  await expect.poll(() => framed).toEqual([link.previewUrl])
+  expect(aisaApi.calls.map(({ method, path }) => `${method} ${path}`)).toEqual([
+    'GET /api/proposals/upload-seedklinikdesa/deck-url',
+  ])
+
+  await page.keyboard.press('Escape')
+  await expect(panel).toHaveCount(0)
+  // Reopened inside the link's lifetime: the same link, no second request.
+  await page
+    .getByRole('button', { name: 'Pratinjau deck', exact: true })
+    .click()
+  await expect(previewPanel(page).locator('iframe')).toHaveAttribute(
+    'src',
+    link.previewUrl,
+  )
+  expect(aisaApi.calls).toHaveLength(1)
+})
+
+test('DSB-32 a page citation opens the preview at that page, from the criteria and from Log penilaian', async ({
+  page,
+}) => {
+  await interceptDeckHosts(page)
+  const link = deckLinkFor('upload-seedklinikdesa')
+  await page.goto('/proposal/upload-seedklinikdesa')
+
+  // Seed: criterion n quotes page 2 + n (produk is the third → hal. 4).
+  await criterion(page, 'produk')
+    .getByRole('button', { name: 'Buka pratinjau deck di halaman 4' })
+    .click()
+  const panel = previewPanel(page)
+  await expect(panel.locator('iframe')).toHaveAttribute(
+    'src',
+    `${link.previewUrl}#page=4`,
+  )
+  await expect(panel.getByText('hal. 4', { exact: true })).toBeVisible()
+  await expect(
+    panel.getByRole('link', { name: 'Buka di tab baru' }),
+  ).toHaveAttribute('href', `${link.url}#page=4`)
+  await page.keyboard.press('Escape')
+  await expect(panel).toHaveCount(0)
+
+  await page.getByRole('button', { name: 'Lihat log penilaian' }).click()
+  const log = page.getByRole('dialog', { name: 'Log penilaian' })
+  await log
+    .getByRole('button', { name: 'Buka pratinjau deck di halaman 3' })
+    .click()
+  await expect(panel.locator('iframe')).toHaveAttribute(
+    'src',
+    `${link.previewUrl}#page=3`,
+  )
+  // Closing the preview returns to the log it was opened from.
+  await page.keyboard.press('Escape')
+  await expect(panel).toHaveCount(0)
+  await expect(log).toBeVisible()
+})
+
+test('DSB-33 a Form deck previews in Drive from page 1 and says which page the quote is on', async ({
+  page,
+}) => {
+  const framed = await interceptDeckHosts(page)
+  const link = deckLinkFor('form-seedtanimaju')
+  await page.goto('/proposal/form-seedtanimaju')
+
+  // A Form deck lives in Drive: preview, no "Buka deck" for an upload link.
+  await expect(page.getByRole('button', { name: 'Buka deck' })).toHaveCount(0)
+  await criterion(page, 'tim')
+    .getByRole('button', { name: 'Buka pratinjau deck di halaman 2' })
+    .click()
+  const panel = previewPanel(page)
+  await expect(panel.locator('iframe')).toHaveAttribute('src', link.previewUrl)
+  await expect(panel.getByText('hal. 2', { exact: true })).toBeVisible()
+  await expect(
+    panel.getByText(
+      /^Pratinjau Drive selalu mulai dari halaman 1; gulir ke hal\. 2\./u,
+    ),
+  ).toBeVisible()
+  await expect.poll(() => framed).toEqual([link.previewUrl])
+})
+
+test('DSB-34 with no preview link the panel offers Buka deck instead of a frame', async ({
+  page,
+  aisaApi,
+}) => {
+  const link = deckLinkFor('upload-seedklinikdesa')
+  aisaApi.answerNext({
+    status: 200,
+    body: { url: link.url, previewUrl: null, expiresIn: 900 },
+  })
+  await page.goto('/proposal/upload-seedklinikdesa')
+  await page
+    .getByRole('button', { name: 'Pratinjau deck', exact: true })
+    .click()
+
+  const panel = previewPanel(page)
+  await expect(
+    panel.getByText('Pratinjau tidak tersedia untuk deck ini.'),
+  ).toBeVisible()
+  await expect(panel.locator('iframe')).toHaveCount(0)
+  await expect(panel.getByRole('link', { name: 'Buka deck' })).toHaveAttribute(
+    'href',
+    link.url,
+  )
+})
+
+test('DSB-35 a deck link the API refuses shows its message in the panel with Coba lagi', async ({
+  page,
+  aisaApi,
+}) => {
+  await interceptDeckHosts(page)
+  aisaApi.refuseNext({ status: 404, detail: 'deck tidak ditemukan' })
+  await page.goto('/proposal/upload-seedklinikdesa')
+  await page
+    .getByRole('button', { name: 'Pratinjau deck', exact: true })
+    .click()
+
+  const panel = previewPanel(page)
+  await expect(panel.getByText('Deck tidak bisa dibuka.')).toBeVisible()
+  await expect(panel.getByText('deck tidak ditemukan')).toBeVisible()
+  await panel.getByRole('button', { name: 'Coba lagi' }).click()
+  await expect(panel.locator('iframe')).toHaveAttribute(
+    'src',
+    deckLinkFor('upload-seedklinikdesa').previewUrl,
+  )
+  expect(aisaApi.calls).toHaveLength(2)
 })

@@ -13,7 +13,7 @@
   Python secara langsung.
 - **Untuk** — manajer program (akun Firebase dengan klaim `role`), developer yang
   merawat dashboard ini, dan coding agent yang bekerja di dalamnya.
-- **Outcome** — halaman Dashboard, Proposal, Tren, Aktivitas AI, Riwayat, Aturan
+- **Outcome** — halaman Dashboard, Proposal, Tren, Aktivitas AI, Biaya AI, Riwayat, Aturan
   penilaian, dan Pengaturan yang membaca Firestore di server, plus panel **Tanya AISA**
   yang bertanya ke Asisten lewat `aisa-api`; setiap tombol yang mengubah data memanggil
   `aisa-api` lewat server action dengan header `X-AISA-Key`, jadi Next tidak pernah

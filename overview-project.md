@@ -102,7 +102,7 @@ Contoh: "Fintech yang sangat cocok", "Yang berkualitas tapi di luar fokus", "Ken
 
 ### 7. Dashboard
 
-**Dashboard** · **Proposal** (filter, detail Tahap 1 dan Tahap 2, kutipan halaman, token per proposal) · **Tren** · **Aktivitas AI** · **Riwayat** · **Aturan penilaian** (lihat dan ubah bobot, patokan nilai, cek kecocokan, batas kategori, dan model, dengan pratinjau dampak sebelum disimpan; dasar baseline; kalibrasi) · **Pengaturan** (profil, tampilan, ringkasan WhatsApp, integrasi dengan STOP/LANJUT, privasi dan retensi). Panel **Tanya AISA** di setiap halaman bertanya ke Asisten yang sama dengan WhatsApp, dengan tools baca saja. Tombol **Unggah pitch deck** (PDF) memasukkan proposal lewat alur penilaian yang sama dengan Form. Tombol **Hapus data** di detail proposal menghapusnya atas permintaan founder, dengan alasan wajib.
+**Dashboard** · **Proposal** (filter, detail Tahap 1 dan Tahap 2, kutipan halaman, token per proposal) · **Tren** · **Aktivitas AI** · **Biaya AI** · **Riwayat** · **Aturan penilaian** (lihat dan ubah bobot, patokan nilai, cek kecocokan, batas kategori, dan model, dengan pratinjau dampak sebelum disimpan; dasar baseline; kalibrasi) · **Pengaturan** (profil, tampilan, ringkasan WhatsApp, integrasi dengan STOP/LANJUT, privasi dan retensi). Panel **Tanya AISA** di setiap halaman bertanya ke Asisten yang sama dengan WhatsApp, dengan tools baca saja. Tombol **Unggah pitch deck** (PDF) memasukkan proposal lewat alur penilaian yang sama dengan Form. Tombol **Hapus data** di detail proposal menghapusnya atas permintaan founder, dengan alasan wajib.
 
 ---
 
@@ -115,6 +115,8 @@ Setiap pekerjaan agent (misalnya "Menilai proposal Tani Maju" atau "Ringkasan 09
 - Langkah yang dikerjakan kode (hitung skor, cek kecocokan) diberi label "(kode)" dengan token 0, sehingga terlihat jelas bagian mana yang memakai AI.
 
 Di bagian atas ada ringkasan pemakaian: total token, rata-rata token per proposal dan per ringkasan, jumlah panggilan model, serta grafik token per hari. Token diambil dari `usage_metadata` setiap respons model. Dari detail proposal, tombol "Lihat log penilaian" langsung membuka kartu penilaiannya.
+
+Halaman **Biaya AI** mengubah token itu menjadi perkiraan biaya: token × harga resmi Vertex AI pada tanggal pemakaiannya (`features/aisa/aisa.pricing.ts`, dengan sumber dan tanggal pengambilan), ditampilkan dalam USD dan rupiah dengan kurs acuan JISDOR. Isinya total biaya sejak pencatatan mulai, rata-rata biaya per proposal dinilai, per pertanyaan Asisten, dan per ringkasan WhatsApp, bagian kredit uji coba $300 yang setara, rincian per agent dan token masuk vs keluar, grafik biaya per hari, serta kalkulator **AISA vs cek manual** yang asumsinya (proposal per bulan, menit per deck, menit membaca hasil AISA, gaji analis, jam kerja) bisa diubah dan tersimpan di URL. Total dan grafik dari `dailyStats`, rata-rata dari `jobs`. Halaman ini tidak menghitung Memory Bank, komputasi Agent Runtime, atau panggilan model di luar aplikasi, dan angkanya perkiraan, bukan tagihan.
 
 ## Model
 

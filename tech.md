@@ -29,7 +29,7 @@
 - Ringkasan WhatsApp pukul **09.00 dan 17.00** berisi proposal yang belum ditanggapi, dikelompokkan per kategori
 - Perintah manajer di WhatsApp: tanggapi proposal, koreksi kategori, STOP/LANJUT
 - Asisten tanya data dan saran
-- Dashboard: Dashboard (beranda), Proposal + detail, Tren, Aktivitas AI, Riwayat, Aturan penilaian (lihat, ubah dengan pratinjau dampak, kalibrasi), Pengaturan (profil, tampilan, ringkasan, integrasi dan STOP/LANJUT, privasi dan retensi), panel Tanya AISA ke Asisten, unggah PDF, hapus data atas permintaan founder
+- Dashboard: Dashboard (beranda), Proposal + detail, Tren, Aktivitas AI, Biaya AI (perkiraan biaya dari token × harga Vertex AI, dengan kalkulator perbandingan cek manual), Riwayat, Aturan penilaian (lihat, ubah dengan pratinjau dampak, kalibrasi), Pengaturan (profil, tampilan, ringkasan, integrasi dan STOP/LANJUT, privasi dan retensi), panel Tanya AISA ke Asisten, unggah PDF, hapus data atas permintaan founder
 - Retensi harian: proposal yang diarsipkan lebih lama dari periode retensi dihapus
 
 **Tidak masuk:** saran tindak lanjut otomatis, audio/voice note, OCR, analisis mendalam/memo, banyak pengguna (hanya 1 manajer), pengiriman pesan ke founder, masking dokumen (dikerjakan terpisah), pencarian internet.

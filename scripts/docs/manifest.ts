@@ -185,6 +185,31 @@ export const docsManifest: DocEntry[] = [
   },
   { path: 'docs/qa/asisten.md', type: 'reference', normative: false },
   { path: 'docs/qa/use-case.md', type: 'reference', normative: false },
+  {
+    path: 'docs/qa/panduan-uji/README.md',
+    type: 'reference',
+    normative: false,
+  },
+  {
+    path: 'docs/qa/panduan-uji/01-masuk-dashboard-tren.md',
+    type: 'reference',
+    normative: false,
+  },
+  {
+    path: 'docs/qa/panduan-uji/02-proposal.md',
+    type: 'reference',
+    normative: false,
+  },
+  {
+    path: 'docs/qa/panduan-uji/03-aktivitas-riwayat-aturan-pengaturan.md',
+    type: 'reference',
+    normative: false,
+  },
+  {
+    path: 'docs/qa/panduan-uji/04-tanya-aisa-whatsapp-form.md',
+    type: 'reference',
+    normative: false,
+  },
 
   // Generated reference facts.
   ...generatedReferenceDocs,

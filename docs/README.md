@@ -87,6 +87,12 @@ The AISA data contract — every collection the Python services write and this a
 - [`qa/asisten.md`](qa/asisten.md) — the Asisten's read tools and live answers.
 - [`qa/use-case.md`](qa/use-case.md) — the 14 AISA use cases, their status, and the evidence
   for each.
+- [`qa/panduan-uji/`](qa/panduan-uji/README.md) — step-by-step manual test guides in Indonesian,
+  one per area, written from what is on screen:
+  [masuk, Dashboard, Tren](qa/panduan-uji/01-masuk-dashboard-tren.md),
+  [Proposal](qa/panduan-uji/02-proposal.md),
+  [Aktivitas, Riwayat, Aturan, Pengaturan](qa/panduan-uji/03-aktivitas-riwayat-aturan-pengaturan.md),
+  [Tanya AISA, WhatsApp, Form](qa/panduan-uji/04-tanya-aisa-whatsapp-form.md).
 - [`AI_USAGE.md`](AI_USAGE.md) — how AI coding assistants were used and what people decided.
 - [`reference/contracts/aisa-firestore.md`](reference/contracts/aisa-firestore.md) — collection
   shapes and enum values. The Python Pydantic models are its source of truth; the dashboard

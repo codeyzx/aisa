@@ -80,7 +80,8 @@ describe.skipIf(!reachable)('aisa repo', () => {
     expect(stats[0]!.date < stats[13]!.date).toBe(true)
     const jobs = await listJobsWithSteps(30, 'job-penilaian-tanimaju')
     const tani = jobs.find((job) => job.id === 'job-penilaian-tanimaju')
-    expect(tani?.steps.map((step) => step.seq)).toEqual([1, 2, 3, 4, 5])
+    // The seed writes the seven steps a production assessment records.
+    expect(tani?.steps.map((step) => step.seq)).toEqual([1, 2, 3, 4, 5, 6, 7])
     expect(
       tani?.steps
         .filter((s) => s.actor === 'kode')

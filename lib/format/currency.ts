@@ -25,3 +25,26 @@ const rupiahFormatter = new Intl.NumberFormat(LOCALE, {
 export function formatRupiah(amount: number): string {
   return rupiahFormatter.format(amount)
 }
+
+const usdFormatters = [2, 4].map(
+  (max) =>
+    new Intl.NumberFormat(LOCALE, {
+      style: 'currency',
+      currency: 'USD',
+      currencyDisplay: 'narrowSymbol',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: max,
+    }),
+)
+
+/**
+ * A US-dollar amount, for prices quoted in USD (cloud list prices): `$1,50`.
+ * Below one dollar it keeps up to four decimals, because a per-call cost of
+ * `$0,0148` would otherwise round to `$0,01` and hide the difference between
+ * two models. Same `id-ID` separators as `formatRupiah`.
+ */
+export function formatUsd(amount: number): string {
+  return (
+    usdFormatters[Math.abs(amount) < 1 ? 1 : 0] as Intl.NumberFormat
+  ).format(amount)
+}

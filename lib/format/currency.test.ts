@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { formatRupiah } from './currency'
+import { formatRupiah, formatUsd } from './currency'
 
 /**
  * These pin the money format to `id-ID` + `IDR`, the same way `date.test.ts`
@@ -28,5 +28,18 @@ describe('formatRupiah', () => {
     // currency code, and IDR's CLDR default is 0.
     expect(normalize(0)).toBe('Rp 0')
     expect(normalize(1500)).toBe('Rp 1.500')
+  })
+})
+
+describe('formatUsd', () => {
+  it('uses id-ID separators with a dollar sign', () => {
+    expect(formatUsd(1234.5)).toBe('$1.234,50')
+    expect(formatUsd(1.5)).toBe('$1,50')
+  })
+
+  it('keeps up to four decimals below one dollar, so small costs stay visible', () => {
+    expect(formatUsd(0.0148)).toBe('$0,0148')
+    expect(formatUsd(0.8)).toBe('$0,80')
+    expect(formatUsd(0)).toBe('$0,00')
   })
 })

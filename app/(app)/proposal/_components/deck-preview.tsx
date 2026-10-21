@@ -11,6 +11,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ComponentProps,
@@ -52,6 +53,11 @@ function withPage(url: string, page: number | null): string {
 
 export type OpenPreview = (page?: number) => void
 const PreviewContext = createContext<OpenPreview | null>(null)
+/** Whether the panel is open, and how to close it: see `useDeckPreviewPanel`. */
+const PanelContext = createContext<{ open: boolean; close: () => void }>({
+  open: false,
+  close: () => {},
+})
 
 /**
  * One "Pratinjau deck" panel per page, opened from the button in the Founder
@@ -113,9 +119,12 @@ export function DeckPreviewProvider({
   const drive = previewUrl ? isDrive(previewUrl) : false
   const newTabUrl = fetched ? withPage(fetched.url, page) : null
 
+  const close = useCallback(() => setOpen(false), [])
+  const panel = useMemo(() => ({ open, close }), [open, close])
+
   return (
     <PreviewContext.Provider value={deck ? openAt : null}>
-      {children}
+      <PanelContext.Provider value={panel}>{children}</PanelContext.Provider>
       {deck ? (
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetContent className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl data-[side=right]:lg:max-w-4xl">
@@ -246,6 +255,16 @@ function Loading({ label }: { label: string }) {
  */
 export function useDeckPreview(): OpenPreview | null {
   return useContext(PreviewContext)
+}
+
+/**
+ * The panel's open state, for a dialog that opens it from inside itself (Log
+ * penilaian): the two are separate dialogs, so an Escape pressed before focus
+ * has moved into the panel would reach the dialog underneath and close it
+ * instead. That dialog asks here first and closes the panel.
+ */
+export function useDeckPreviewPanel() {
+  return useContext(PanelContext)
 }
 
 /** "Pratinjau deck": opens the panel at the first page; nothing without a deck. */

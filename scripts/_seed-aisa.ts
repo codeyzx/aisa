@@ -594,79 +594,53 @@ export async function seedAisa(
     if (seed.queued) continue
     jobCount += 1
     const t0 = createdAt.getTime() + 2_000
+    // The steps and names `run_intake` (services/api/aisa/intake.py) records
+    // for an uploaded or Form deck, so the dashboard reads the seed exactly as
+    // it reads production.
+    const code = (
+      action: string,
+      tool: string,
+      durationMs: number,
+      io: { read?: string; wrote?: string } = {},
+    ) => ({
+      action,
+      tool,
+      actor: 'kode',
+      read: io.read ?? null,
+      wrote: io.wrote ?? null,
+      tokensIn: 0,
+      tokensOut: 0,
+      durationMs,
+      status: 'ok',
+    })
     const steps = [
-      {
-        action: 'Ekstrak teks per halaman',
-        tool: 'extract_text',
-        actor: 'kode',
-        read: `pitch deck (${pageCount} hal.)`,
+      code('Ekstrak teks per halaman', 'pypdf', 1800, {
+        read: 'pitch deck',
         wrote: `proposalTexts/${id}`,
-        tokensIn: 0,
-        tokensOut: 0,
-        durationMs: 1800,
-        status: 'ok',
-      },
+      }),
+      code('Cek jumlah teks', 'kode', 4, { read: `proposalTexts/${id}` }),
       ...(scored
         ? [
             {
-              action: 'Nilai 5 kriteria dengan kutipan halaman',
-              tool: 'penilai.assess',
+              action: 'Menilai 5 kriteria',
+              tool: 'gemini.generate_content',
               actor: 'model',
               model: MODEL,
-              read: `teks ${pageCount} halaman + rubrik v1`,
-              wrote: 'nilai, alasan, kutipan, profil',
+              read: `proposalTexts/${id}`,
+              wrote: null,
               tokensIn,
               tokensOut,
               durationMs: 21_400,
               status: 'ok',
             },
-            {
-              action: 'Hitung skor',
-              tool: 'compute_score',
-              actor: 'kode',
-              read: 'nilai + bobot v1',
-              wrote: `skor ${assessment?.score}`,
-              tokensIn: 0,
-              tokensOut: 0,
-              durationMs: 3,
-              status: 'ok',
-            },
-            {
-              action: 'Cek kecocokan',
-              tool: 'check_fit',
-              actor: 'kode',
-              read: 'profil + aturan kecocokan v1',
-              wrote: fit?.passed ? 'lulus' : 'gagal',
-              tokensIn: 0,
-              tokensOut: 0,
-              durationMs: 2,
-              status: 'ok',
-            },
-            {
-              action: 'Simpan hasil',
-              tool: 'firestore.write',
-              actor: 'kode',
-              read: null,
+            code('Hitung skor', 'kode', 3, { read: 'settings/rules v1' }),
+            code('Cek kecocokan', 'kode', 2, { read: 'settings/rules v1' }),
+            code('Tentukan kategori', 'kode', 1),
+            code('Simpan hasil penilaian', 'firestore', 140, {
               wrote: `proposals/${id}`,
-              tokensIn: 0,
-              tokensOut: 0,
-              durationMs: 140,
-              status: 'ok',
-            },
+            }),
           ]
-        : [
-            {
-              action: 'Tandai perlu dicek manual',
-              tool: 'firestore.write',
-              actor: 'kode',
-              read: null,
-              wrote: `proposals/${id}`,
-              tokensIn: 0,
-              tokensOut: 0,
-              durationMs: 120,
-              status: 'ok',
-            },
-          ]),
+        : []),
     ]
     let elapsed = 0
     steps.forEach((step, index) => {
@@ -678,7 +652,8 @@ export async function seedAisa(
           .doc(String(index + 1).padStart(3, '0')),
         {
           seq: index + 1,
-          at: new Date(t0 + elapsed),
+          // A step is recorded when it ends, so `at` is its end time.
+          at: new Date(t0 + elapsed + step.durationMs),
           model: null,
           ...step,
         },

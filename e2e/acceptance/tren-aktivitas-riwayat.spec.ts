@@ -212,7 +212,7 @@ test('DSB-40 Aktivitas AI sums usage and labels every code step (kode) with 0 to
   const tani = job(page, 'Menilai proposal Tani Maju')
   await expect(tani.locator('.a-model')).toHaveText('gemini-3.8-flash')
   await expect(tani.locator('.a-agent')).toHaveText('Penilai')
-  await expect(tani).toContainText('5 langkah')
+  await expect(tani).toContainText('7 langkah')
   await expect(tani.getByTitle('10.100 masuk / 1.284 keluar')).toBeVisible()
   await expect(tani).toContainText('Selesai')
 
@@ -243,7 +243,7 @@ test('DSB-40 Aktivitas AI sums usage and labels every code step (kode) with 0 to
     bengkel
       .getByRole('row')
       .filter({ hasText: 'Ekstrak teks per halaman (kode)' }),
-  ).toContainText('extract_text')
+  ).toContainText('pypdf')
 
   // "Lihat log penilaian" links here with ?job=…; that card opens by itself.
   await page.goto(

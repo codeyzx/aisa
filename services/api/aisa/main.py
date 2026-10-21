@@ -13,9 +13,9 @@ from typing import Any, Literal
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from google.api_core.exceptions import AlreadyExists
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from . import db, digest, domain, gowa, intake, orchestrator, retention, storage
+from . import assistant_client, db, digest, domain, gowa, intake, orchestrator, retention, storage
 from .auth import require_key, require_scheduler_or_key
 from .config import settings
 from .models import Category, Founder, ResponseKind, Source, SourceKind, Via, WebhookEvent, to_doc
@@ -236,3 +236,29 @@ def api_deck_url(pid: str) -> dict:
         raise HTTPException(404, str(e)) from e
     except RuntimeError as e:  # bucket or signer not configured
         raise HTTPException(503, str(e)) from e
+
+
+class AskIn(BaseModel):
+    # The `dashboard-` prefix keeps a dashboard conversation out of every manager phone's
+    # session: phone sessions are keyed by digits only.
+    session: str = Field(pattern=r"^dashboard-[A-Za-z0-9_-]{1,200}$")
+    text: str = Field(min_length=1, max_length=4000)
+
+
+DASHBOARD_PAUSED_REPLY = ("AISA sedang dijeda (STOP). Pertanyaan bisa dikirim lagi setelah "
+                          "LANJUT di dashboard atau lewat WhatsApp.")
+DASHBOARD_CANCELLED_REPLY = "Jawaban dibatalkan karena AISA dijeda (STOP). Kirim ulang pertanyaannya."
+
+
+@app.post("/api/assistant/ask", dependencies=[Depends(require_key)])
+def api_assistant_ask(body: AskIn) -> dict:
+    """The Asisten for the dashboard's "Tanya AISA": the same agent, STOP handling and
+    `asisten` job as a WhatsApp question, without the WhatsApp typing indicator. Commands are
+    not parsed here; the dashboard has its own buttons for them."""
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(422, "pertanyaan kosong")
+    if db.is_paused():
+        return {"answer": DASHBOARD_PAUSED_REPLY}
+    answer = assistant_client.ask(body.session, text)
+    return {"answer": DASHBOARD_CANCELLED_REPLY if answer is None else answer}

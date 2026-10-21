@@ -45,9 +45,10 @@ import {
   VIA_LABEL,
 } from '@/features/aisa/aisa.labels'
 import {
+  getAssessmentProgress,
+  getJobWithSteps,
   getProposal,
   getRules,
-  listJobsWithSteps,
   listProposalHistory,
 } from '@/features/aisa/aisa.repo'
 import {
@@ -71,6 +72,7 @@ import {
 import { AskAisaCard } from '../_components/ask-aisa-card'
 import { AssessmentLogProvider, LogButton } from '../_components/assessment-log'
 import { buildAssessmentLog } from '../_components/assessment-log-data'
+import { AssessmentProgressCard } from '../_components/assessment-progress'
 import { CorrectionForm } from '../_components/correction-form'
 import { DeckButton } from '../_components/deck-button'
 import {
@@ -80,7 +82,6 @@ import {
 } from '../_components/deck-preview'
 import { DeleteProposalButton } from '../_components/delete-proposal-button'
 import { proposalHistoryEntries } from '../_components/proposal-history'
-import { RefreshWhileScoring } from '../_components/refresh-while-scoring'
 import {
   compactNumber,
   dateTime,
@@ -159,11 +160,13 @@ export default async function ProposalDetailPage({
     getRules(),
   ])
   if (!proposal) notFound()
-  const job = proposal.jobId
-    ? ((await listJobsWithSteps(1, proposal.jobId)).find(
-        (candidate) => candidate.id === proposal.jobId,
-      ) ?? null)
-    : null
+  // Still queued or being scored: the live progress card starts from this.
+  const inProgress =
+    proposal.status === 'antre' || proposal.status === 'dinilai_proses'
+  const [job, progress] = await Promise.all([
+    proposal.jobId ? getJobWithSteps(proposal.jobId) : null,
+    inProgress ? getAssessmentProgress(proposal.id) : null,
+  ])
 
   const canRespond = can(session, AISA_RESPOND)
   const canDelete = can(session, AISA_CONFIGURE)
@@ -205,11 +208,6 @@ export default async function ProposalDetailPage({
       }
     >
       <div className="flex flex-col gap-5">
-        <RefreshWhileScoring
-          active={
-            proposal.status === 'antre' || proposal.status === 'dinilai_proses'
-          }
-        />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Link
             href="/proposal"
@@ -355,6 +353,8 @@ export default async function ProposalDetailPage({
             </div>
           </CardContent>
         </Card>
+
+        <AssessmentProgressCard proposalId={proposal.id} initial={progress} />
 
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="flex min-w-0 flex-col gap-5">

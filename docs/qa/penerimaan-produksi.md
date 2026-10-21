@@ -277,3 +277,22 @@ Temuan putaran ini:
 - **Job `asisten` tidak membedakan kanal.** Job dari dashboard dan dari WhatsApp sama-sama
   berjudul "Menjawab pertanyaan manajer" tanpa kolom kanal; README memang menyebutnya "same
   `asisten` job", jadi ini catatan, bukan cacat.
+
+### Uji ulang hapus proposal dan state Asisten (`aisa-api-00012-nzb`, 01.05–01.10 WIB)
+
+Image `aisa-api:20261022-010315` (`sha256:ea878e72…3cba5`); hanya image yang berubah, env,
+secret, service account, `cpu-throttling` false dan timeout 600 d sama dengan `00011-q82`.
+Tanpa pesan WhatsApp. Data uji: deck sintetis "QA Hapus 0105" (fiktif).
+
+| ID     | Hasil | Bukti                                                                                                                                                                                                                                                                              |
+| ------ | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SMK    | Lulus | `GET /health` 200; `POST /api/assistant/ask` tanpa kunci 401, dengan kunci 200 dalam 20,6 d (7 belum ditanggapi)                                                                                                                                                                   |
+| DSB-AS | Lulus | `upload-5efa4689154d6188` `dinilai` 63,1 Kurang cocok. Session `dashboard-qascrub-1` "Ceritakan proposal QA Hapus 0105" → jawaban menyebut namanya (session engine `7600156045742178304`). Sebelum hapus: 5 `assistantSessions`, 33 session engine, 1 memory (tidak menyebut nama) |
+| DSB-AS | Lulus | `DELETE … {"reason":"uji QA"}` → 200 `{"deleted":true,"assistantScrub":{"sessions":33,"memories":0}}`, tanpa `error`. Cascade Firestore/GCS sama dengan DSB-WA, nama tidak tersisa di `history`, `jobs`, `steps`, `digests`                                                        |
+| DSB-AS | Lulus | 20 d kemudian: 0 `assistantSessions`, 0 session engine (tak satu pun dari 33 id lama tercantum), 1 memory tetap ada dan tidak menyebut nama                                                                                                                                        |
+| DSB-AS | Lulus | Session key yang sama "Proposal apa yang tadi kita bahas?" → "belum ada proposal yang kita bahas sebelumnya (ini pesan pertama)", tanpa nama; session engine baru `1505659850003054592`                                                                                            |
+
+Belum teruji: jalur penghapusan memory yang menyebut proposal. Memory Bank tidak membuat
+memory tentang "QA Hapus 0105", jadi `memories` 0 dan hanya terbukti bahwa memory lain tidak
+ikut terhapus. Semua session engine terhapus, termasuk session WhatsApp manajer; pertanyaan
+berikutnya mulai dari session baru, sesuai README.

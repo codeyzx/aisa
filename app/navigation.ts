@@ -1,10 +1,11 @@
 import {
-  Activity,
-  FileText,
-  History,
-  Settings,
-  Sun,
-  TrendingUp,
+  ActivityIcon,
+  Clock3Icon,
+  InboxIcon,
+  LayoutDashboardIcon,
+  SettingsIcon,
+  SlidersHorizontalIcon,
+  TrendingUpIcon,
 } from 'lucide-react'
 
 import { type NavSection } from '@/components/shell/nav-config'
@@ -16,41 +17,53 @@ import { type NavSection } from '@/components/shell/nav-config'
  */
 export const APP_NAV_SECTIONS: NavSection[] = [
   {
+    title: 'Ruang kerja',
     items: [
       {
-        title: 'Hari ini',
-        href: '/hari-ini',
-        icon: Sun,
+        title: 'Dashboard',
+        href: '/dashboard',
+        icon: LayoutDashboardIcon,
         capability: 'aisa:read',
       },
       {
         title: 'Proposal',
         href: '/proposal',
-        icon: FileText,
+        icon: InboxIcon,
         capability: 'aisa:read',
       },
       {
         title: 'Tren',
         href: '/tren',
-        icon: TrendingUp,
+        icon: TrendingUpIcon,
         capability: 'aisa:read',
       },
       {
         title: 'Aktivitas AI',
         href: '/aktivitas',
-        icon: Activity,
+        icon: ActivityIcon,
         capability: 'aisa:read',
       },
       {
         title: 'Riwayat',
         href: '/riwayat',
-        icon: History,
+        icon: Clock3Icon,
+        capability: 'aisa:read',
+      },
+    ],
+  },
+  {
+    title: 'Lainnya',
+    items: [
+      {
+        title: 'Aturan penilaian',
+        href: '/aturan',
+        icon: SlidersHorizontalIcon,
         capability: 'aisa:read',
       },
       {
         title: 'Pengaturan',
         href: '/pengaturan',
-        icon: Settings,
+        icon: SettingsIcon,
         capability: 'aisa:read',
       },
     ],

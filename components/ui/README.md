@@ -2,7 +2,8 @@
 
 shadcn primitives — style **`base-nova`** on **Base UI** (`@base-ui/react`, not
 Radix). Config in `components.json`; add more with
-`pnpm dlx shadcn@latest add <name>`. Tokens: `app/globals.css` (neutral).
+`pnpm dlx shadcn@latest add <name>`. Tokens: `app/globals.css`, which imports the
+AISA workspace styles in `app/artifact.css`.
 Vendored primitives relax a few extra-strict a11y lint rules (`.oxlintrc.json`
 override); app/shell code keeps them on. Non-shadcn shared components may live
 here too — list them under "Custom".
@@ -10,11 +11,11 @@ here too — list them under "Custom".
 Forms: use **`field`** + **TanStack Form**, not shadcn `form` (react-hook-form).
 
 **shadcn base-nova** — alert · alert-dialog · avatar · badge · breadcrumb ·
-button · card · checkbox · combobox · command · dialog · dropdown-menu · empty ·
-field · input · input-group · label · pagination · popover · progress ·
-radio-group · scroll-area · select · separator · sheet · sidebar · skeleton ·
-sonner · spinner · switch · table · tabs · textarea · toggle · toggle-group ·
-tooltip
+button · card · chart (recharts) · checkbox · collapsible · combobox · command ·
+dialog · dropdown-menu · empty · field · input · input-group · kbd · label ·
+pagination · popover · progress · radio-group · scroll-area · select · separator ·
+sheet · skeleton · slider · sonner · spinner · switch · table · tabs ·
+textarea · toggle · toggle-group · tooltip
 
 `checkbox` is vendored base-nova, locally extended with an `indeterminate` (dash)
 indicator — the middle state the tri-state select-all header needs.

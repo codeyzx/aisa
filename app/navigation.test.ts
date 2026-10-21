@@ -34,11 +34,11 @@ describe('application navigation', () => {
     expect(hrefs(APP_NAV_SECTIONS)).not.toContain('/admin')
   })
 
-  it('shows every role the Hari ini landing page', () => {
+  it('shows every role the Dashboard landing page', () => {
     // Both roles hold `aisa:read`, the landing page's guard.
     for (const role of ROLES) {
       expect(hrefs(filterNavByRole(APP_NAV_SECTIONS, role))).toContain(
-        '/hari-ini',
+        '/dashboard',
       )
     }
   })

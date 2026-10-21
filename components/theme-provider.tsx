@@ -15,7 +15,8 @@ import { ThemeProvider as NextThemesProvider } from 'next-themes'
  * same-origin iframe — silently loses the keystroke to a theme flip instead.
  * It is also undiscoverable: nothing on screen ever announces it, so the people
  * who trip it are exactly the people who cannot find out why. The VISIBLE
- * control in `components/theme-toggle.tsx` is the whole affordance.
+ * controls — the shell's theme button, the command menu entry and the
+ * Pengaturan appearance tab — are the whole affordance.
  */
 function ThemeProvider({
   children,
@@ -24,7 +25,7 @@ function ThemeProvider({
   return (
     <NextThemesProvider
       attribute="class"
-      defaultTheme="system"
+      defaultTheme="light"
       enableSystem
       disableTransitionOnChange
       {...props}

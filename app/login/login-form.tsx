@@ -16,7 +16,7 @@ import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from '@tanstack/react-form'
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
-import { LoaderCircle } from 'lucide-react'
+import { EyeIcon, EyeOffIcon } from 'lucide-react'
 import * as z from 'zod'
 
 import { establishSession } from '@/lib/auth/client'
@@ -40,6 +40,13 @@ import {
   FieldLabel,
 } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@/components/ui/input-group'
+import { Spinner } from '@/components/ui/spinner'
 
 const schema = z.object({
   email: z.email('Email tidak valid'),
@@ -80,9 +87,10 @@ export function LoginForm() {
   const nextValues = searchParams.getAll('next')
   const next = safeInternalPath(
     nextValues.length === 1 ? nextValues[0] : undefined,
-    '/hari-ini',
+    '/dashboard',
   )
   const [authError, setAuthError] = useState<string | null>(null)
+  const [showPassword, setShowPassword] = useState(false)
 
   const form = useForm({
     defaultValues: { email: '', password: '' },
@@ -113,12 +121,10 @@ export function LoginForm() {
   })
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle>Masuk</CardTitle>
-        <CardDescription>
-          Masuk dengan akun manajer dashboard AISA.
-        </CardDescription>
+    <Card>
+      <CardHeader className="text-center">
+        <CardTitle className="text-xl">Masuk ke AISA</CardTitle>
+        <CardDescription>Gunakan email kerja yang terdaftar.</CardDescription>
       </CardHeader>
       <CardContent>
         <form
@@ -144,6 +150,8 @@ export function LoginForm() {
                       name={field.name}
                       type="email"
                       autoComplete="email"
+                      placeholder="nama@perusahaan.co.id"
+                      className="border-input bg-transparent"
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(event) =>
@@ -166,18 +174,33 @@ export function LoginForm() {
                 return (
                   <Field data-invalid={invalid || undefined}>
                     <FieldLabel htmlFor={field.name}>Kata sandi</FieldLabel>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      type="password"
-                      autoComplete="current-password"
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
-                      }
-                      aria-invalid={invalid}
-                    />
+                    <InputGroup>
+                      <InputGroupInput
+                        id={field.name}
+                        name={field.name}
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(event) =>
+                          field.handleChange(event.target.value)
+                        }
+                        aria-invalid={invalid}
+                      />
+                      <InputGroupAddon align="inline-end">
+                        <InputGroupButton
+                          size="icon-xs"
+                          aria-label={
+                            showPassword
+                              ? 'Sembunyikan password'
+                              : 'Tampilkan password'
+                          }
+                          onClick={() => setShowPassword((shown) => !shown)}
+                        >
+                          {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                        </InputGroupButton>
+                      </InputGroupAddon>
+                    </InputGroup>
                     <FieldError errors={field.state.meta.errors} />
                   </Field>
                 )
@@ -192,20 +215,12 @@ export function LoginForm() {
 
             <form.Subscribe selector={(state) => state.isSubmitting}>
               {(isSubmitting) => (
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <LoaderCircle className="animate-spin" />
-                      Sedang masuk…
-                    </>
-                  ) : (
-                    'Masuk'
-                  )}
-                </Button>
+                <Field>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? <Spinner /> : null}
+                    Masuk
+                  </Button>
+                </Field>
               )}
             </form.Subscribe>
           </FieldGroup>

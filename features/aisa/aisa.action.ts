@@ -9,7 +9,7 @@ import { callAisaApi, type AisaApiOutcome } from '@/lib/aisa-api/client'
 import { runAction, type ActionResult } from '@/lib/data/action-result'
 
 import { AISA_CONFIGURE, AISA_READ, AISA_RESPOND } from './aisa.capability'
-import { MAX_DECK_BYTES, MAX_REASON_LENGTH } from './aisa.limits'
+import { deckRefusal, MAX_REASON_LENGTH } from './aisa.limits'
 import { getRules } from './aisa.repo'
 import {
   CategorySchema,
@@ -287,43 +287,43 @@ export async function setRuntimePausedAction(
   })
 }
 
+// aisa-api words its intake refusals as lowercase fragments ("berkas bukan
+// PDF"); the upload form shows them as the sentences its own checks write.
+const asSentence = (text: string) => {
+  const trimmed = text.trim()
+  const capital = trimmed.charAt(0).toUpperCase() + trimmed.slice(1)
+  return /[.!?]$/u.test(capital) ? capital : `${capital}.`
+}
+
 /**
- * Forward a pitch deck to `/intake/upload`. Answers the new proposal id (202);
- * scoring continues asynchronously in the worker.
+ * Forward a pitch deck to `/intake/upload`. Answers the proposal id (202) and
+ * whether this upload created it: the id is the deck's content hash, so a deck
+ * sent before answers `created: false` with the existing proposal's id. Scoring
+ * a new deck continues asynchronously in the worker.
  */
 export async function uploadDeckAction(
   formData: FormData,
-): ApiAction<{ proposalId: string }> {
+): ApiAction<{ proposalId: string; created: boolean }> {
   return runAction(AISA_RESPOND, async () => {
     const file = formData.get('file')
     const name = formData.get('name')
-    if (!(file instanceof File) || file.size === 0) {
-      return { ok: false as const, status: null, error: 'Pilih berkas PDF.' }
+    const refusal = deckRefusal(file)
+    if (refusal !== null) {
+      return { ok: false as const, status: null, error: refusal }
     }
-    if (
-      file.type !== 'application/pdf' &&
-      !file.name.toLowerCase().endsWith('.pdf')
-    ) {
-      return { ok: false as const, status: null, error: 'Berkas harus PDF.' }
-    }
-    if (file.size > MAX_DECK_BYTES) {
-      return {
-        ok: false as const,
-        status: null,
-        error: `Berkas terlalu besar (maksimal ${MAX_DECK_BYTES / 1024 / 1024} MB).`,
-      }
-    }
+    // `deckRefusal` only accepts a non-empty File.
+    const deck = file as File
     const upstream = new FormData()
-    upstream.append('file', file, file.name)
+    upstream.append('file', deck, deck.name)
     const trimmedName =
       typeof name === 'string' ? name.trim().slice(0, 120) : ''
     if (trimmedName) upstream.append('name', trimmedName)
+    const outcome = await callAisaApi<{
+      proposalId: string
+      created: boolean
+    }>('POST', '/intake/upload', upstream)
     return afterWrite(
-      await callAisaApi<{ proposalId: string }>(
-        'POST',
-        '/intake/upload',
-        upstream,
-      ),
+      outcome.ok ? outcome : { ...outcome, error: asSentence(outcome.error) },
     )
   })
 }

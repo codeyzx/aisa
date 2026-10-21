@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { UploadIcon } from 'lucide-react'
+import { toast } from 'sonner'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -17,14 +18,17 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { uploadDeckAction } from '@/features/aisa/aisa.action'
-import { MAX_DECK_BYTES } from '@/features/aisa/aisa.limits'
+import { deckRefusal } from '@/features/aisa/aisa.limits'
 
 import { useApiAction } from './use-api-action'
 
 /**
  * "Unggah pitch deck": a PDF plus an optional startup name, forwarded to the
  * same intake `aisa-api` runs for the Form. Scoring is asynchronous, so success
- * opens the new proposal, which shows `Antre`/`Sedang dinilai` until it is done.
+ * opens the new proposal, which shows `Antre`/`Sedang dinilai` and refreshes
+ * itself until it is done. A deck uploaded before opens its existing proposal
+ * and says so. A refusal — checked here or by the API — shows inline and as a
+ * toast, in the same sentence form either way.
  */
 export function UploadDeckButton({ className }: { className?: string }) {
   const router = useRouter()
@@ -37,19 +41,17 @@ export function UploadDeckButton({ className }: { className?: string }) {
     event.preventDefault()
     setLocalError(null)
     const data = new FormData(event.currentTarget)
-    const file = data.get('file')
-    if (!(file instanceof File) || file.size === 0) {
-      setLocalError('Pilih berkas PDF.')
-      return
-    }
-    if (file.size > MAX_DECK_BYTES) {
-      setLocalError(
-        `Berkas terlalu besar (maksimal ${MAX_DECK_BYTES / 1024 / 1024} MB).`,
-      )
+    const refusal = deckRefusal(data.get('file'))
+    if (refusal !== null) {
+      setLocalError(refusal)
+      toast.error(refusal)
       return
     }
     run(() => uploadDeckAction(data), {
-      success: 'Pitch deck diterima dan sedang diproses.',
+      success: ({ created }) =>
+        created
+          ? 'Pitch deck diterima dan sedang diproses.'
+          : 'Pitch deck ini sudah pernah diunggah. Membuka proposalnya.',
       onSuccess: ({ proposalId }) => {
         formRef.current?.reset()
         setOpen(false)

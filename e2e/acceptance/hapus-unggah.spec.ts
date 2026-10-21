@@ -155,7 +155,8 @@ test('DSB-86 a file that is not a PDF is refused before it is sent', async ({
   })
   await dialog.getByRole('button', { name: 'Unggah', exact: true }).click()
 
-  await expect(alertIn(dialog, 'Berkas harus PDF.')).toBeVisible()
+  await expect(alertIn(dialog, 'Berkas bukan PDF.')).toBeVisible()
+  await expect(toast(page, 'Berkas bukan PDF.')).toBeVisible()
   expect(aisaApi.calls).toEqual([])
 })
 
@@ -171,9 +172,10 @@ test('DSB-87 a deck over 20 MB is refused before it is sent', async ({
   })
   await dialog.getByRole('button', { name: 'Unggah', exact: true }).click()
 
-  await expect(
-    alertIn(dialog, 'Berkas terlalu besar (maksimal 20 MB).'),
-  ).toBeVisible()
+  // The same words aisa-api uses for this refusal, as a sentence, and surfaced
+  // the same way: inline and as a toast.
+  await expect(alertIn(dialog, 'PDF lebih dari 20 MB.')).toBeVisible()
+  await expect(toast(page, 'PDF lebih dari 20 MB.')).toBeVisible()
   expect(aisaApi.calls).toEqual([])
 })
 
@@ -190,7 +192,33 @@ test('DSB-88 a deck aisa-api refuses shows its message and stays on the dialog',
   })
   await dialog.getByRole('button', { name: 'Unggah', exact: true }).click()
 
-  await expect(alertIn(dialog, 'berkas bukan PDF')).toBeVisible()
+  // The API's lowercase fragment reads as the sentence the form's own check
+  // writes for the same refusal.
+  await expect(alertIn(dialog, 'Berkas bukan PDF.')).toBeVisible()
+  await expect(toast(page, 'Berkas bukan PDF.')).toBeVisible()
   await expect(page).toHaveURL(/\/dashboard$/u)
   expect(aisaApi.calls).toHaveLength(1)
+})
+
+test('DSB-89 a deck uploaded before says so and opens the existing proposal', async ({
+  page,
+  aisaApi,
+}) => {
+  const dialog = await openUpload(page)
+  aisaApi.answerNext({
+    status: 202,
+    body: { proposalId: UPLOAD_ANSWER_ID, created: false },
+  })
+  await dialog.getByLabel('Berkas PDF').setInputFiles(FICTIONAL_DECK)
+  await dialog.getByRole('button', { name: 'Unggah', exact: true }).click()
+
+  await expect(
+    toast(page, 'Pitch deck ini sudah pernah diunggah. Membuka proposalnya.'),
+  ).toBeVisible()
+  await expect(
+    toast(page, 'Pitch deck diterima dan sedang diproses.'),
+  ).toHaveCount(0)
+  await expect(page).toHaveURL(
+    new RegExp(`/proposal/${UPLOAD_ANSWER_ID}$`, 'u'),
+  )
 })

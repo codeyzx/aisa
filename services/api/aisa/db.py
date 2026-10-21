@@ -39,6 +39,10 @@ def load_rules() -> Rules:
     return Rules.model_validate(snap.to_dict())
 
 
-def is_paused() -> bool:
+def runtime() -> Runtime:
     snap = client().document("settings/runtime").get()
-    return bool(snap.exists and Runtime.model_validate(snap.to_dict()).paused)
+    return Runtime.model_validate(snap.to_dict()) if snap.exists else Runtime()
+
+
+def is_paused() -> bool:
+    return runtime().paused

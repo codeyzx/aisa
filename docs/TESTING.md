@@ -149,6 +149,11 @@ produksi**:
   dijeda" tanpa memanggil Asisten.
 - Salam ringkasan mengikuti jam kirim, dengan nama manajer dari `MANAGER_NAME` bila diatur.
 - Pekerjaan Asisten mencatat satu langkah untuk setiap pemanggilan tool.
+- STOP membatalkan jawaban Asisten yang sedang diproses (`settings/runtime.lastStopAt`; job
+  berakhir `dihentikan`, jawaban tidak dikirim), dan balasan STOP/LANJUT menyebut pembatalan
+  itu. Selama Asisten bekerja, chat menampilkan "mengetik…" dan, setelah 20 detik tanpa
+  jawaban, satu pesan "⏳ Sedang mengambil data, mohon tunggu…". Pertanyaan umum dijawab
+  dari tool `get_overview` dengan lebih sedikit pemanggilan tool.
 
 ## Cara mengulang
 

@@ -40,6 +40,7 @@ log = logging.getLogger(__name__)
 TEXT_MAX = 220
 QUOTE_MAX = 160
 LIMIT_MAX = 25
+OVERVIEW_MAX = 50
 
 
 def _cut(text: object, n: int = TEXT_MAX) -> object:
@@ -170,6 +171,42 @@ def _resolve(name_or_id: str, proposals: Optional[list[dict]] = None) -> dict:
     return {
         "error": f"nama '{q}' cocok dengan beberapa proposal; minta manajer memperjelas",
         "kandidat": [{"id": p["id"], "nama": p.get("name")} for p in matches[:10]],
+    }
+
+
+def _overview_row(p: dict) -> dict:
+    eff = p.get("effectiveCategory")
+    row = {
+        "nama": p.get("name"),
+        "sektor": (p.get("profile") or {}).get("sector"),
+        "skor": _score(p),
+        "kategori": CATEGORY_LABEL.get(eff, eff),
+        "status": STATUS_LABEL.get(p.get("status"), p.get("status")),
+        "tanggapan": (p.get("response") or {}).get("kind") or "belum",
+    }
+    if _quality_outside_focus(p):
+        row["luarFokus"] = True
+    return {k: v for k, v in row.items() if v is not None}
+
+
+def get_overview() -> dict:
+    """Gambaran ringkas SEMUA proposal dalam satu panggilan: jumlah per kategori efektif, jumlah
+    belum ditanggapi, dan satu baris per proposal (nama, sektor, skor kualitas, kategori efektif,
+    status, tanggapan, luarFokus = "Berkualitas, di luar fokus"), urut dari skor tertinggi,
+    maksimal 50 baris. Pakai ini untuk pertanyaan umum ("ringkas semua proposal", "bagaimana
+    kondisi proposal", "mana yang menonjol")."""
+    proposals = store.list_proposals()
+    proposals.sort(key=lambda p: (_score(p) is not None, _score(p) or 0), reverse=True)
+    per_category: dict[str, int] = {}
+    for p in proposals:
+        k = CATEGORY_LABEL.get(p.get("effectiveCategory"), "tanpa kategori (belum/tidak dinilai)")
+        per_category[k] = per_category.get(k, 0) + 1
+    return {
+        "total": len(proposals),
+        "belumDitanggapi": sum(1 for p in proposals if not p.get("responded")),
+        "perKategori": per_category,
+        "ditampilkan": min(len(proposals), OVERVIEW_MAX),
+        "proposal": [_overview_row(p) for p in proposals[:OVERVIEW_MAX]],
     }
 
 
@@ -479,6 +516,7 @@ def _safe(fn):
 ALL_TOOLS = [
     _safe(fn)
     for fn in (
+        get_overview,
         search_proposals,
         count_proposals,
         get_proposal_detail,

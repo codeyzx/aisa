@@ -268,6 +268,9 @@ class Runtime(_M):
     paused: bool = False
     pausedAt: datetime | None = None
     pausedVia: Via | None = None
+    # Set on every STOP and never cleared by LANJUT: an Asisten answer that started before
+    # it is cancelled even when LANJUT arrives before the answer would have been sent.
+    lastStopAt: datetime | None = None
 
 
 # ---------- jobs ----------

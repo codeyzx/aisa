@@ -39,14 +39,18 @@ def split_message(text: str, limit: int = MAX_CHARS) -> list[str]:
     return parts
 
 
-def send(phone: str, text: str) -> list[str]:
-    """Send `text` (split if long). Returns GOWA message ids; raises on a failed send."""
+def _client(timeout: float = 30) -> httpx.Client:
     s = settings()
     headers = {"Authorization": "Basic " + base64.b64encode(s.gowa_basic_auth.encode()).decode()}
     if s.gowa_device_id:
         headers["X-Device-Id"] = s.gowa_device_id
+    return httpx.Client(base_url=s.gowa_base_url, timeout=timeout, headers=headers)
+
+
+def send(phone: str, text: str) -> list[str]:
+    """Send `text` (split if long). Returns GOWA message ids; raises on a failed send."""
     ids: list[str] = []
-    with httpx.Client(base_url=s.gowa_base_url, timeout=30, headers=headers) as c:
+    with _client() as c:
         for part in split_message(text):
             r = c.post("/send/message", json={"phone": jid(phone), "message": part})
             r.raise_for_status()
@@ -55,6 +59,16 @@ def send(phone: str, text: str) -> list[str]:
                 raise RuntimeError(f"GOWA menolak pesan: {body}")
             ids.append(str((body.get("results") or {}).get("message_id", "")))
     return ids
+
+
+def presence(phone: str, typing: bool) -> None:
+    """Show (`typing=True`) or clear the "mengetik…" indicator in the manager's chat.
+    WhatsApp hides it again after a while or once a message arrives, so a caller that keeps
+    working refreshes it. Raises on failure; callers treat it as best-effort."""
+    with _client(timeout=10) as c:
+        r = c.post("/send/chat-presence",
+                   json={"phone": jid(phone), "action": "start" if typing else "stop"})
+        r.raise_for_status()
 
 
 def signature_valid(raw: bytes, header: str | None, secret: str) -> bool:

@@ -1,5 +1,6 @@
 """Orchestrator: commands are recognised by code (`commands.parse`); anything else goes to
-the Asisten. Returns the reply text; sending it is the caller's job."""
+the Asisten. Returns the reply text, or None when there is nothing to send (an Asisten answer
+cancelled by STOP); sending it is the caller's job."""
 
 from __future__ import annotations
 
@@ -23,6 +24,17 @@ from .models import CATEGORY_LABEL, JobKind, JobStatus, PendingConfirmation, Via
 
 CONFIRM_TTL = timedelta(minutes=10)
 PAUSED_REPLY = "AISA sedang dijeda (STOP). Kirim LANJUT untuk melanjutkan."
+
+
+def stop_reply(answer_cancelled: bool) -> str:
+    return ("AISA dijeda (STOP)."
+            + (" Jawaban yang sedang diproses dibatalkan." if answer_cancelled else "")
+            + " Proposal baru akan antre. Kirim LANJUT untuk melanjutkan.")
+
+
+def resume_reply(answer_cancelled: bool) -> str:
+    return ("Pekerjaan AI dilanjutkan."
+            + (" Pertanyaan yang dibatalkan perlu dikirim ulang." if answer_cancelled else ""))
 
 
 def _all_names() -> list[tuple[str, str]]:
@@ -49,12 +61,15 @@ def _pending_ref(phone: str):
 
 def _execute(phone: str, cmd) -> str:
     if isinstance(cmd, Stop):
+        # Any answer running now started before this STOP, so it will be cancelled.
+        running = assistant_client.answer_in_progress()
         domain.set_paused(True, Via.wa)
-        return "Pekerjaan AI dijeda. Proposal baru akan antre sampai Anda kirim LANJUT."
+        return stop_reply(running)
     if isinstance(cmd, Resume):
+        cancelled = assistant_client.cancelled_since(db.runtime().lastStopAt)
         domain.set_paused(False, Via.wa)
         threading.Thread(target=intake.process_queue, daemon=True).start()
-        return "Pekerjaan AI dilanjutkan. Proposal yang antre sedang dinilai."
+        return resume_reply(cancelled)
     if isinstance(cmd, Respond):
         pid, reply = _resolve(cmd.name)
         if not pid:
@@ -101,13 +116,13 @@ def _execute(phone: str, cmd) -> str:
     raise AssertionError(cmd)
 
 
-def handle(phone: str, text: str) -> str:
+def handle(phone: str, text: str) -> str | None:
     cmd = parse(text)
     if cmd is None:
         # STOP pauses all AI work, the Asisten included; commands still run.
         if db.is_paused():
             return PAUSED_REPLY
-        return assistant_client.ask(phone, text)
+        return assistant_client.ask(phone, text, notify=True)
     job = JobLog(JobKind.perintah, "Orchestrator", f"Perintah: {text.strip()[:60]}")
     try:
         with job.code_step(f"Jalankan perintah {type(cmd).__name__.lower()}", "kode",

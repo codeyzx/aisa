@@ -105,8 +105,10 @@ def correct(pid: str, category: Category, reason: str, via: Via) -> Proposal:
 
 
 def set_paused(paused: bool, via: Via) -> Runtime:
-    rt = Runtime(paused=paused, pausedAt=db.now() if paused else None,
-                 pausedVia=via if paused else None)
+    t = db.now()
+    rt = Runtime(paused=paused, pausedAt=t if paused else None,
+                 pausedVia=via if paused else None,
+                 lastStopAt=t if paused else db.runtime().lastStopAt)
     db.client().document("settings/runtime").set(to_doc(rt))
     write_history(via=via, action="stop" if paused else "lanjut",
                   detail="Pekerjaan AI dijeda (STOP)" if paused else "Pekerjaan AI dilanjutkan (LANJUT)")

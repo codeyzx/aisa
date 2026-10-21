@@ -123,6 +123,24 @@ $SCHEDULER_SA_EMAIL --oidc-token-audience $SCHEDULER_AUDIENCE`, no key header):
   `antre`). While paused the digest is sent from the template, without model calls, and a
   WhatsApp message that is not a command gets "AISA sedang dijeda (STOP). Kirim LANJUT
   untuk melanjutkan." instead of reaching the Asisten.
+- Every STOP (WhatsApp or dashboard) also sets `settings/runtime.lastStopAt`, which LANJUT
+  never clears. An Asisten answer whose job started before `lastStopAt`, or that is running
+  while paused, is cancelled: the client stops reading the engine's stream at the next event
+  (a model or tool call already under way may still finish on the engine), checks once more
+  before returning, sends nothing, and ends the job `dihentikan` with a step "Dihentikan oleh
+  STOP" carrying the tokens used so far. The STOP reply adds "Jawaban yang sedang diproses
+  dibatalkan." when an `asisten` job was `berjalan` (started within the last 200 s); the
+  LANJUT reply adds "Pertanyaan yang dibatalkan perlu dikirim ulang." when such an answer was
+  cancelled since the last STOP. LANJUT does not resend the question.
+- While the Asisten works, the chat shows "mengetik…" (`POST /send/chat-presence`, refreshed
+  every 8 s, cleared at the end or when STOP is seen), and an answer still missing after 20 s
+  sends one "⏳ Sedang mengambil data, mohon tunggu…". Presence and that message are
+  best-effort: a GOWA failure there is logged and never affects the answer.
+- The Asisten is told to answer broad questions from one `get_overview` call (one compact row
+  per proposal, at most 50, plus counts per category and unresponded), to call
+  `get_proposal_detail` for at most 2 named proposals unless asked for more, and to stay
+  around 4 tool calls per answer. This is an instruction to the model, not a limit enforced
+  by code.
 - A job that ends without any model call (e.g. a deck with too little text) has
   `model: null`.
 - Every Asisten function call is its own step (`tool` = function name, `read` = its

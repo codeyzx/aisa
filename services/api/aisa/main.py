@@ -121,6 +121,8 @@ def _process_message(phone: str, text: str) -> None:
     except Exception:
         log.exception("orchestrator failed")
         reply = "Maaf, terjadi kesalahan saat memproses pesan. Coba lagi."
+    if reply is None:  # an Asisten answer cancelled by STOP: nothing is sent
+        return
     try:
         gowa.send(phone, reply)
     except Exception:

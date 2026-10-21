@@ -9,16 +9,23 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import threading
 import time
 from collections.abc import Callable
+from contextlib import nullcontext
+from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Any
 
-from . import db
+from google.cloud.firestore_v1.base_query import FieldFilter
+
+from . import db, gowa
 from .config import settings
 from .jobs import JobLog
-from .models import AssistantSession, JobKind, JobStatus, StepActor, to_doc
+from .models import AssistantSession, JobKind, JobStatus, Runtime, StepActor, to_doc
+
+log = logging.getLogger(__name__)
 
 APP_NAME = "aisa"
 NO_ANSWER = "Maaf, asisten tidak memberi jawaban. Coba ulangi pertanyaannya."
@@ -70,6 +77,15 @@ class StepRecorder:
             self.job.step(f"Memanggil {name}", name, StepActor.model, model=self.model,
                           read=args_summary(args), tokens_in=tokens_in if first else 0,
                           tokens_out=tokens_out if first else 0, duration_ms=ms if first else 0)
+
+    def stopped(self) -> None:
+        """The run was cancelled by STOP: one step carrying the tokens used so far."""
+        used = bool(self.pending_in or self.pending_out)
+        self.job.step("Dihentikan oleh STOP", self.tool,
+                      StepActor.model if used else StepActor.kode,
+                      model=self.model if used else None, tokens_in=self.pending_in,
+                      tokens_out=self.pending_out, duration_ms=self._elapsed(),
+                      status="dihentikan")
 
     def answer(self, status: str = "ok", error: str | None = None) -> None:
         self.job.step("Menjawab pertanyaan", self.tool, StepActor.model, model=self.model,
@@ -170,18 +186,150 @@ def _ask_remote(phone: str, text: str, on_event: OnEvent) -> str:
     return texts[-1] if texts else ""
 
 
+# ---------- STOP and progress ----------
+
+WAIT_MESSAGE = "⏳ Sedang mengambil data, mohon tunggu…"
+WAIT_AFTER_S = 20.0
+PRESENCE_EVERY_S = 8.0
+HEARTBEAT_TICK_S = 4.0
+# Longer than the 180 s an in-process answer may take: a `berjalan` asisten job older than
+# this was left behind by a crashed instance and is not an answer in progress.
+RUN_MAX = timedelta(seconds=200)
+
+
+class Stopped(Exception):
+    """STOP arrived after this answer started; it must not be sent."""
+
+
+def stop_requested(started_at: datetime, rt: Runtime) -> bool:
+    """An answer is cancelled while AISA is paused, or when any STOP came after it started
+    (also when LANJUT has already followed that STOP)."""
+    return rt.paused or (rt.lastStopAt is not None and rt.lastStopAt > started_at)
+
+
+def in_progress(job: dict, now: datetime) -> bool:
+    return job.get("status") == JobStatus.berjalan and job["startedAt"] > now - RUN_MAX
+
+
+def cancelled_by(job: dict, last_stop: datetime | None, now: datetime) -> bool:
+    """Whether STOP at `last_stop` cancelled this asisten job, or will at its next check."""
+    if last_stop is None:
+        return False
+    if job.get("status") == JobStatus.dihentikan:
+        return bool(job.get("endedAt")) and job["endedAt"] >= last_stop
+    return in_progress(job, now) and job["startedAt"] < last_stop
+
+
+def _asisten_jobs(status: JobStatus) -> list[dict]:
+    # Two equality filters only: served without a composite index.
+    q = (db.client().collection("jobs")
+         .where(filter=FieldFilter("kind", "==", JobKind.asisten.value))
+         .where(filter=FieldFilter("status", "==", status.value)))
+    return [s.to_dict() for s in q.stream()]
+
+
+def answer_in_progress() -> bool:
+    now = db.now()
+    return any(in_progress(j, now) for j in _asisten_jobs(JobStatus.berjalan))
+
+
+def cancelled_since(last_stop: datetime | None) -> bool:
+    """Whether the STOP at `last_stop` cancelled (or is cancelling) an Asisten answer."""
+    if last_stop is None:
+        return False
+    now = db.now()
+    return any(cancelled_by(j, last_stop, now)
+               for st in (JobStatus.dihentikan, JobStatus.berjalan) for j in _asisten_jobs(st))
+
+
+class _StopWatch:
+    """Reads settings/runtime on each call until STOP is seen, then stays stopped. A failed
+    read counts as not stopped: an unreadable flag must not swallow the manager's answer."""
+
+    def __init__(self, started_at: datetime):
+        self.started_at = started_at
+        self.hit = False
+
+    def __call__(self) -> bool:
+        if not self.hit:
+            try:
+                self.hit = stop_requested(self.started_at, db.runtime())
+            except Exception:  # noqa: BLE001
+                log.warning("runtime read failed", exc_info=True)
+        return self.hit
+
+
+class _Heartbeat:
+    """While an answer is prepared: keep WhatsApp's typing indicator on (it lapses on its
+    own, so it is refreshed), send WAIT_MESSAGE once if the answer takes longer than
+    WAIT_AFTER_S, and clear the indicator at the end or as soon as STOP is seen. Every GOWA
+    call here is best-effort and can never fail the answer."""
+
+    def __init__(self, phone: str, stopped: Callable[[], bool]):
+        self.phone, self.stopped = phone, stopped
+        self.done = threading.Event()
+        self._thread = threading.Thread(target=self._run, daemon=True)
+
+    def __enter__(self):
+        self._thread.start()
+        return self
+
+    def __exit__(self, *_):
+        self.done.set()
+        self._thread.join(timeout=1)
+
+    def _try(self, what: str, fn: Callable[[], Any]) -> None:
+        try:
+            fn()
+        except Exception:  # noqa: BLE001
+            log.warning("gowa %s failed", what, exc_info=True)
+
+    def _run(self) -> None:
+        t0 = time.monotonic()
+        last_presence: float | None = None
+        waited = False
+        while not self.done.is_set() and not self.stopped():
+            elapsed = time.monotonic() - t0
+            if not waited and elapsed >= WAIT_AFTER_S:
+                waited = True
+                self._try("wait message", lambda: gowa.send(self.phone, WAIT_MESSAGE))
+                last_presence = None  # a delivered message clears the indicator
+            if not self.done.is_set() and (last_presence is None
+                                           or elapsed - last_presence >= PRESENCE_EVERY_S):
+                last_presence = elapsed
+                self._try("presence", lambda: gowa.presence(self.phone, True))
+            self.done.wait(HEARTBEAT_TICK_S)
+        self._try("presence", lambda: gowa.presence(self.phone, False))
+
+
 # ---------- public ----------
 
 
-def ask(phone: str, text: str) -> str:
+def ask(phone: str, text: str, notify: bool = False) -> str | None:
+    """The Asisten's reply, or None when STOP cancelled it (nothing must be sent).
+    `notify` shows the typing indicator and the wait message in the manager's chat."""
     remote = bool(settings().assistant_engine_id)
     # The label names the model the agent was deployed with (ASSISTANT_MODEL, the same
     # variable agent.py reads), not rules.models.asisten, which changes nothing at runtime.
     model = settings().assistant_model
     job = JobLog(JobKind.asisten, "Asisten", "Menjawab pertanyaan manajer", model=model)
     rec = StepRecorder(job, model, "agent_runtime" if remote else "adk.runner")
+    stopped = _StopWatch(job.job.startedAt)
+
+    def on_event(calls: list[tuple[str, Any]], tokens_in: int, tokens_out: int) -> None:
+        rec.event(calls, tokens_in, tokens_out)
+        if stopped():
+            raise Stopped
+
     try:
-        answer = (_ask_remote if remote else _ask_local)(phone, text, rec.event)
+        with _Heartbeat(phone, stopped) if notify else nullcontext():
+            answer = (_ask_remote if remote else _ask_local)(phone, text, on_event)
+        if stopped():
+            raise Stopped
+    except Stopped:
+        rec.stopped()
+        job.finish(JobStatus.dihentikan)
+        return None
     except Exception as e:
         rec.answer(status="gagal", error=str(e)[:500])
         job.finish(JobStatus.gagal)

@@ -83,9 +83,11 @@ informational only; the Asisten's model is fixed when it is deployed to Agent Ru
 
 ## `settings/runtime`
 
-`{paused: bool, pausedAt?, pausedVia?}` — STOP sets `paused`, LANJUT clears it. While
-paused, a WhatsApp message that is not a command gets "AISA sedang dijeda" instead of
-reaching the Asisten.
+`{paused: bool, pausedAt?, pausedVia?, lastStopAt?}` — STOP sets `paused` and
+`lastStopAt`; LANJUT clears `paused` but keeps `lastStopAt`. While paused, a WhatsApp
+message that is not a command gets "AISA sedang dijeda" instead of reaching the Asisten.
+An Asisten answer that started before `lastStopAt` is cancelled and never sent, even if
+LANJUT arrives before it finishes.
 
 ## `jobs/{jobId}` and `jobs/{jobId}/steps/{stepId}`
 

@@ -8,8 +8,6 @@ import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from google.cloud.firestore_v1.base_query import FieldFilter
-
 from . import db, gowa, llm
 from .config import settings
 from .jobs import JobLog, write_history
@@ -211,7 +209,110 @@ def sector_candidates(rows: list[tuple[datetime, str | None]], now: datetime) ->
     return out[:3]
 
 
+@dataclass
+class Seen:
+    """One proposal as the insight candidates read it, responded or not."""
+    at: datetime | None
+    sector: str | None
+    category: str | None  # effective category
+    score: float | None
+    responded: bool
+
+
+GOOD = (Category.sangat_cocok.value, Category.cocok.value)
+
+
+def is_new(s: Seen, window_start: datetime | None) -> bool:
+    """Came in since the last ringkasan; before the first one, every proposal is new."""
+    return window_start is None or (s.at is not None and s.at >= window_start)
+
+
+def _category_phrase(sangat: int, cocok: int) -> str:
+    if sangat and cocok:
+        return "Sangat cocok atau Cocok"
+    return "Sangat cocok" if sangat else "Cocok"
+
+
+def fallback_candidates(seen: list[Seen], d: DigestData, now: datetime) -> list[dict]:
+    """The first fact that holds, in a fixed order, when no sector trend is strong enough.
+    Every number here is counted by code; at most one candidate comes back, and none only
+    when there are no proposals at all."""
+    new = [s for s in seen if is_new(s, d.window_start)]
+    good = [s for s in new if s.category in GOOD]
+    if good:
+        c = {"jenis": "proposalBaruCocok", "proposalBaru": len(new),
+             "sangatCocok": sum(s.category == Category.sangat_cocok.value for s in good),
+             "cocok": sum(s.category == Category.cocok.value for s in good)}
+        per: dict[str, int] = {}
+        for s in good:
+            if s.sector:
+                per[s.sector] = per.get(s.sector, 0) + 1
+        ranked = sorted(per.items(), key=lambda kv: kv[1], reverse=True)
+        # A tie has no "terbanyak"; naming one of the tied sectors would be a guess.
+        if ranked and (len(ranked) == 1 or ranked[0][1] > ranked[1][1]):
+            c["sektorTerbanyak"], c["jumlahSektorTerbanyak"] = ranked[0]
+        return [c]
+
+    this_start, last_start = now - timedelta(days=7), now - timedelta(days=14)
+    this = [s.score for s in seen if s.score is not None and s.at and this_start <= s.at < now]
+    last = [s.score for s in seen if s.score is not None and s.at and last_start <= s.at < this_start]
+    if len(this) >= MIN_INSIGHT_COUNT and len(last) >= MIN_INSIGHT_COUNT:
+        return [{"jenis": "rataRataSkor", "mingguIni": fmt_score(sum(this) / len(this)),
+                 "jumlahMingguIni": len(this), "mingguLalu": fmt_score(sum(last) / len(last)),
+                 "jumlahMingguLalu": len(last)}]
+
+    if d.quality_outside_focus or d.manual:
+        return [{"jenis": "perluPerhatian", "berkualitasDiLuarFokus": len(d.quality_outside_focus),
+                 "perluDicekManual": len(d.manual)}]
+
+    top = max((it for v in d.groups.values() for it in v), key=lambda it: it.score, default=None)
+    if top:
+        return [{"jenis": "skorTertinggi", "nama": top.name, "skor": fmt_score(top.score)}]
+
+    if seen:
+        return [{"jenis": "sudahDitanggapi", "sudahDitanggapi": sum(s.responded for s in seen),
+                 "total": len(seen)}]
+    return []
+
+
+def insight_candidates(seen: list[Seen], d: DigestData, now: datetime) -> list[dict]:
+    """Sector week-over-week first; the fallbacks only when it has nothing to say."""
+    rows = [(s.at, s.sector) for s in seen if s.at is not None]
+    return sector_candidates(rows, now) or fallback_candidates(seen, d, now)
+
+
+def _fallback_text(c: dict) -> str | None:
+    kind = c.get("jenis")
+    if kind == "proposalBaruCocok":
+        n = c["sangatCocok"] + c["cocok"]
+        text = f"{n} dari {c['proposalBaru']} proposal baru masuk {_category_phrase(c['sangatCocok'], c['cocok'])}"
+        if "sektorTerbanyak" in c:
+            text += (f", terbanyak dari sektor {c['sektorTerbanyak']}" if n > 1
+                     else f", dari sektor {c['sektorTerbanyak']}")
+        return text + "."
+    if kind == "rataRataSkor":
+        a, b = c["mingguIni"], c["mingguLalu"]
+        va, vb = float(a.replace(",", ".")), float(b.replace(",", "."))
+        arah = "naik dari" if va > vb else "turun dari" if va < vb else "sama dengan"
+        return (f"rata-rata skor kualitas proposal minggu ini {a} ({c['jumlahMingguIni']} proposal), "
+                f"{arah} {b} minggu lalu ({c['jumlahMingguLalu']} proposal).")
+    if kind == "perluPerhatian":
+        parts = []
+        if c["berkualitasDiLuarFokus"]:
+            parts.append(f"{c['berkualitasDiLuarFokus']} proposal Berkualitas, di luar fokus")
+        if c["perluDicekManual"]:
+            parts.append(f"{c['perluDicekManual']} proposal Perlu dicek manual")
+        return f"ada {' dan '.join(parts)} yang belum ditanggapi."
+    if kind == "skorTertinggi":
+        return f"skor tertinggi yang belum ditanggapi: {c['nama']} ({c['skor']})."
+    if kind == "sudahDitanggapi":
+        return f"{c['sudahDitanggapi']} dari {c['total']} proposal sudah ditanggapi."
+    return None
+
+
 def template_insight(cands: list[dict]) -> str | None:
+    if cands and "jenis" in cands[0]:
+        return _fallback_text(cands[0])
     for c in cands:
         if "perubahanPersen" in c and c["perubahanPersen"] != 0:
             arah = "naik" if c["perubahanPersen"] > 0 else "turun"
@@ -232,7 +333,9 @@ INSIGHT_SYSTEM = (
     "angka yang ada di data; jangan menghitung angka baru. Awali dengan huruf kecil karena "
     "kalimat akan disambung setelah 'Yang menarik: '. Tulis wajar seperti "
     "'proposal agritech naik 50% dibanding minggu lalu'; hindari frasa kaku seperti "
-    "'mencatatkan angka'."
+    "'mencatatkan angka'. Bila kandidat punya field 'jenis', tulis tentang kandidat itu saja; "
+    "angka desimal ditulis persis seperti di data (pakai koma, mis. 72,4) dan nama kategori "
+    "ditulis seperti di data (Sangat cocok, Cocok, Berkualitas, di luar fokus, Perlu dicek manual)."
 )
 
 RINGKASAN_SYSTEM = (
@@ -281,8 +384,19 @@ def collect(slot: str, now: datetime) -> tuple[DigestData, list[dict], list[str]
     qof: list[Item] = []
     manual: list[Item] = []
     ids: list[str] = []
-    for s in fs.collection("proposals").where(filter=FieldFilter("responded", "==", False)).stream():
-        p = Proposal.model_validate(s.to_dict())
+    seen: list[Seen] = []
+    # One read of every proposal: the counts, "baru masuk" and the insight all come from it,
+    # so no number in the message can disagree with another.
+    for s in fs.collection("proposals").stream():
+        raw = s.to_dict()
+        seen.append(Seen(at=raw.get("createdAt"), sector=(raw.get("profile") or {}).get("sector"),
+                         category=raw.get("effectiveCategory"),
+                         score=(raw.get("assessment") or {}).get("score")
+                         if raw.get("status") == ProposalStatus.dinilai.value else None,
+                         responded=bool(raw.get("responded"))))
+        if raw.get("responded"):
+            continue
+        p = Proposal.model_validate(raw)
         if p.status == ProposalStatus.dinilai and p.effectiveCategory:
             it = _item(s.id, p)
             groups[Category(p.effectiveCategory)].append(it)
@@ -296,16 +410,11 @@ def collect(slot: str, now: datetime) -> tuple[DigestData, list[dict], list[str]
         v.sort(key=lambda it: it.score, reverse=True)
     qof.sort(key=lambda it: it.score, reverse=True)
 
-    q = fs.collection("proposals")
-    if window_start is not None:
-        q = q.where(filter=FieldFilter("createdAt", ">=", window_start))
-    baru = q.count().get()[0][0].value
-    rows = [(s.get("createdAt"), (s.to_dict().get("profile") or {}).get("sector"))
-            for s in fs.collection("proposals").where(filter=FieldFilter("createdAt", ">=", now - timedelta(days=14))).stream()]
+    baru = sum(is_new(x, window_start) for x in seen)
     data = DigestData(slot=slot, salutation=settings().manager_salutation, window_start=window_start,
-                      groups=groups, quality_outside_focus=qof, manual=manual, baru_masuk=int(baru),
+                      groups=groups, quality_outside_focus=qof, manual=manual, baru_masuk=baru,
                       manager_name=settings().manager_name, at=now)
-    return data, sector_candidates(rows, now), ids
+    return data, insight_candidates(seen, data, now), ids
 
 
 def run_digest(slot: str, send: bool = True) -> dict:

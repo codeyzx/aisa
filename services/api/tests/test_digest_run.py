@@ -141,3 +141,28 @@ def test_rks_08_failed_send_records_no_digest_so_a_retry_sends(world, model, sen
         digest.run_digest("09.00")
     assert world.get(f"digests/{DIGEST_ID}") is None
     assert job_of(world)["status"] == "gagal"
+
+
+def test_rks_09_without_a_sector_trend_the_fallback_insight_is_sent(world, model, sent):
+    # Two proposals, both new: no sector clears MIN_INSIGHT_COUNT, so fallback (a) speaks.
+    model.insight = "2 dari 2 proposal baru masuk kategori teratas."
+    r = digest.run_digest("09.00")
+    d = world.get(f"digests/{DIGEST_ID}")
+    assert digest.INSIGHT_SYSTEM in model.calls
+    assert d["insight"] == "2 dari 2 proposal baru masuk kategori teratas."
+    assert f"{digest.INSIGHT_LABEL} 2 dari 2 proposal baru" in r["text"]
+
+
+def test_rks_10_fallback_insight_with_invented_number_uses_code_text(world, model, sent):
+    model.insight = "3 dari 7 proposal baru masuk Sangat cocok."
+    digest.run_digest("09.00")
+    assert world.get(f"digests/{DIGEST_ID}")["insight"] == (
+        "2 dari 2 proposal baru masuk Sangat cocok atau Cocok.")
+
+
+def test_rks_11_dry_run_shows_the_fallback_candidate(world, model, sent):
+    r = digest.run_digest("09.00", send=False)
+    assert r["insightCandidates"] == [{"jenis": "proposalBaruCocok", "proposalBaru": 2,
+                                       "sangatCocok": 1, "cocok": 1}]
+    assert r["insight"] == "2 dari 2 proposal baru masuk Sangat cocok atau Cocok."
+    assert digest.INSIGHT_LABEL in r["text"] and model.calls == []

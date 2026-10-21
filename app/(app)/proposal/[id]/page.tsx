@@ -74,6 +74,7 @@ import { CorrectionForm } from '../_components/correction-form'
 import { DeckButton } from '../_components/deck-button'
 import { DeleteProposalButton } from '../_components/delete-proposal-button'
 import { proposalHistoryEntries } from '../_components/proposal-history'
+import { RefreshWhileScoring } from '../_components/refresh-while-scoring'
 import {
   compactNumber,
   dateTime,
@@ -166,6 +167,11 @@ export default async function ProposalDetailPage({
   return (
     <AssessmentLogProvider log={log} thresholds={thresholds}>
       <div className="flex flex-col gap-5">
+        <RefreshWhileScoring
+          active={
+            proposal.status === 'antre' || proposal.status === 'dinilai_proses'
+          }
+        />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Link
             href="/proposal"

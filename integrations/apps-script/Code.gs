@@ -55,14 +55,20 @@ const PURPOSE_NOTICE = () =>
   ].join('\n')
 
 /**
- * Adds the intake items to this (bound, still empty) Form. FormApp cannot create a
- * file-upload item, so the pitch-deck question is added by hand afterwards.
+ * Adds the intake items to this Form. FormApp cannot create a file-upload item, so the
+ * pitch-deck question is added by hand — before or after this runs. The Form may hold
+ * nothing but file-upload items; any other item means it was already set up, and this
+ * refuses rather than add a second set of questions.
  */
 function setupForm() {
   const form = FormApp.getActiveForm()
-  if (form.getItems().length > 0) {
+  const existing = form.getItems()
+  const uploads = existing.filter(
+    (it) => it.getType() === FormApp.ItemType.FILE_UPLOAD,
+  )
+  if (existing.length > uploads.length) {
     throw new Error(
-      'Form sudah berisi pertanyaan. setupForm() hanya untuk form kosong.',
+      'Form sudah berisi pertanyaan selain unggah file. setupForm() hanya untuk form kosong.',
     )
   }
   form
@@ -86,8 +92,13 @@ function setupForm() {
     .setChoiceValues([CONSENT_CHOICE])
     .setRequired(true)
 
+  // Keep an upload question added earlier at the end, after the text questions.
+  for (const it of uploads) form.moveItem(it, form.getItems().length - 1)
+
   console.log(
-    'Form siap. Tambahkan pertanyaan "Unggah file" untuk pitch deck secara manual.',
+    uploads.length
+      ? 'Form siap, termasuk pertanyaan unggah pitch deck.'
+      : 'Form siap. Tambahkan pertanyaan "Upload file" untuk pitch deck secara manual.',
   )
 }
 

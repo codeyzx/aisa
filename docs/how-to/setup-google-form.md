@@ -94,8 +94,10 @@ Salin persis, tanpa spasi tambahan dan tanpa garis miring di akhir URL.
 tab form (refresh) sekarang ada pemberitahuan tujuan beserta empat pertanyaan:
 _Nama startup_, _Nama founder_, _Email founder_, _Persetujuan_.
 
-Bila muncul error "Form sudah berisi pertanyaan", form tidak kosong. Hapus semua
-pertanyaan di form, lalu jalankan `setupForm` lagi.
+Pertanyaan unggah pitch deck yang sudah dibuat lebih dulu (langkah 8) tidak masalah:
+`setupForm` membiarkannya dan memindahkannya ke urutan terakhir. Bila muncul error
+"Form sudah berisi pertanyaan selain unggah file", form sudah pernah disiapkan; hapus
+pertanyaan lain itu dulu, lalu jalankan `setupForm` lagi.
 
 ## Langkah 8 — Tambahkan pertanyaan unggah pitch deck (manual)
 
@@ -137,6 +139,17 @@ spasi. Bila berisi error URL, periksa `AISA_API_URL`.
 ✅ Berhasil bila: ada tepat satu baris trigger `onFormSubmit` dengan event
 _From form – On form submit_.
 
+## Langkah 10b — Publikasikan form
+
+Google Forms baru tidak bisa diisi sebelum dipublikasikan; link responden menampilkan
+"Dokumen ini tidak diterbitkan".
+
+1. Di editor form, klik tombol **Publish** (Publikasikan) di kanan atas.
+2. Dialog _Publikasikan formulir_: pastikan **Responden** = _Siapa saja yang memiliki
+   link_, lalu klik **Publish**.
+
+✅ Berhasil bila: link responden (ikon tautan di kanan atas) membuka form dan bisa diisi.
+
 ## Langkah 11 — Kirim satu respons uji
 
 1. Di tab form, klik **Send** → ikon tautan → **Copy**, buka tautannya di tab baru.
@@ -175,7 +188,8 @@ Semua file di dalam folder, termasuk subfolder per pertanyaan, ikut bisa dibaca.
 
 Respons uji di langkah 11 dikirim sebelum folder dibagikan, jadi proposal itu bisa
 tertahan di _Antre_ dengan alasan `404 Not Found`. Itu wajar: kirim satu respons uji
-lagi dengan PDF lain (file yang sama tidak dinilai ulang). Respons kedua ini harus
+lagi dengan PDF lain (file yang sama tidak dinilai ulang), atau kirim `LANJUT` ke bot WhatsApp:
+LANJUT memproses ulang semua proposal yang berstatus _Antre_. Respons kedua ini harus
 sampai ke _Dinilai_. Proposal uji yang tertahan bisa dihapus dengan tombol
 **Hapus data** di halaman detailnya.
 

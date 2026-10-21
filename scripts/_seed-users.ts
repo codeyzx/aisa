@@ -45,20 +45,23 @@ export const SEED_USERS: readonly SeedUser[] = [
 export async function upsertSeedUsers(
   auth: Auth,
 ): Promise<readonly SeedUser[]> {
-  for (const { email, role } of SEED_USERS) {
-    const existing = await auth.getUserByEmail(email).catch(() => null)
-    const { uid } = existing
-      ? await auth.updateUser(existing.uid, {
-          password: SEEDED_PASSWORD,
-          emailVerified: true,
-        })
-      : await auth.createUser({
-          email,
-          password: SEEDED_PASSWORD,
-          emailVerified: true,
-        })
+  // Each email is a distinct account, so the upserts cannot race each other.
+  await Promise.all(
+    SEED_USERS.map(async ({ email, role }) => {
+      const existing = await auth.getUserByEmail(email).catch(() => null)
+      const { uid } = existing
+        ? await auth.updateUser(existing.uid, {
+            password: SEEDED_PASSWORD,
+            emailVerified: true,
+          })
+        : await auth.createUser({
+            email,
+            password: SEEDED_PASSWORD,
+            emailVerified: true,
+          })
 
-    await auth.setCustomUserClaims(uid, { role })
-  }
+      await auth.setCustomUserClaims(uid, { role })
+    }),
+  )
   return SEED_USERS
 }

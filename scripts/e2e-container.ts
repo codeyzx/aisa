@@ -193,6 +193,7 @@ try {
     let ready = false
     const deadline = Date.now() + READY_TIMEOUT_MS
     while (Date.now() < deadline) {
+      // oxlint-disable-next-line no-await-in-loop -- readiness poll: one probe, then a pause, until the deadline
       const response = await fetch(`${base}/api/health`).catch(() => undefined)
       if (response?.ok) {
         const cacheControl = response.headers.get('cache-control')
@@ -206,6 +207,7 @@ try {
         ready = true
         break
       }
+      // oxlint-disable-next-line no-await-in-loop -- the pause between readiness probes
       await delay(2000)
     }
 

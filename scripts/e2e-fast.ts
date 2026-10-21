@@ -319,7 +319,9 @@ async function waitForPort(
         `The ${label} emulator exited ${child.exitCode} before answering on 127.0.0.1:${port}.\n${tail(log)}`,
       )
     }
+    // oxlint-disable-next-line no-await-in-loop -- readiness poll: one probe, then a pause, until the deadline
     if (await fetch(`http://127.0.0.1:${port}/`).catch(() => undefined)) return
+    // oxlint-disable-next-line no-await-in-loop -- the pause between readiness probes
     await new Promise((resolve) => setTimeout(resolve, 500))
   }
   throw new Error(
@@ -337,10 +339,10 @@ async function waitForPort(
  * is ever returned, so this cannot pick some unrelated server.
  */
 function firestoreJvmOn(port: number): number | undefined {
-  const listing = spawnSync('ss', ['-ltnpH', `sport = :${port}`], {
+  const sockets = spawnSync('ss', ['-ltnpH', `sport = :${port}`], {
     encoding: 'utf8',
   }).stdout
-  const pid = Number(/pid=(\d+)/u.exec(listing ?? '')?.[1])
+  const pid = Number(/pid=(\d+)/u.exec(sockets ?? '')?.[1])
   if (!pid) return undefined
   try {
     const cmdline = readFileSync(`/proc/${pid}/cmdline`, 'utf8')
@@ -406,9 +408,21 @@ async function prepareEmulators(): Promise<void> {
   }
   // Same for a Firestore port: the readiness probe would take a leftover
   // emulator (with a previous run's data in it) for the one this run started.
-  for (let index = 1; index <= shardCount; index++) {
+  // Every port is probed at once; the first busy shard, in shard order, is the
+  // one reported.
+  const shardIndexes = Array.from({ length: shardCount }, (_, i) => i + 1)
+  const busy = await Promise.all(
+    shardIndexes.map(async (index) =>
+      Boolean(
+        await fetch(`http://127.0.0.1:${firestorePort(index)}/`).catch(
+          () => undefined,
+        ),
+      ),
+    ),
+  )
+  for (const index of shardIndexes) {
     const port = firestorePort(index)
-    if (await fetch(`http://127.0.0.1:${port}/`).catch(() => undefined)) {
+    if (busy[index - 1]) {
       const pid = firestoreJvmOn(port)
       throw new Error(
         `Something already answers on 127.0.0.1:${port}, shard ${index}'s Firestore port` +
@@ -441,6 +455,7 @@ async function prepareEmulators(): Promise<void> {
   // emulator, and two concurrent creates of one email race to "already exists".
   for (let index = 1; index <= shardCount; index++) {
     const log = join(RUN_DIR, `seed-${index}.log`)
+    // oxlint-disable-next-line no-await-in-loop -- serial on purpose, see above
     const code = await runToLog('node', ['scripts/seed-emulator.ts'], log, {
       ...process.env,
       FIREBASE_PROJECT_ID: PROJECT_ID,

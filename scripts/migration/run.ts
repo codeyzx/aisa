@@ -72,7 +72,6 @@ import {
   assertMigrationFilenameId,
   MIGRATIONS_COLLECTION,
   type Migration,
-  type MigrationContext,
 } from './infrastructure.ts'
 
 const MIGRATION_DIR = dirname(fileURLToPath(import.meta.url))
@@ -96,23 +95,25 @@ async function discoverMigrations(): Promise<DiscoveredMigration[]> {
     .filter((name) => /^\d{4}-.+\.ts$/.test(name))
     .toSorted((a, b) => a.localeCompare(b))
 
-  const discovered: DiscoveredMigration[] = []
-  for (const file of files) {
-    const url = pathToFileURL(join(MIGRATION_DIR, file)).href
-    // NOT named `module`: next(no-assign-module-variable) rejects it, and it is
-    // right to — `module` is a real binding in a CJS scope and shadowing it is
-    // how a file starts behaving differently depending on how it was loaded.
-    const loaded: unknown = await import(url)
-    const migration = (loaded as { migration?: Migration }).migration
-    if (!migration || typeof migration.run !== 'function') {
-      throw new Error(
-        `${file} does not export a \`migration\` with a run() — see _template.ts`,
-      )
-    }
-    assertMigrationFilenameId(file, migration.id)
-    discovered.push({ id: migration.id, migration })
-  }
-  return discovered
+  // Loaded concurrently; `Promise.all` keeps the result in filename order,
+  // which is the execution order.
+  return Promise.all(
+    files.map(async (file): Promise<DiscoveredMigration> => {
+      const url = pathToFileURL(join(MIGRATION_DIR, file)).href
+      // NOT named `module`: next(no-assign-module-variable) rejects it, and it is
+      // right to — `module` is a real binding in a CJS scope and shadowing it is
+      // how a file starts behaving differently depending on how it was loaded.
+      const loaded: unknown = await import(url)
+      const migration = (loaded as { migration?: Migration }).migration
+      if (!migration || typeof migration.run !== 'function') {
+        throw new Error(
+          `${file} does not export a \`migration\` with a run() — see _template.ts`,
+        )
+      }
+      assertMigrationFilenameId(file, migration.id)
+      return { id: migration.id, migration }
+    }),
+  )
 }
 
 async function main(): Promise<void> {
@@ -189,6 +190,7 @@ async function main(): Promise<void> {
   console.log(`\n  ${pending.length} pending:\n`)
   let totalWrites = 0
   for (const { id, migration } of pending) {
+    // oxlint-disable-next-line no-await-in-loop -- one migration at a time, so each report reads in execution order
     const writes = await migration.run({
       db,
       apply: false,
@@ -217,6 +219,7 @@ async function main(): Promise<void> {
 
   console.log('')
   for (const { id, migration } of pending) {
+    // oxlint-disable-next-line no-await-in-loop -- migrations apply in filename order; a later one may depend on an earlier one's writes
     const writes = await migration.run({
       db,
       apply: true,
@@ -225,6 +228,7 @@ async function main(): Promise<void> {
 
     // Ledger AFTER the work — see the header. Dying between the two costs a
     // redundant (idempotent) re-run; the reverse order would cost skipped data.
+    // oxlint-disable-next-line no-await-in-loop -- recorded before the next migration starts, so a crash never leaves a finished one unrecorded
     await db.collection(MIGRATIONS_COLLECTION).doc(id).set({
       id,
       description: migration.description,

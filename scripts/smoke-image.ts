@@ -244,6 +244,7 @@ try {
     )
     health = inspected.status === 0 ? inspected.stdout : `inspect failed`
     if (health === 'healthy' || health === 'unhealthy') break
+    // oxlint-disable-next-line no-await-in-loop -- the pause between health probes
     await delay(2000)
   }
   record(

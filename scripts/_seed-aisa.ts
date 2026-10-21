@@ -291,6 +291,30 @@ function categoryOf(
   return { category: 'tidak_cocok' as Category, outside: false }
 }
 
+function rp(n: number) {
+  return `Rp${(n / 1_000_000_000).toLocaleString('id-ID')} M`
+}
+
+/** One `kode` (non-model) assessment step, finished `ok`. */
+function code(
+  action: string,
+  tool: string,
+  durationMs: number,
+  io: { read?: string; wrote?: string } = {},
+) {
+  return {
+    action,
+    tool,
+    actor: 'kode',
+    read: io.read ?? null,
+    wrote: io.wrote ?? null,
+    tokensIn: 0,
+    tokensOut: 0,
+    durationMs,
+    status: 'ok',
+  }
+}
+
 function fitOf(seed: Seed) {
   const sectorOk = seed.sector !== null && FIT.sectors.includes(seed.sector)
   const stageOk = seed.stage !== null && FIT.stages.includes(seed.stage)
@@ -298,7 +322,6 @@ function fitOf(seed: Seed) {
     seed.funding !== null &&
     seed.funding >= FIT.fundingMinIdr &&
     seed.funding <= FIT.fundingMaxIdr
-  const rp = (n: number) => `Rp${(n / 1_000_000_000).toLocaleString('id-ID')} M`
   return {
     passed: sectorOk && stageOk && fundingOk,
     checks: {
@@ -597,22 +620,6 @@ export async function seedAisa(
     // The steps and names `run_intake` (services/api/aisa/intake.py) records
     // for an uploaded or Form deck, so the dashboard reads the seed exactly as
     // it reads production.
-    const code = (
-      action: string,
-      tool: string,
-      durationMs: number,
-      io: { read?: string; wrote?: string } = {},
-    ) => ({
-      action,
-      tool,
-      actor: 'kode',
-      read: io.read ?? null,
-      wrote: io.wrote ?? null,
-      tokensIn: 0,
-      tokensOut: 0,
-      durationMs,
-      status: 'ok',
-    })
     const steps = [
       code('Ekstrak teks per halaman', 'pypdf', 1800, {
         read: 'pitch deck',

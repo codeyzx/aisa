@@ -83,9 +83,11 @@ export async function forEachRawCollectionPage(
   for (;;) {
     let query = collection.orderBy('__name__').limit(pageSize)
     if (last) query = query.startAfter(last)
+    // oxlint-disable-next-line no-await-in-loop -- cursor pagination: each page starts after the previous page's last doc
     const page = await query.get()
     if (page.empty) return
 
+    // oxlint-disable-next-line no-await-in-loop -- one page in memory at a time is the point of paging
     await visit(page.docs)
     last = page.docs[page.docs.length - 1]
     if (page.size < pageSize) return

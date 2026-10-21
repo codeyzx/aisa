@@ -52,6 +52,10 @@ export interface ExportedAction {
   body: ts.Node | undefined
 }
 
+function isExported(node: ts.Declaration): boolean {
+  return (ts.getCombinedModifierFlags(node) & ts.ModifierFlags.Export) !== 0
+}
+
 /**
  * Every exported top-level action in a source file, across BOTH the shapes a
  * `'use server'` file can present a browser-reachable action as:
@@ -67,9 +71,6 @@ export interface ExportedAction {
  * returned — only arrow / function-expression initializers are action-shaped.
  */
 export function exportedActions(sf: ts.SourceFile): ExportedAction[] {
-  const isExported = (node: ts.Declaration): boolean =>
-    (ts.getCombinedModifierFlags(node) & ts.ModifierFlags.Export) !== 0
-
   const out: ExportedAction[] = []
   for (const statement of sf.statements) {
     if (ts.isFunctionDeclaration(statement) && statement.name) {

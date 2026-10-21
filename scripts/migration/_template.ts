@@ -60,6 +60,7 @@ export const migration: Migration = {
           writes++
           if (!ctx.apply) continue // dry run: counted, not written
 
+          // oxlint-disable-next-line no-await-in-loop -- one write per doc, logged as it lands, so an interrupted run's log names exactly what changed
           await doc.ref.update({ __field__: '__value__' })
           ctx.log(`migrated ${doc.id}`)
         }

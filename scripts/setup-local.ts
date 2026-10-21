@@ -120,8 +120,14 @@ async function waitForEmulators(
 
   const deadline = Date.now() + EMULATOR_WAIT_MS
   while (Date.now() < deadline) {
+    // oxlint-disable-next-line no-await-in-loop -- the pause between emulator probes
     await new Promise((resolve) => setTimeout(resolve, 2000))
-    if ((await isUp(authHost)) && (await isUp(firestoreHost))) {
+    // oxlint-disable-next-line no-await-in-loop -- readiness poll: both emulators probed once per round
+    const [authUp, firestoreUp] = await Promise.all([
+      isUp(authHost),
+      isUp(firestoreHost),
+    ])
+    if (authUp && firestoreUp) {
       console.log('  emulators are up. Continuing.')
       return
     }

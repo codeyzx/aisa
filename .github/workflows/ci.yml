@@ -331,13 +331,16 @@ jobs:
       - name: Image smoke (non-root, assets, build identity, headers, health, shutdown)
         run: pnpm smoke:image
 
-      # `test:e2e:ci` is the whole arrangement in one canonical command: it starts
-      # the emulators, seeds them, builds the image, runs the CONTAINER, waits on a
-      # `no-store` /api/health, drives the browser suite against it, and tears the
-      # container down. Running `pnpm test:e2e` here instead would drive nothing —
-      # the suite refuses to start without a target, deliberately.
+      # `test:e2e:ci` is the whole arrangement in one canonical command: it builds
+      # the image, starts and seeds the emulators, runs one CONTAINER per shard,
+      # waits on a `no-store` /api/health, drives its share of the browser suite
+      # against it, and tears everything down. Running `pnpm test:e2e` here instead
+      # would drive nothing — the suite refuses to start without a target,
+      # deliberately. Two shards, not the default four: each shard is a container,
+      # a Firestore emulator JVM and a browser, and a hosted runner's memory is
+      # not a workstation's.
       - name: Browser E2E against the production container
-        run: pnpm test:e2e:ci
+        run: pnpm test:e2e:ci --shards 2
 
       # The move-dance: the builds wrote `--cache-to` to `-new` so it never fought the
       # restored `-cache` mid-build; promote it now, before actions/cache saves the

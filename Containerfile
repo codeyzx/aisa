@@ -7,7 +7,7 @@
 # commit run different runtimes, which is the thing that turns "it passed on my
 # machine" into an unfalsifiable claim. `.node-version` is the source and
 # `pnpm node:check` proves this line still agrees with it.
-ARG NODE_VERSION=24.18.0
+ARG NODE_VERSION=24.22.1
 
 FROM node:${NODE_VERSION}-bookworm-slim AS base
 ENV PNPM_HOME=/pnpm \

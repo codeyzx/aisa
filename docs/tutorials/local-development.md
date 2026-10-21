@@ -9,7 +9,7 @@ this tutorial can touch a real project.
 
 ## Before you start
 
-- **Node 24.18.0, exactly.** `.node-version` is the source a version manager reads
+- **Node 24.22.1, exactly.** `.node-version` is the source a version manager reads
   (fnm, nvm, asdf, nodenv, mise all understand it). `pnpm node:check` proves every
   place that pins a Node version still agrees, and warns when the interpreter you
   are actually running is a different one — a local "it worked for me" on the wrong

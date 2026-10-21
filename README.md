@@ -42,7 +42,7 @@ Alasan lengkap di balik bentuknya ada di
 
 ### Prasyarat
 
-- **Node 24.18.0, persis** — `.node-version` adalah sumber yang dibaca version manager
+- **Node 24.22.1, persis** — `.node-version` adalah sumber yang dibaca version manager
   (fnm, nvm, asdf, nodenv, mise).
 - **pnpm** — jangan `npm`; lockfile-nya punya pnpm.
 - **Docker atau Podman, opsional** — hanya untuk pemeriksaan container

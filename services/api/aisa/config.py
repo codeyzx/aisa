@@ -46,7 +46,7 @@ def settings() -> Settings:
         gowa_device_id=_env("GOWA_DEVICE_ID"),
         gowa_webhook_secret=_env("GOWA_WEBHOOK_SECRET"),
         manager_phones=phones,
-        manager_salutation=_env("MANAGER_SALUTATION", "Ibu"),
+        manager_salutation=_env("MANAGER_SALUTATION", "Pak"),
         manager_name=_env("MANAGER_NAME"),
         internal_api_key=_env("INTERNAL_API_KEY"),
         intake_secret=_env("INTAKE_SECRET"),

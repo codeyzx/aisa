@@ -88,7 +88,7 @@ reply lists candidates and nothing changes. Any other message goes to the Asiste
 | `GOWA_DEVICE_ID`         | sent as `X-Device-Id`                                                                     |
 | `GOWA_WEBHOOK_SECRET`    | secret; unset → every webhook is rejected                                                 |
 | `MANAGER_PHONES`         | comma-separated digits, e.g. `62812…`; the only senders served and the digest recipients  |
-| `MANAGER_SALUTATION`     | default `Ibu`                                                                             |
+| `MANAGER_SALUTATION`     | default `Pak`                                                                             |
 | `MANAGER_NAME`           | optional; digest greeting becomes "Selamat pagi, Pak Budi." Empty → salutation only       |
 | `ASSISTANT_MODEL`        | model the Asisten runs (default `gemini-3.8-flash`); also the `asisten` job's model label |
 | `SCHEDULER_SA_EMAIL`     | service account Cloud Scheduler signs its OIDC token as; unset → OIDC is not accepted     |

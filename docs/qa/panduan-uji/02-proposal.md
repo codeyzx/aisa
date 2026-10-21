@@ -411,8 +411,9 @@ dengan bukti dari deck.
   atau tanpa bukti." Di bawahnya: "AI bisa salah. Cocokkan dengan kutipan di bawah, atau buka log
   penilaian untuk melihat alasannya."
 - **Nilai per kriteria**: lima baris (Tim, Pasar & masalah, Produk & keunggulan, Traksi, Model
-  bisnis & keuangan). Tiap kutipan diberi label "Hal. <n>". Buka deck (UC-PRP-21) dan cocokkan:
-  kalimat itu ada di halaman yang disebut.
+  bisnis & keuangan). Tiap kutipan diberi label "Hal. <n>". Klik label itu untuk membuka
+  pratinjau deck di halaman tersebut (UC-PRP-21) dan cocokkan: kalimat itu ada di halaman yang
+  disebut.
 - Keterangan kartu menyebut versi aturan dan model, mis. "Aturan v1 · model gemini-3.8-flash."
   Bila aturan sudah diubah sejak dinilai, ada kalimat "Bobot yang tampil dari aturan v3 yang
   berlaku sekarang." Artinya bobot di layar adalah bobot sekarang, bukan bobot saat dinilai.
@@ -626,11 +627,11 @@ AISA dibahas di panduan Asisten.
 
 **Yang seharusnya terlihat:**
 
-- Proposal Form: inisial, nama founder, dan alamat email, lalu tombol **Email** selebar kartu.
-  Baris sumber "Form · <nama berkas> · <n> halaman".
+- Proposal Form: inisial, nama founder, dan alamat email, lalu tombol **Pratinjau deck** dan
+  tombol **Email**, keduanya selebar kartu. Baris sumber "Form · <nama berkas> · <n> halaman".
 - **Email** membuka aplikasi email Anda dengan alamat founder sudah terisi.
-- Proposal unggahan: "Data founder tidak disebut.", tanpa tombol **Email**, dengan tombol **Buka
-  deck**, dan baris sumber "Unggahan · …".
+- Proposal unggahan: "Data founder tidak disebut.", tanpa tombol **Email**, dengan tombol
+  **Pratinjau deck** dan **Buka deck**, dan baris sumber "Unggahan · …".
 
 **Kalau berbeda:** catat proposal yang alamat emailnya kosong atau salah.
 
@@ -638,22 +639,39 @@ AISA dibahas di panduan Asisten.
 
 **Situasi:** Anda ingin membaca deck asli untuk mencocokkan kutipan AI.
 
-**Sebelum mulai:** di detail proposal **unggahan** (mis. Klinik Desa Sehat). Tombol ini tidak ada
-di proposal yang masuk lewat Form.
+**Sebelum mulai:** di detail proposal **unggahan** (mis. Klinik Desa Sehat). Untuk langkah 5,
+detail proposal yang masuk lewat Form (mis. Saku Hukum), masuk dengan akun Google yang bisa
+membuka berkas Drive-nya. Use case ini tidak mengubah data.
 
 **Langkah:**
 
-1. Di kartu **Founder**, klik **Buka deck**.
+1. Di kartu **Founder**, klik **Pratinjau deck**.
+2. Tekan Esc, lalu di **Nilai per kriteria** klik label "Hal. <n>" di samping sebuah kutipan.
+3. Tekan Esc, klik **Cara AI menilai**, lalu di panel **Log penilaian** klik "hal. <n>" di
+   samping "Bukti dari".
+4. Tutup semua panel, lalu di kartu **Founder** klik **Buka deck**.
+5. Di detail proposal Form, klik label "Hal. <n>" mana pun.
 
 **Yang seharusnya terlihat:**
 
-- Tab baru terbuka dan menampilkan PDF deck itu.
-- Di bawah tombol muncul tautan cadangan **Tautan deck (sementara)**. Pakai tautan itu bila
-  browser memblokir tab baru. Tautannya hanya berlaku sebentar; klik **Buka deck** lagi untuk
-  tautan baru.
+- Langkah 1: panel **Pratinjau deck** terbuka di kanan (di ponsel: selayar penuh) dengan nama
+  berkas, "· <n> halaman", PDF deck di dalam panel, dan tombol **Buka di tab baru**. Selama PDF
+  dimuat tertulis "Membuka deck…". Di bawah: "Tautan pratinjau berlaku 15 menit; …".
+- Langkah 2: panel yang sama terbuka dengan label "hal. <n>" di samping judul, dan PDF langsung
+  menampilkan halaman itu. Kalimat kutipan ada di halaman tersebut.
+- Langkah 3: pratinjau terbuka di halaman itu di atas Log penilaian; Esc menutup pratinjau dan
+  Log penilaian tampil lagi.
+- Langkah 4: tab baru terbuka dan menampilkan PDF deck itu. Di bawah tombol muncul tautan
+  cadangan **Tautan deck (sementara)**. Pakai tautan itu bila browser memblokir tab baru.
+  Tautannya hanya berlaku sebentar; klik **Buka deck** lagi untuk tautan baru.
+- Langkah 5: pratinjau Google Drive tampil di panel, mulai dari halaman 1, dengan label
+  "hal. <n>" dan catatan "Pratinjau Drive selalu mulai dari halaman 1; gulir ke hal. <n>."
+  Proposal Form tidak punya tombol **Buka deck**; pakai **Buka di tab baru** di panel.
 
-**Kalau berbeda:** bila muncul teks merah di bawah tombol atau toast, catat pesannya. Tab kosong
-yang langsung tertutup juga berarti tautan gagal dibuat.
+**Kalau berbeda:** bila panel bertuliskan "Deck tidak bisa dibuka." atau muncul toast, catat
+pesannya. Bila panel kosong atau browser menampilkan halaman terblokir, catat browsernya dan
+pakai **Buka di tab baru**. Tab kosong yang langsung tertutup setelah **Buka deck** juga berarti
+tautan gagal dibuat.
 
 ### UC-PRP-22 · Koreksi kategori tanpa alasan
 
@@ -843,7 +861,8 @@ lingkungan lokal (emulator) akun ini sudah tersedia: `viewer@aisa.test`.
   manajer investasi." tanpa tombol tanggapan.
 - Kartu **Kategori kurang pas?** tidak ada, kecuali proposal itu pernah dikoreksi: maka hanya
   keterangan koreksinya yang tampil, tanpa formulir.
-- **Lihat log penilaian**, **Tanya AISA**, **Email**, dan **Buka deck** tetap bisa dipakai.
+- **Lihat log penilaian**, **Tanya AISA**, **Email**, **Pratinjau deck** (juga dari label
+  "Hal. <n>"), dan **Buka deck** tetap bisa dipakai.
 
 **Kalau berbeda:** tombol tulis apa pun yang tampil di akun baca-saja adalah temuan: catat tombol
 dan halamannya.

@@ -153,6 +153,9 @@ class FakeJob:
     def __init__(self):
         self.steps = []
 
+    def begin(self, action, tool, actor):
+        pass
+
     def step(self, action, tool, actor, **kw):
         self.steps.append({"action": action, "tool": tool, "actor": actor, **kw})
 

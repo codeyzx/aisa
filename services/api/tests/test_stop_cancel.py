@@ -73,6 +73,9 @@ class FakeJob:
         self.job = SimpleNamespace(startedAt=T0)
         self.steps, self.status = [], None
 
+    def begin(self, action, tool, actor):
+        pass
+
     def step(self, action, tool, actor, **k):
         self.steps.append((action, k.get("status", "ok"), k.get("tokens_in", 0)))
 

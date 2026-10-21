@@ -10,7 +10,7 @@ from contextlib import contextmanager
 from google.cloud import firestore
 
 from . import db
-from .models import Job, JobKind, JobStatus, Step, StepActor, to_doc
+from .models import CurrentStep, Job, JobKind, JobStatus, Step, StepActor, to_doc
 
 
 class JobLog:
@@ -42,6 +42,12 @@ class JobLog:
         if upd:
             self.ref.update(upd)
 
+    def begin(self, action: str, tool: str, actor: StepActor) -> None:
+        """Mark a step as started on the job card; `step()` clears it when the step is
+        recorded. One job-doc write, so a live view can name the step still running."""
+        cur = CurrentStep(action=action, tool=tool, actor=actor, startedAt=db.now())
+        self.ref.update({"currentStep": to_doc(cur)})
+
     def step(self, action: str, tool: str, actor: StepActor, *, model: str | None = None,
              read: str | None = None, wrote: str | None = None, tokens_in: int = 0,
              tokens_out: int = 0, duration_ms: int = 0, status: str = "ok",
@@ -56,12 +62,13 @@ class JobLog:
                  durationMs=duration_ms, status=status, error=error)
         self.ref.collection("steps").document(f"{self.seq:03d}").set(to_doc(s))
         self.ref.update({"stepCount": self.seq, "tokensIn": self.tokens_in,
-                         "tokensOut": self.tokens_out})
+                         "tokensOut": self.tokens_out, "currentStep": None})
 
     @contextmanager
     def code_step(self, action: str, tool: str, read: str | None = None,
                   wrote: str | None = None):
         """A step done by code: actor `kode`, zero tokens. Records a failure and re-raises."""
+        self.begin(action, tool, StepActor.kode)
         t0 = time.monotonic()
         try:
             yield
@@ -75,7 +82,7 @@ class JobLog:
     def finish(self, status: JobStatus) -> None:
         end = db.now()
         upd = {"status": status.value, "endedAt": end,
-               "durationMs": int((time.monotonic() - self._t0) * 1000)}
+               "durationMs": int((time.monotonic() - self._t0) * 1000), "currentStep": None}
         if not self.model_calls and self.job.model:
             # No model was called (e.g. too little text, or a paused digest): the card must
             # not name a model that did no work.

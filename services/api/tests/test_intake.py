@@ -151,3 +151,57 @@ def test_pnl_04_history_detail_uses_comma_decimal_and_category_label(proposal, p
     cat = fs.get(f"proposals/{PID}")["category"]
     (h,) = fs.all("history").values()
     assert h["detail"].startswith(f"Proposal Tani Maju masuk: skor 68,1, {CATEGORY_LABEL[cat]}")
+
+
+# ---------- live progress: jobs/{id}.currentStep ----------
+
+def current_step(fs):
+    return fs.get(f"jobs/{fs.get(f'proposals/{PID}')['jobId']}")["currentStep"]
+
+
+def test_current_step_names_the_running_step_and_clears_after(proposal, env, rules):
+    fs = proposal(RICH)
+    seen = []
+    env.setattr(intake, "extract_pages", lambda pdf: seen.append(current_step(fs)) or list(RICH))
+
+    def assess(pages, rules):
+        seen.append(current_step(fs))
+        return bad_attempt() if len(seen) == 2 else ok_attempt()
+
+    env.setattr(intake, "assess_once", assess)
+    assert intake.run_intake(PID, b"%PDF") == "dinilai"
+    extract, first, retry = seen
+    assert (extract["action"], extract["actor"], extract["tool"]) == ("Ekstrak teks per halaman", "kode", "pypdf")
+    assert first["action"] == "Menilai 5 kriteria" and first["actor"] == "model"
+    assert first["tool"] == "gemini.generate_content" and first["startedAt"] is not None
+    # The failed attempt's step doc cleared it; the retry set it again.
+    assert retry["action"] == "Menilai 5 kriteria (ulang)"
+    _, job, _ = job_of(fs)
+    assert job["status"] == "selesai" and job["currentStep"] is None
+
+
+def test_current_step_cleared_on_stop(proposal, env, rules):
+    fs = proposal(RICH)
+
+    def assess(pages, rules):
+        fs.document("settings/runtime").set({"paused": True})
+        return ok_attempt()
+
+    env.setattr(intake, "assess_once", assess)
+    assert intake.run_intake(PID, b"%PDF") == "dihentikan"
+    _, job, steps = job_of(fs)
+    assert steps[-1]["action"] == "Dihentikan oleh STOP"
+    assert job["status"] == "dihentikan" and job["currentStep"] is None
+
+
+def test_current_step_cleared_when_the_model_call_raises(proposal, env, rules):
+    fs = proposal(RICH)
+
+    def assess(pages, rules):
+        assert current_step(fs)["action"] == "Menilai 5 kriteria"
+        raise RuntimeError("gemini down")
+
+    env.setattr(intake, "assess_once", assess)
+    assert intake.run_intake(PID, b"%PDF") == "antre"
+    _, job, _ = job_of(fs)
+    assert job["status"] == "gagal" and job["currentStep"] is None

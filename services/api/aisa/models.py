@@ -276,6 +276,14 @@ class Runtime(_M):
 # ---------- jobs ----------
 
 
+class CurrentStep(_M):
+    """The step a running job has started but not yet recorded under `steps`."""
+    action: str
+    tool: str
+    actor: StepActor
+    startedAt: datetime
+
+
 class Job(_M):
     kind: JobKind
     agent: str
@@ -293,6 +301,9 @@ class Job(_M):
     stepCount: int = 0
     tokensIn: int = 0
     tokensOut: int = 0
+    # Set when a step starts; null again once that step's doc is written and when the job
+    # finishes, so a non-null value always names work still in progress.
+    currentStep: CurrentStep | None = None
 
 
 class Step(_M):

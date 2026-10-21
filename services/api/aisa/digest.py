@@ -452,6 +452,7 @@ def run_digest(slot: str, send: bool = True) -> dict:
         insight = template_insight(cands)
         if cands and not paused:
             cand_json = json.dumps(cands, ensure_ascii=False)
+            job.begin("Menulis insight", "gemini.generate_content", StepActor.model)
             try:
                 r = llm.generate(rules.models.insight, INSIGHT_SYSTEM, f"Data:\n{cand_json}", temperature=0.3)
                 ok = bool(r.text.strip()) and numbers_ok(r.text, cand_json) and not has_advice(r.text)
@@ -472,6 +473,7 @@ def run_digest(slot: str, send: bool = True) -> dict:
         if not paused:
             payload = {"draf": draft, "alasanSangatCocok": {
                 it.name: it.reasons for it in data.groups[Category.sangat_cocok][:SANGAT_DETAIL_MAX]}}
+            job.begin("Menyusun teks ringkasan", "gemini.generate_content", StepActor.model)
             try:
                 r = llm.generate(rules.models.ringkasan, RINGKASAN_SYSTEM,
                                  json.dumps(payload, ensure_ascii=False), temperature=0.3)

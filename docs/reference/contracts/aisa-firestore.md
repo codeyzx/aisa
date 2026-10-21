@@ -92,10 +92,21 @@ LANJUT arrives before it finishes.
 ## `jobs/{jobId}` and `jobs/{jobId}/steps/{stepId}`
 
 Job: `{kind: JobKind, agent, title, model?, proposalId?, proposalIds?, digestId?, status: JobStatus,
-startedAt, endedAt?, durationMs?, stepCount, tokensIn, tokensOut}`. A WhatsApp command job
+startedAt, endedAt?, durationMs?, stepCount, tokensIn, tokensOut, currentStep?}`. A WhatsApp command job
 gets `proposalId` once its name resolves to one proposal, and `proposalIds` when it lists or
 confirms a bulk response. Its title is "Perintah: <perintah> <nama>" built from the parsed
 command, never the message text, so a correction's reason is not in it.
+
+`currentStep: {action, tool, actor: StepActor, startedAt} | null` is the live progress of a
+running job. It is written on the job doc just before a step starts and set back to `null` by
+the same update that records any step and by the update that finishes the job (every
+`status`), so a non-null value names work still in progress; once the job ends it is `null`.
+Every code step sets it, and so does each Penilai assessment call ("Menilai 5 kriteria",
+then "Menilai 5 kriteria (ulang)") and each ringkasan model call ("Menulis insight",
+"Menyusun teks ringkasan"). An `asisten` job shows "Menjawab pertanyaan" from its start and
+again after each tool call: its tool-call steps are only known once the agent asks for them,
+so `currentStep` never names one. Jobs written before this field existed have no
+`currentStep` key; read a missing key as `null`.
 
 Step: `{seq: int, at, action, tool, actor: StepActor, model?, read?, wrote?, tokensIn,
 tokensOut, durationMs, status: "ok" | "gagal" | "dihentikan", error?}`. Code steps have

@@ -151,8 +151,10 @@ def run_intake(pid: str, pdf: bytes | None = None) -> ProposalStatus | None:
         attempt = None
         for i in range(PENILAI_ATTEMPTS):
             check_paused()
+            action = "Menilai 5 kriteria" + (" (ulang)" if i else "")
+            job.begin(action, "gemini.generate_content", StepActor.model)
             attempt = assess_once(pages, rules)
-            job.step("Menilai 5 kriteria" + (" (ulang)" if i else ""), "gemini.generate_content",
+            job.step(action, "gemini.generate_content",
                      StepActor.model, model=rules.models.penilai, read=f"proposalTexts/{pid}",
                      tokens_in=attempt.tokens_in, tokens_out=attempt.tokens_out,
                      duration_ms=attempt.duration_ms, status="ok" if attempt.ok else "gagal",

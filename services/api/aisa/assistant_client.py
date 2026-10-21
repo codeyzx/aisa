@@ -62,6 +62,12 @@ class StepRecorder:
         self.pending_in = self.pending_out = 0
         self.tool_calls = 0
         self._t = time.monotonic()
+        self._answering()
+
+    def _answering(self) -> None:
+        # The agent is working towards its answer from the start and again after every tool
+        # call it asked for, since recording that call's step clears the job's currentStep.
+        self.job.begin("Menjawab pertanyaan", self.tool, StepActor.model)
 
     def _elapsed(self) -> int:
         now = time.monotonic()
@@ -80,6 +86,7 @@ class StepRecorder:
             self.job.step(f"Memanggil {name}", name, StepActor.model, model=self.model,
                           read=args_summary(args), tokens_in=tokens_in if first else 0,
                           tokens_out=tokens_out if first else 0, duration_ms=ms if first else 0)
+        self._answering()
 
     def stopped(self) -> None:
         """The run was cancelled by STOP: one step carrying the tokens used so far."""

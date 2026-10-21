@@ -57,9 +57,10 @@ function ChartContainer({
 }) {
   const uniqueId = React.useId()
   const chartId = `chart-${id ?? uniqueId.replace(/:/g, '')}`
+  const contextValue = React.useMemo(() => ({ config }), [config])
 
   return (
-    <ChartContext.Provider value={{ config }}>
+    <ChartContext.Provider value={contextValue}>
       <div
         data-slot="chart"
         data-chart={chartId}
@@ -82,7 +83,7 @@ function ChartContainer({
 
 const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
   const colorConfig = Object.entries(config).filter(
-    ([, config]) => config.theme ?? config.color,
+    ([, itemConfig]) => itemConfig.theme ?? itemConfig.color,
   )
 
   if (!colorConfig.length) {
@@ -205,6 +206,9 @@ function ChartTooltipContent({
 
             return (
               <div
+                // Recharts payload entries carry no unique id (a pie's entries share one
+                // dataKey), and each row is stateless and rebuilt on every render.
+                // oxlint-disable-next-line react/no-array-index-key
                 key={index}
                 className={cn(
                   'flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground',
@@ -303,6 +307,9 @@ function ChartLegendContent({
 
           return (
             <div
+              // Recharts payload entries carry no unique id (a pie's entries share one
+              // dataKey), and each row is stateless and rebuilt on every render.
+              // oxlint-disable-next-line react/no-array-index-key
               key={index}
               className={cn(
                 'flex items-center gap-1.5 [&>svg]:h-3 [&>svg]:w-3 [&>svg]:text-muted-foreground',

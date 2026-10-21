@@ -93,14 +93,17 @@ export function deriveProgress(progress: AssessmentProgress): ProgressView {
       ? null
       : progress.job
 
-  const rows: ProgressRow[] = (job?.steps ?? []).map((step) => ({
-    ...describeStep(step),
-    id: `step-${step.seq}`,
-    state: step.status === 'ok' ? 'selesai' : step.status,
-    durationMs: step.durationMs,
-    startedAt: null,
-    error: step.error ?? null,
-  }))
+  // describeStep returns a fresh object per call, so extending it in place
+  // copies nothing and aliases nothing.
+  const rows: ProgressRow[] = (job?.steps ?? []).map((step) =>
+    Object.assign(describeStep(step), {
+      id: `step-${step.seq}`,
+      state: step.status === 'ok' ? ('selesai' as const) : step.status,
+      durationMs: step.durationMs,
+      startedAt: null,
+      error: step.error ?? null,
+    }),
+  )
 
   const current =
     phase === 'berjalan' && job?.status === 'berjalan' ? job.currentStep : null

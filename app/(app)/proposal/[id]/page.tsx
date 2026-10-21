@@ -38,8 +38,6 @@ import { isCorrected } from '@/features/aisa/aisa.calibration'
 import {
   CATEGORY_LABEL,
   CRITERION_LABEL,
-  HISTORY_ACTION_LABEL,
-  labelOf,
   QUALITY_OUTSIDE_FOCUS_LABEL,
   sectorLabel,
   STATUS_LABEL,
@@ -75,6 +73,7 @@ import { buildAssessmentLog } from '../_components/assessment-log-data'
 import { CorrectionForm } from '../_components/correction-form'
 import { DeckButton } from '../_components/deck-button'
 import { DeleteProposalButton } from '../_components/delete-proposal-button'
+import { proposalHistoryEntries } from '../_components/proposal-history'
 import {
   compactNumber,
   dateTime,
@@ -149,6 +148,7 @@ export default async function ProposalDetailPage({
   const log = job ? buildAssessmentLog(job, proposal, history, rules) : null
   const tone = assessment ? scoreTone(assessment.score, thresholds) : null
   const decision = proposal.response?.kind ?? null
+  const entries = proposalHistoryEntries(history, proposal.response)
   const { strengths, checks } = strengthsAndChecks(proposal)
   const tokens = proposal.tokens.in + proposal.tokens.out
   const weightsDiffer =
@@ -569,9 +569,9 @@ export default async function ProposalDetailPage({
                 </CardAction>
               </CardHeader>
               <CardContent>
-                {history.length ? (
+                {entries.length ? (
                   <ol className="ml-1.5 space-y-6 border-l pl-6">
-                    {history.map((row, i) => (
+                    {entries.map((row, i) => (
                       <li key={row.id} className="relative">
                         <span
                           aria-hidden
@@ -580,9 +580,7 @@ export default async function ProposalDetailPage({
                             i === 0 ? 'bg-primary' : 'bg-muted-foreground/40',
                           )}
                         />
-                        <p className="text-sm font-medium">
-                          {labelOf(HISTORY_ACTION_LABEL, row.action)}
-                        </p>
+                        <p className="text-sm font-medium">{row.title}</p>
                         <p className="text-sm text-muted-foreground">
                           {row.detail}
                           {row.reason ? ` — ${row.reason}` : ''} · via{' '}

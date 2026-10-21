@@ -253,7 +253,8 @@ pekerjaan itu tetap tercatat di sidebar **Ruang kerja** → **Aktivitas AI** seb
 tab baru mulai dengan percakapan kosong (**Halo**), tetapi percakapan tadi ada di riwayat dan bisa
 dibuka dari sana. Riwayat disimpan di browser ini (localStorage) per akun: browser atau perangkat
 lain tidak melihatnya, dan akun lain yang masuk di browser yang sama tidak melihat riwayat akun
-Anda. Percakapan yang sedang terbuka diingat per tab.
+Anda. Percakapan yang sedang terbuka diingat per tab. Saat Anda **Keluar** (menu akun kanan
+atas), seluruh riwayat Tanya AISA di browser ini dihapus, jadi setelah masuk lagi riwayatnya kosong.
 **Kalau berbeda:** catat langkah mana yang kehilangan percakapan.
 
 ### UC-AST-11 · Menyalin jawaban

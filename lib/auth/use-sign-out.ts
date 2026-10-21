@@ -11,6 +11,7 @@ import { toast } from 'sonner'
 
 import { revokeSession } from '@/lib/auth/client'
 import { firebaseAuth } from '@/lib/firebase/client-auth'
+import { clearUserBrowserData } from '@/lib/user-browser-data'
 
 /**
  * Returns a handler that ends the session and navigates to /login, or reports a
@@ -46,6 +47,10 @@ export function useSignOut(): () => Promise<void> {
     }
 
     // Drop the client Router Cache, then leave the now-gated shell.
+    // Only after the session is really gone: a failed sign-out stays signed in
+    // and must keep the user's data. On a shared computer nothing of theirs
+    // (e.g. the Tanya AISA history) should outlive the session.
+    clearUserBrowserData()
     router.refresh()
     router.push('/login')
   }

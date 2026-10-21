@@ -1,4 +1,5 @@
 import { LOCALE, TIME_ZONE } from '@/lib/format/locale'
+import { USER_DATA_PREFIX } from '@/lib/user-browser-data'
 
 import type { ChatMessage } from './assistant-types'
 
@@ -18,11 +19,11 @@ export interface Conversation {
 /**
  * The history is kept in localStorage under the user's uid, so a different
  * account signing in on this browser never sees it, and it is shared by the
- * user's tabs.
+ * user's tabs. It sits under USER_DATA_PREFIX, so signing out removes it.
  */
-const HISTORY_PREFIX = 'aisa:tanya-aisa:riwayat:'
+const HISTORY_PREFIX = `${USER_DATA_PREFIX}tanya-aisa:riwayat:`
 /** The conversation open in THIS tab, so a reload reopens it. */
-const ACTIVE_KEY = 'aisa:tanya-aisa:aktif'
+const ACTIVE_KEY = `${USER_DATA_PREFIX}tanya-aisa:aktif`
 /** Where the single conversation lived before there was a history. */
 const LEGACY_KEY = 'aisa:tanya-aisa'
 

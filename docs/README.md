@@ -37,6 +37,9 @@ missing its metadata.
 - [`how-to/deploy.md`](how-to/deploy.md) — the executed container runbook.
 - [`how-to/setup-google-form.md`](how-to/setup-google-form.md) — connect the founder Google
   Form to `aisa-api` through Apps Script.
+- [`how-to/test-a-feature.md`](how-to/test-a-feature.md) — test an AISA feature to its end
+  state: test layers, acceptance matrix, evidence, live WhatsApp rules, and the
+  `docs/qa/<feature>.md` record.
 - [`how-to/backup-and-restore.md`](how-to/backup-and-restore.md) — snapshot export/restore and
   migrations, including the gates that stop them reaching a real project by accident.
 - [`how-to/maintain-project-readme.md`](how-to/maintain-project-readme.md) — keeping the README
@@ -75,6 +78,13 @@ The AISA data contract — every collection the Python services write and this a
 
 - [`TESTING.md`](TESTING.md) — the T01–T11 scenarios run against production, with actual
   results and evidence ids.
+- [`qa/inventaris-fitur.md`](qa/inventaris-fitur.md) — every AISA feature to test, the layer
+  that proves it, the tests that exist, and the gap.
+- [`qa/api.md`](qa/api.md) — aisa-api route, command, intake and digest tests (pytest, fakes).
+- [`qa/dashboard.md`](qa/dashboard.md) — dashboard acceptance specs against a mock aisa-api.
+- [`qa/penerimaan-produksi.md`](qa/penerimaan-produksi.md) — acceptance against production
+  through the API and WhatsApp webhook, with evidence ids and cleanup.
+- [`qa/asisten.md`](qa/asisten.md) — the Asisten's read tools and live answers.
 - [`AI_USAGE.md`](AI_USAGE.md) — how AI coding assistants were used and what people decided.
 - [`reference/contracts/aisa-firestore.md`](reference/contracts/aisa-firestore.md) — collection
   shapes and enum values. The Python Pydantic models are its source of truth; the dashboard

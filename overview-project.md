@@ -48,7 +48,7 @@ Teks diambil di server **per halaman** dengan penanda `[hal. n]`. Hanya teks yan
 | 3     | Ada bukti sebagian                                     |
 | 5     | Bukti kuat: data, perilaku pelanggan, atau rekam jejak |
 
-Informasi yang tidak ada diberi nilai 1 dan ditandai **"tidak disebut"**. Skor dihitung dengan kode: `skor = Σ bobot × (nilai − 1) / 4`. Bila tidak ada satu pun kutipan sebuah kriteria yang bisa ditemukan di halaman yang disebut, nilainya dibatasi paling tinggi 2 dan dashboard menampilkan tanda **kutipan belum terverifikasi**.
+Informasi yang tidak ada diberi nilai 1 dan ditandai **"tidak disebut"**. Skor dihitung dengan kode: `skor = Σ bobot × (nilai − 1) / 4`. Bila tidak ada satu pun kutipan sebuah kriteria yang bisa ditemukan di halaman yang disebut, nilainya dibatasi paling tinggi 2 dan dashboard menampilkan tanda **kutipan tidak terverifikasi**.
 
 **Tahap 2 — Cek kecocokan (kode, tanpa AI dan tanpa token).** Sektor, tahap pendanaan, dan besar dana dicocokkan dengan aturan yang diatur manajer di halaman **Pengaturan** dashboard (disimpan di Firestore). Keputusan: butir yang **tidak disebut** di deck dianggap **gagal** cek, karena kecocokan yang tidak bisa dibuktikan tidak boleh dianggap cocok.
 

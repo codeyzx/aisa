@@ -23,7 +23,9 @@ function inline(text: string): ReactNode[] {
   const out: ReactNode[] = []
   let at = 0
   for (const part of text.split(INLINE)) {
-    const key = `o${at}`
+    // The split yields an empty part before a leading mark, so the offset alone
+    // would repeat; offset plus length cannot.
+    const key = `o${at}:${part.length}`
     const mark =
       part.length > 2 && part.at(-1) === part[0] ? MARKS[part[0]] : undefined
     out.push(

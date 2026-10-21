@@ -118,13 +118,27 @@ export async function bulkRespondAction(
   })
 }
 
-/** A short-lived link to an uploaded deck. Only uploads have one. */
+/**
+ * Where a deck can be opened, as `aisa-api` answers `GET …/deck-url`: `url` for
+ * a new tab, and `previewUrl` for an `<iframe>` — a signed GCS link served
+ * inline as a PDF for uploads, Drive's `/preview` viewer for Form decks. An API
+ * older than the preview sends no `previewUrl`, which reads as "no preview".
+ * `expiresIn` is seconds until both links stop working, null when they do not
+ * expire (Drive).
+ */
+export interface DeckLink {
+  url: string
+  previewUrl?: string | null
+  expiresIn: number | null
+}
+
+/** Links to a proposal's deck: a short-lived signed one for uploads, Drive for Form. */
 export async function getDeckUrlAction(
   proposalId: string,
-): ApiAction<{ url: string }> {
+): ApiAction<DeckLink> {
   return runAction(AISA_READ, async () => {
     const id = ProposalIdSchema.parse(proposalId)
-    return callAisaApi<{ url: string }>(
+    return callAisaApi<DeckLink>(
       'GET',
       `/api/proposals/${encodeURIComponent(id)}/deck-url`,
     )

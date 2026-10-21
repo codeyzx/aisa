@@ -46,6 +46,7 @@ import type {
   LogDetail,
   LogStep,
 } from './assessment-log-data'
+import { DeckPageLink } from './deck-preview'
 import {
   clockTime,
   compactNumber,
@@ -117,7 +118,13 @@ function Detail({
                   <div key={`${citation.page}:${citation.quote}`}>
                     <dt className="mb-0.5 flex items-center gap-1 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">
                       <FileTextIcon className="size-3" />
-                      Bukti dari hal. {citation.page}
+                      Bukti dari{' '}
+                      <DeckPageLink
+                        page={citation.page}
+                        className="rounded-sm uppercase"
+                      >
+                        hal. {citation.page}
+                      </DeckPageLink>
                     </dt>
                     <dd className="border-l-2 border-primary/40 pl-2.5 leading-relaxed italic">
                       “{citation.quote}”

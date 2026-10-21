@@ -16,6 +16,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { type Metadata } from 'next'
+import { type ComponentProps } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
@@ -72,6 +73,11 @@ import { AssessmentLogProvider, LogButton } from '../_components/assessment-log'
 import { buildAssessmentLog } from '../_components/assessment-log-data'
 import { CorrectionForm } from '../_components/correction-form'
 import { DeckButton } from '../_components/deck-button'
+import {
+  DeckPageLink,
+  DeckPreviewButton,
+  DeckPreviewProvider,
+} from '../_components/deck-preview'
 import { DeleteProposalButton } from '../_components/delete-proposal-button'
 import { proposalHistoryEntries } from '../_components/proposal-history'
 import { RefreshWhileScoring } from '../_components/refresh-while-scoring'
@@ -122,6 +128,23 @@ function strengthsAndChecks(proposal: Proposal) {
   return { strengths, checks }
 }
 
+/**
+ * The page's two side panels. The deck preview wraps the log so a citation
+ * inside the log can open the preview too.
+ */
+function DetailPanels({
+  deck,
+  children,
+  ...log
+}: ComponentProps<typeof AssessmentLogProvider> &
+  ComponentProps<typeof DeckPreviewProvider>) {
+  return (
+    <DeckPreviewProvider deck={deck}>
+      <AssessmentLogProvider {...log}>{children}</AssessmentLogProvider>
+    </DeckPreviewProvider>
+  )
+}
+
 export default async function ProposalDetailPage({
   params,
 }: {
@@ -163,9 +186,24 @@ export default async function ProposalDetailPage({
       ]
     : []
   const fitCount = fitItems.filter((item) => item.check.passed).length
+  // A Form deck stays in Drive and opens there only while its id is known.
+  const hasDeck =
+    proposal.source.kind === 'upload' || Boolean(proposal.source.driveFileId)
 
   return (
-    <AssessmentLogProvider log={log} thresholds={thresholds}>
+    <DetailPanels
+      log={log}
+      thresholds={thresholds}
+      deck={
+        hasDeck
+          ? {
+              proposalId: proposal.id,
+              fileName: proposal.source.fileName,
+              pageCount: proposal.pageCount,
+            }
+          : null
+      }
+    >
       <div className="flex flex-col gap-5">
         <RefreshWhileScoring
           active={
@@ -471,10 +509,13 @@ export default async function ProposalDetailPage({
                                   className="text-[13.5px] leading-relaxed"
                                 >
                                   “{citation.quote}”
-                                  <span className="ml-1.5 inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 align-middle text-[11px] font-medium whitespace-nowrap text-muted-foreground">
+                                  <DeckPageLink
+                                    page={citation.page}
+                                    className="ml-1.5 inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 align-middle text-[11px] font-medium whitespace-nowrap text-muted-foreground hover:bg-primary/10"
+                                  >
                                     <FileTextIcon className="size-3" />
                                     Hal. {citation.page}
-                                  </span>
+                                  </DeckPageLink>
                                 </blockquote>
                               ))}
                               <p className="text-[13px] text-muted-foreground">
@@ -674,9 +715,11 @@ export default async function ProposalDetailPage({
                     Data founder tidak disebut.
                   </p>
                 )}
-                {proposal.founder?.email ||
-                proposal.source.kind === 'upload' ? (
+                {proposal.founder?.email || hasDeck ? (
                   <div className="grid grid-cols-2 gap-2">
+                    {hasDeck ? (
+                      <DeckPreviewButton size="sm" className="col-span-2" />
+                    ) : null}
                     {proposal.founder?.email ? (
                       <a
                         href={`mailto:${proposal.founder.email}`}
@@ -734,6 +777,6 @@ export default async function ProposalDetailPage({
           </aside>
         </div>
       </div>
-    </AssessmentLogProvider>
+    </DetailPanels>
   )
 }

@@ -6,6 +6,7 @@ import {
   SettingsIcon,
   SlidersHorizontalIcon,
   TrendingUpIcon,
+  WalletIcon,
 } from 'lucide-react'
 
 import { type NavSection } from '@/components/shell/nav-config'
@@ -41,6 +42,12 @@ export const APP_NAV_SECTIONS: NavSection[] = [
         title: 'Aktivitas AI',
         href: '/aktivitas',
         icon: ActivityIcon,
+        capability: 'aisa:read',
+      },
+      {
+        title: 'Biaya AI',
+        href: '/biaya',
+        icon: WalletIcon,
         capability: 'aisa:read',
       },
       {

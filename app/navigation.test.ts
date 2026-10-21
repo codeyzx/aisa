@@ -43,6 +43,12 @@ describe('application navigation', () => {
     }
   })
 
+  it('lists Biaya AI right after Aktivitas AI in Ruang kerja', () => {
+    const workspace = APP_NAV_SECTIONS.find((s) => s.title === 'Ruang kerja')
+    const items = hrefs(workspace ? [workspace] : [])
+    expect(items.indexOf('/biaya')).toBe(items.indexOf('/aktivitas') + 1)
+  })
+
   it('never renders a section left empty by filtering', () => {
     for (const role of ROLES) {
       for (const section of filterNavByRole(APP_NAV_SECTIONS, role)) {

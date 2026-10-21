@@ -42,6 +42,12 @@ const ROUTES: readonly RouteEntry[] = [
       'Apa saja yang dikerjakan AI, berapa token, dan berapa lama',
   },
   {
+    href: '/biaya',
+    title: 'Biaya AI',
+    subtitle: () =>
+      'Berapa biaya AI dan berapa yang dihemat dibanding cek manual',
+  },
+  {
     href: '/riwayat',
     title: 'Riwayat',
     subtitle: () => 'Jejak audit: siapa melakukan apa, dan kapan',

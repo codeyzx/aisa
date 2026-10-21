@@ -23,6 +23,14 @@ describe('routeHeading', () => {
     expect(routeHeading('/aturan', 0).title).toBe('Aturan penilaian')
   })
 
+  it('titles the Biaya AI page', () => {
+    expect(routeHeading('/biaya', 0)).toEqual({
+      title: 'Biaya AI',
+      subtitle: 'Berapa biaya AI dan berapa yang dihemat dibanding cek manual',
+      greets: false,
+    })
+  })
+
   it('does not claim a prefix-sharing path', () => {
     expect(routeHeading('/proposal-arsip', 0).title).toBe('AISA')
   })

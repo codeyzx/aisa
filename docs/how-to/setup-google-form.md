@@ -188,7 +188,7 @@ Semua file di dalam folder, termasuk subfolder per pertanyaan, ikut bisa dibaca.
 
 Respons uji di langkah 11 dikirim sebelum folder dibagikan, jadi proposal itu bisa
 tertahan di _Antre_ dengan alasan `404 Not Found`. Itu wajar: kirim satu respons uji
-lagi dengan PDF lain (file yang sama tidak dinilai ulang), atau kirim `LANJUT` ke bot WhatsApp:
+lagi (PDF yang sama pun boleh, tetapi itu menjadi proposal kedua), atau kirim `LANJUT` ke bot WhatsApp:
 LANJUT memproses ulang semua proposal yang berstatus _Antre_. Respons kedua ini harus
 sampai ke _Dinilai_. Proposal uji yang tertahan bisa dihapus dengan tombol
 **Hapus data** di halaman detailnya.
@@ -203,5 +203,8 @@ sampai ke _Dinilai_. Proposal uji yang tertahan bisa dihapus dengan tombol
 | Tidak ada baris di Executions setelah Submit       | Trigger belum terpasang                    | Ulangi langkah 10                            |
 | Error "Pertanyaan … tidak ditemukan" di Executions | Judul pertanyaan diubah                    | Kembalikan judul seperti di langkah 7        |
 
-Mengirim ulang file yang sama tidak membuat proposal baru: proposal dari form
-diidentifikasi dengan ID file Drive-nya.
+Proposal dari form diidentifikasi dengan ID file Drive-nya, bukan dengan isi PDF-nya.
+Setiap respons form menyimpan file baru di Drive, jadi mengirim PDF yang sama lewat form
+dua kali membuat dua proposal. Yang tidak membuat proposal baru hanyalah permintaan
+`intake/form` yang dikirim ulang dengan ID file Drive yang sama. Unggahan dari dashboard berbeda: proposal-nya diidentifikasi dengan hash isi PDF,
+jadi PDF yang sama tidak membuat proposal kedua.

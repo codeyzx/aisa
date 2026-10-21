@@ -1,9 +1,7 @@
 /**
- * The shared Firebase Web SDK app. Both firebaseAuth() and firebaseDb() route
- * through this ONE get-or-init so they attach to the same FirebaseApp: the
- * Firestore Web SDK reads its auth token from the Auth component of that same
- * app, so splitting auth and firestore onto separate apps would silently break
- * authenticated realtime listeners (PERMISSION_DENIED on first read).
+ * The Firebase Web SDK app. The browser uses it for ONE thing: signing in with
+ * email + password (`client-auth.ts`), so the password goes straight to Google
+ * and never to this app's origin. Every Firestore read stays server-side.
  *
  * Fully lazy: nothing runs at module load, so the SDK never initializes during
  * server prerender — where unset env would throw `auth/invalid-api-key`.

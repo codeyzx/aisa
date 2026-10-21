@@ -31,10 +31,9 @@
 #     `scripts/migration/_template.ts` addresses `'__entities__'`, an unresolved
 #     copy-me token rather than a path. `scripts/structure/__fixtures__/**` holds
 #     the deliberately-broken samples that prove the structure checks bite. A
-#     script that addresses a REAL collection imports the owning constant, and
-#     one already does: `scripts/seed-emulator.ts` imports `ASSETS_COLLECTION`
-#     from `features/asset/asset.path.ts`, which is dependency-free and so drags
-#     in neither `server-only` nor the Admin env validation.
+#     script that addresses a REAL collection imports the owning constant from
+#     its feature's `<entity>.path.ts`, which is dependency-free and so drags in
+#     neither `server-only` nor the Admin env validation.
 #
 #   - `firestore.rules.test.ts` — drives collection names as DATA: it asserts a
 #     denied read on `'examples'`, a collection that exists nowhere else and has

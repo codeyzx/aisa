@@ -42,7 +42,7 @@ describe('runAction', () => {
   it('logs an unexpected server error without returning its details', async () => {
     const error = new Error('database details')
 
-    const result = await runAction('asset:write', async () => {
+    const result = await runAction('aisa:configure', async () => {
       throw error
     })
 
@@ -62,7 +62,7 @@ describe('runAction', () => {
     expect(result.error).not.toContain('database details')
     expect(logger.child).toHaveBeenCalledWith({ cid: result.cid })
     expect(logger.error).toHaveBeenCalledWith('[action] unhandled error', {
-      capability: 'asset:write',
+      capability: 'aisa:configure',
       uid: 'admin-uid',
       error,
     })
@@ -71,8 +71,8 @@ describe('runAction', () => {
   it('gives a cid to `internal` alone — every other code explains itself', async () => {
     // A `not_found` names its own cause and its own remedy, so an id would be
     // noise on the screen and a second thing for a reader to ignore.
-    const result = await runAction('asset:write', async () => {
-      throw new NotFoundError('asset gone')
+    const result = await runAction('aisa:configure', async () => {
+      throw new NotFoundError('account gone')
     })
 
     expect(result).toEqual({
@@ -86,11 +86,11 @@ describe('runAction', () => {
   it('refuses a capability the deployment has turned off, without running fn', async () => {
     // Hiding the UI is not a gate — a server action is a public POST endpoint, so
     // a disabled capability must be refused HERE. The admin below is granted
-    // ai:invoke by role, so only the availability check can stop this.
-    availability.unavailable = ['ai:invoke']
+    // admin:audit:read by role, so only the availability check can stop this.
+    availability.unavailable = ['aisa:respond']
     const fn = vi.fn(async () => 'generated')
 
-    const result = await runAction('ai:invoke', fn)
+    const result = await runAction('aisa:respond', fn)
 
     expect(result).toEqual({
       ok: false,
@@ -103,8 +103,8 @@ describe('runAction', () => {
   it('maps a typed domain error to its code WITHOUT logging it as a bug', async () => {
     // The whole point of the domain-error type: an expected not-found must not
     // land in the unhandled-error log, where it would bury a real bug in noise.
-    const result = await runAction('asset:write', async () => {
-      throw new NotFoundError('asset not found')
+    const result = await runAction('aisa:configure', async () => {
+      throw new NotFoundError('account not found')
     })
 
     expect(result).toEqual({
@@ -118,14 +118,14 @@ describe('runAction', () => {
   it('maps a conflict to its code, and never leaks the thrown message', async () => {
     // The client gets the canonical message for `conflict`, never the server-side
     // string the repo threw (which may name a field or a key).
-    const result = await runAction('asset:write', async () => {
-      throw new ConflictError('asset attachment changed since it was read')
+    const result = await runAction('aisa:configure', async () => {
+      throw new ConflictError('account changed since it was read')
     })
 
     expect(result.ok).toBe(false)
     expect(result).toMatchObject({ code: 'conflict' })
     expect(result).not.toMatchObject({
-      error: 'asset attachment changed since it was read',
+      error: 'account changed since it was read',
     })
     expect(logger.error).not.toHaveBeenCalled()
   })
@@ -143,7 +143,7 @@ describe('runAction — what reaches the monitoring seam', () => {
   it('reports an unexpected throw, tagged with the cid the envelope carries', async () => {
     const error = new Error('database details')
 
-    const result = await runAction('asset:write', async () => {
+    const result = await runAction('aisa:configure', async () => {
       throw error
     })
 
@@ -152,7 +152,7 @@ describe('runAction — what reaches the monitoring seam', () => {
     expect(reported).toBe(error)
     expect(context).toStrictEqual({
       cid: result.ok ? undefined : result.cid,
-      capability: 'asset:write',
+      capability: 'aisa:configure',
     })
     // The uid goes to the LOG, never to the reporter — "which user" is
     // answerable from the log via the cid, and stays there.
@@ -160,11 +160,11 @@ describe('runAction — what reaches the monitoring seam', () => {
   })
 
   it('does NOT report a typed domain failure — that is the system working', async () => {
-    await runAction('asset:write', async () => {
-      throw new NotFoundError('asset')
+    await runAction('aisa:configure', async () => {
+      throw new NotFoundError('account')
     })
-    await runAction('asset:write', async () => {
-      throw new ConflictError('asset')
+    await runAction('aisa:configure', async () => {
+      throw new ConflictError('account')
     })
 
     expect(monitoring.reportError).not.toHaveBeenCalled()
@@ -172,7 +172,7 @@ describe('runAction — what reaches the monitoring seam', () => {
 
   it('does NOT report a validation failure', async () => {
     const { z } = await import('zod')
-    await runAction('asset:write', async () => {
+    await runAction('aisa:configure', async () => {
       z.object({ name: z.string() }).parse({ name: 1 })
     })
 
@@ -182,7 +182,7 @@ describe('runAction — what reaches the monitoring seam', () => {
   it('does NOT report an authorization denial', async () => {
     session.current = null
 
-    const result = await runAction('asset:write', async () => 'unreachable')
+    const result = await runAction('aisa:configure', async () => 'unreachable')
 
     expect(result.ok).toBe(false)
     expect(monitoring.reportError).not.toHaveBeenCalled()

@@ -6,10 +6,7 @@ import {
   can,
   CAPABILITIES,
   type Capability,
-  isRetainedAdministrator,
   isRole,
-  RETAINED_ADMIN_CAPABILITY,
-  roleCan,
   type Role,
   roleFromClaims,
   ROLES,
@@ -26,20 +23,8 @@ import {
  * fails typecheck here until someone states its grants.
  */
 const EXPECTED_GRANTS: Record<Role, readonly Capability[]> = {
-  admin: [
-    'asset:read',
-    'asset:write',
-    'admin:access',
-    'admin:users:read',
-    'admin:users:manage',
-    'admin:audit:read',
-    'impersonation:start',
-    'storage:read',
-    'storage:write',
-    'export:read',
-    'ai:invoke',
-  ],
-  user: ['asset:read', 'storage:read'],
+  admin: ['aisa:read', 'aisa:respond', 'aisa:configure'],
+  user: ['aisa:read'],
 }
 
 describe('can', () => {
@@ -92,12 +77,6 @@ describe('isRole', () => {
   }
 })
 
-/**
- * The ONE place a role is decided, so the cases that matter are the ones a
- * malformed token, a hand-edited claim, or a prototype-key trick can produce.
- * Each must land on the least-privileged role, never throw and never leak a
- * non-`Role` string onward.
- */
 describe('roleFromClaims', () => {
   for (const role of ROLES) {
     it(`resolves a valid ${role} claim`, () => {
@@ -114,7 +93,6 @@ describe('roleFromClaims', () => {
     ['a null role', { role: null }],
     ['an array-wrapped role', { role: ['admin'] }],
     ['a prototype key as the role', { role: 'constructor' }],
-    ['other claims but no role', { mustChangePassword: true }],
   ]
 
   for (const [label, claims] of fallsBack) {
@@ -122,35 +100,4 @@ describe('roleFromClaims', () => {
       expect(roleFromClaims(claims)).toBe('user')
     })
   }
-})
-
-/**
- * The final-administrator floor follows a CAPABILITY, not the `admin` role name,
- * so a fork that splits `ROLES` keeps the lockout guarantee. These assert the
- * predicate the count and refusals in the account layer read, independently of
- * that layer.
- */
-describe('isRetainedAdministrator', () => {
-  it('names the manage capability as the retained floor', () => {
-    // If a refactor points the floor at a weaker capability (e.g. read-only
-    // directory access), this fails — losing the last manager is the one
-    // unrecoverable state, so the floor must be the authority that can recover.
-    expect(RETAINED_ADMIN_CAPABILITY).toBe('admin:users:manage')
-  })
-
-  for (const role of ROLES) {
-    const expected = roleCan(role, RETAINED_ADMIN_CAPABILITY)
-    it(`${expected ? 'counts' : 'does not count'} ${role} as a retained administrator`, () => {
-      // Tracks the grant table by construction: whoever holds the retained
-      // capability is a retained administrator, and nobody else.
-      expect(isRetainedAdministrator(role)).toBe(expected)
-    })
-  }
-
-  it('counts admin and not user under the default grant table', () => {
-    // The concrete policy today, stated independently of the derivation above so
-    // a grant-table change that silently flipped either answer is caught.
-    expect(isRetainedAdministrator('admin')).toBe(true)
-    expect(isRetainedAdministrator('user')).toBe(false)
-  })
 })

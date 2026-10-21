@@ -11,9 +11,9 @@
  * So: importing `getSession` or `requireSession` anywhere outside their own
  * module and that one wrapper is a violation. The entry points that legitimately
  * must NOT redirect — the password screen the ready guard redirects TO, the
- * impersonation exit, the public login page — are recorded as named exemptions
- * with a reason, exactly like every other tracked debt. A silent fourth one
- * cannot appear.
+ * password transition action, the public login page — are recorded as named
+ * exemptions with a reason, exactly like every other tracked debt. A silent
+ * fourth one cannot appear.
  *
  * SHALLOW BY DESIGN, same as `route-guard-inventory`: this proves the raw
  * boundary is not IMPORTED, which is what makes a bypass require an edit

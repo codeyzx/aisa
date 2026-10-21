@@ -1,15 +1,12 @@
-# LOCAL DEVELOPMENT ONLY — the app image built from source + a throwaway
-# S3-compatible storage backend. Deploying? You want `compose.prod.yaml`.
+# LOCAL DEVELOPMENT ONLY — the app image built from source. Deploying? You want
+# `compose.prod.yaml`.
 #
-# This file is NOT a production runbook and must never be edited into one. Three
-# things here are wrong on a server, and none of them is a knob you can turn:
+# This file is NOT a production runbook and must never be edited into one. Two
+# things here are wrong on a server, and neither is a knob you can turn:
 #
 #   - It BUILDS from the working tree. Production runs a published image pinned
 #     by digest, so what is deployed is a reviewed artifact rather than whatever
 #     was checked out that afternoon.
-#   - It BUNDLES SeaweedFS with credentials committed to this repo in plaintext
-#     (`seaweedfs.s3.json`) and data in a local Docker volume that no backup ever
-#     sees. Real object storage is a service you point `S3_*` at, not a sidecar.
 #   - It reads `.env`, the developer's own file. Production secrets arrive from
 #     the host's secret store, never from a file tracked next to the code.
 #
@@ -18,13 +15,12 @@
 # HOST. Read the `app` service's `extra_hosts` comment before assuming the
 # containerised app can reach it: by default it CANNOT, and that is a deliberate
 # security trade rather than a bug. The everyday local loop is `pnpm dev` on the
-# host — this file's job is the storage backend, plus the option of smoke-testing
-# the built image.
+# host — this file's job is smoke-testing the built image.
 #
 #   docker compose up --build
 #
-# The app is reachable on http://127.0.0.1:3000, SeaweedFS's S3 API on :8333 —
-# LOOPBACK, not every interface; see the `ports:` comments for why that matters.
+# The app is reachable on http://127.0.0.1:3000 — LOOPBACK, not every interface;
+# see the `ports:` comment for why that matters.
 
 services:
   app:
@@ -33,9 +29,10 @@ services:
       dockerfile: Containerfile
       # NEXT_PUBLIC_* are INLINED by `next build`, so they are build inputs, not
       # runtime env — passing them below would do nothing. They are public by
-      # design (they ship in every client bundle), so they belong in compose
-      # rather than a secret store. A missing one FAILS the build; see the
-      # Containerfile.
+      # design (they ship in every client bundle). A missing one FAILS the build;
+      # see the Containerfile. The Auth emulator host is passed through so the
+      # browser (on the host) signs in against the local emulator — which makes
+      # this image a local test artifact, never a deployable one.
       args:
         NEXT_PUBLIC_FIREBASE_API_KEY: ${NEXT_PUBLIC_FIREBASE_API_KEY:?set it in .env}
         NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ${NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN:?set it in .env}
@@ -43,6 +40,7 @@ services:
         NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: ${NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:?set it in .env}
         NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: ${NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:?set it in .env}
         NEXT_PUBLIC_FIREBASE_APP_ID: ${NEXT_PUBLIC_FIREBASE_APP_ID:?set it in .env}
+        NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST: ${NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST:-}
     ports:
       # Bound to 127.0.0.1, not every interface. A published port with no host IP
       # means 0.0.0.0, and Docker writes that straight into the host's NAT chain —
@@ -52,8 +50,7 @@ services:
       # café wifi that is a stranger's browser away from an app signed in as your
       # fixture admin. Local development has no reason to listen off-box.
       #
-      # Overridable for the same reason S3_HOST_PORT is, and it is the commoner
-      # collision: 3000 is where `pnpm dev` already lives, so bringing the stack
+      # Overridable because 3000 is where `pnpm dev` already lives, so bringing the stack
       # up beside a dev server fails to bind unless this can move. Only the PORT
       # moves — the loopback bind is not part of the override, so no env value can
       # accidentally re-expose it. The CONTAINER port stays 3000 — that is what the
@@ -96,15 +93,6 @@ services:
     # Firebase project anyway.
     extra_hosts:
       - 'host.docker.internal:host-gateway'
-    depends_on:
-      # One edge covers both readiness facts: `seaweedfs-init` itself waits for
-      # `seaweedfs` to be healthy, and it exits non-zero unless it has SEEN the
-      # bucket in `s3.bucket.list` — so `service_completed_successfully` here
-      # means "the port answers AND the bucket exists", not merely "a container
-      # ran". That second half is only true because the init step verifies rather
-      # than trusting an exit code; read its comment before changing it.
-      seaweedfs-init:
-        condition: service_completed_successfully
     # The drain window. Compose's default is 10s, and Next's server finishes in-flight
     # requests (and pending `after()` work) on SIGTERM before exiting — so a window
     # shorter than the slowest request turns a normal redeploy into a truncated response
@@ -112,125 +100,3 @@ services:
     # There is no `healthcheck:` here on purpose: the app image DECLARES one (Containerfile),
     # and compose inherits it. Restating it would be a second definition to keep in sync.
     stop_grace_period: 30s
-
-  # The default backend. Any S3-compatible service swaps in by env alone.
-  seaweedfs:
-    image: chrislusf/seaweedfs
-    # `-s3.config` is NOT optional. Without it SeaweedFS accepts EVERY request,
-    # signed or not — so signature, permission and expiry bugs all pass locally
-    # and only surface against a real backend. An unauthenticated dev bucket is
-    # a local test that lies.
-    command: server -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json -dir=/data
-    ports:
-      # Loopback for the same reason `app` is, and more urgently: this is object
-      # storage whose one credential is committed to the repo in plaintext, so
-      # anyone who can reach the port can read it out of GitHub and then read,
-      # overwrite, or delete every object. Published only so a host-side
-      # `pnpm dev` can reach it; `app` uses the service name over the compose
-      # network and ignores this line entirely. 8333 is the SeaweedFS convention,
-      # so it collides with any already running on the host — override
-      # S3_HOST_PORT rather than editing this file; the `127.0.0.1:` prefix is
-      # deliberately outside the override.
-      - '127.0.0.1:${S3_HOST_PORT:-8333}:8333'
-    volumes:
-      # The identity file is deliberately SCOPED — `Read:`/`Write:` on the one
-      # bucket the app uses, and nothing else. JSON has no comments, so the
-      # argument lives here: the app only ever does PutObject, GetObject,
-      # CopyObject and DeleteObject against `S3_BUCKET` (`lib/storage/s3.ts` is
-      # the only module that constructs an S3 client), so an identity that can
-      # also list buckets, tag, or administer is granting reach the code never
-      # exercises. Worse, it makes the local backend MORE permissive than a real
-      # one: a call the production bucket policy would refuse passes here, and the
-      # bug ships. Widen it only when `lib/storage/s3.ts` grows a command that
-      # needs it — and say which command in the commit.
-      #
-      # The bucket NAME is written into the grants, and a mounted file cannot be
-      # interpolated — so changing `S3_BUCKET` means editing `seaweedfs.s3.json`
-      # to match. It fails loudly if you forget (403 on every call, not a silent
-      # fallback), which is the failure this repo prefers.
-      - ./seaweedfs.s3.json:/etc/seaweedfs/s3.json:ro
-      - seaweedfs-data:/data
-    healthcheck:
-      # Probe /healthz, NOT the S3 root: with `-s3.config` in place the root
-      # correctly answers 403 to an unsigned request, which wget reports as a
-      # failure. A healthcheck that reads "auth is working" as "service is down"
-      # would push everyone toward deleting the config that makes it work.
-      test: ['CMD', 'wget', '-q', '--spider', 'http://127.0.0.1:8333/healthz']
-      interval: 5s
-      timeout: 3s
-      retries: 10
-
-  # One-shot: create the bucket, then PROVE it exists. This step exists BECAUSE
-  # the S3 identity is least-privilege now, and that trade is deliberate.
-  #
-  # SeaweedFS has no auto-create-bucket flag (`weed s3 -h` lists none). What it
-  # has is an accident: an identity holding the unscoped `Admin` action gets the
-  # bucket created for it on the first PutObject. That is how this stack used to
-  # work — the bucket appeared because the app's own key could administer the
-  # whole server. Verified here: with `Admin`, a PUT into a nonexistent bucket
-  # returns 200 and the bucket springs into being; with `Read:<bucket>` +
-  # `Write:<bucket>` the same PUT is 403. Even `Admin:<bucket>` does not do it —
-  # CreateBucket is checked against the UNSCOPED grant, so there is no
-  # narrow-admin middle ground to hide in.
-  #
-  # So the choice was: keep a key that can create and delete any bucket on the
-  # server, or make bucket creation an explicit setup step. It is a setup step.
-  # It runs over `weed shell` — the ADMIN plane, reached over the compose network
-  # on the master/filer ports, which are never published to the host — so no S3
-  # credential is involved and the app's key stays scoped to its own bucket.
-  #
-  # `s3.bucket.create` is idempotent (driven: a second run re-prints "created
-  # bucket" and exits 0), so `docker compose up` on an existing volume is a no-op
-  # rather than an error. Piped on stdin, not `-c`: this `weed shell` has no `-c`
-  # flag (verified against the image).
-  #
-  # WHY THIS IS A SCRIPT AND NOT ONE `echo | weed shell` LINE: `weed shell` exits
-  # 0 NO MATTER WHAT. Driven against chrislusf/seaweedfs: an invalid bucket name
-  # prints `error: bucket name can only contain lower case characters, numbers,
-  # dots, and hyphens` and exits 0; an unreachable master prints nothing and exits
-  # 0 (after `timeout` SIGTERMs it — weed handles the signal and returns 0, so
-  # even `timeout` does not turn the failure into a non-zero code). A one-shot
-  # whose exit code is a constant proves the container RAN, not that the bucket
-  # exists — and `app` would then start against storage where every call 403s at
-  # run time with nothing wrong at bring-up. So the exit code here is OURS: we ask
-  # `s3.bucket.list` and exit 1 unless the bucket is in the answer.
-  #
-  # `timeout` is still needed, for the other failure: with an unreachable master
-  # `weed shell` retries FOREVER (driven without it: still running, silent, when
-  # killed after two minutes). It bounds each call, so an unreachable dependency
-  # fails in ~60s (driven: 63s, exit 1) instead of hanging `docker compose up`
-  # indefinitely. `-k 5` SIGKILLs a weed that ignores the SIGTERM.
-  seaweedfs-init:
-    image: chrislusf/seaweedfs
-    depends_on:
-      seaweedfs:
-        condition: service_healthy
-    entrypoint: ['sh', '-c']
-    command:
-      # The `aisa-dev` fallback MIRRORS `compose.env`'s own default and must move
-      # with it. It cannot simply read `compose.env`: an `env_file` sets a
-      # CONTAINER's environment, while this is a `${...}` INTERPOLATION, which
-      # compose resolves from the shell and `.env` before any service exists.
-      # `$$` is an escaped `$` — it reaches the shell, not compose.
-      - |
-        bucket='${S3_BUCKET:-aisa-dev}'
-        echo "s3.bucket.create -name $$bucket" | timeout -k 5 30 weed shell -master=seaweedfs:9333 -filer=seaweedfs:8888
-        # `$$1` is the bucket-name column of `s3.bucket.list` ("  <name>\tsize:..\tchunk:..").
-        # Compared as a whole field, so a bucket name is never a substring match.
-        if echo "s3.bucket.list" | timeout -k 5 30 weed shell -master=seaweedfs:9333 -filer=seaweedfs:8888 \
-          | awk -v want="$$bucket" '$$1 == want { found = 1 } END { exit found ? 0 : 1 }'
-        then
-          echo "seaweedfs-init: bucket \"$$bucket\" verified present."
-          exit 0
-        fi
-        echo "seaweedfs-init: S3_BUCKET \"$$bucket\" is NOT present after s3.bucket.create." >&2
-        echo "seaweedfs-init: see the error above -- an invalid bucket name and an unreachable master both leave weed shell exiting 0, so this check is the only thing that catches either. Refusing to let 'app' start." >&2
-        exit 1
-    # A one-shot must not be resurrected by compose's restart policy — restarting
-    # it would also re-run the verification whose FAILURE is the signal `app`
-    # depends on, turning a hard stop into a loop. Exiting is the terminal state;
-    # exiting ZERO is the success condition, and `app` gates on exactly that.
-    restart: 'no'
-
-volumes:
-  seaweedfs-data:

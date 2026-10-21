@@ -42,57 +42,18 @@ COPY . .
 
 # `next build` INLINES NEXT_PUBLIC_* into the client bundle, so they must be present at BUILD
 # time — supplying them only at run time ships a browser wired to `undefined`. The image is
-# therefore environment-specific: a prod image cannot be reused for staging. That is the
-# accepted trade (the alternative, reading config on the server per request, was weighed and
-# declined).
+# therefore environment-specific. The browser uses this config for ONE thing: Firebase
+# email/password sign-in (every Firestore read is server-side).
 #
 # These are NOT secrets. Firebase's web config is public by design and ships in every client
-# bundle; pass them as CI `vars`, not `secrets`. Server credentials (FIREBASE_PRIVATE_KEY,
-# S3_*) are never build inputs and are never baked — they arrive at run time.
+# bundle. Server secrets (AISA_API_KEY, any FIREBASE_PRIVATE_KEY) are never build inputs and
+# are never baked — they arrive at run time.
 ARG NEXT_PUBLIC_FIREBASE_API_KEY
 ARG NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
 ARG NEXT_PUBLIC_FIREBASE_PROJECT_ID
 ARG NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
 ARG NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
 ARG NEXT_PUBLIC_FIREBASE_APP_ID
-# OPTIONAL — omit it and the image simply ships with error monitoring off, which is the
-# capability's whole contract. It has to be a BUILD arg all the same: the browser half is
-# initialized from the inlined value, so supplying the DSN only at run time would give you
-# a server that reports and a browser that silently does not.
-ARG NEXT_PUBLIC_SENTRY_DSN
-ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
-
-# ⚠️ TEST-ONLY, AND LEAVE THEM EMPTY FOR ANYTHING YOU DEPLOY.
-#
-# These point the BROWSER half at local Firebase emulators. They exist because
-# `pnpm test:e2e:ci` has to drive a real browser through a real sign-in against
-# the emulator, and the browser only ever learns about an emulator from an
-# inlined `NEXT_PUBLIC_*` (lib/firebase/client-auth.ts calls
-# `connectAuthEmulator` exactly when `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST`
-# is set). Inlined means BUILD time — there is no way to supply this at run time
-# and no way to add it to an image that was built without it.
-#
-# The consequence is unavoidable rather than chosen, and it is the same trade the
-# six public vars above already carry: an image that can talk to an emulator is a
-# DIFFERENT IMAGE from a production one. The E2E image is a test artifact. Build
-# a deployable image without these (the default: empty, so
-# `getClientEmulatorConfig()` returns undefined and nothing connects) and the
-# browser talks to real Firebase.
-#
-# THE FAILURE THIS WOULD CAUSE IF MISUSED: an image built with these set, shipped
-# to production, sends every user's sign-in to a host that is not there — and it
-# fails in the BROWSER, so the server looks healthy the whole time.
-ARG NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST
-ARG NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST
-ENV NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=$NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST \
-    NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST=$NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST
-# The build stamp, needed HERE as well as in the runner — and for a different reason.
-# The runner's copy is read from process.env at run time by /api/health; this one becomes
-# the `release` tag on every error-monitoring event, and a release has to be INLINED into
-# the client bundle, which only a NEXT_PUBLIC_* is. One `--build-arg BUILD_SHA` still
-# drives both, so there is no second value for a deployer to remember.
-ARG BUILD_SHA=unknown
-ENV NEXT_PUBLIC_BUILD_SHA=$BUILD_SHA
 ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY \
     NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=$NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
     NEXT_PUBLIC_FIREBASE_PROJECT_ID=$NEXT_PUBLIC_FIREBASE_PROJECT_ID \
@@ -100,15 +61,36 @@ ENV NEXT_PUBLIC_FIREBASE_API_KEY=$NEXT_PUBLIC_FIREBASE_API_KEY \
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=$NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID \
     NEXT_PUBLIC_FIREBASE_APP_ID=$NEXT_PUBLIC_FIREBASE_APP_ID
 
-# `next.config.ts` calls `validateClientEnv()`, so a forgotten build-arg FAILS THIS BUILD
-# instead of shipping an app that boots fine and only breaks in a browser — the failure mode
-# where localhost ends up in a production config. There is no bypass flag to reach for: the
-# check cannot be switched off, only satisfied. Server env is NOT validated here (nothing
-# forces it during build, verified), so no secret is required to build.
+# TEST-ONLY, AND LEAVE IT EMPTY FOR ANYTHING YOU DEPLOY. Points the BROWSER's sign-in at a
+# local Auth emulator (lib/firebase/client-auth.ts connects exactly when it is set). It exists
+# because `pnpm test:e2e:ci` drives a real browser through a real sign-in against the
+# emulator, and the browser only learns about an emulator from an inlined NEXT_PUBLIC_*.
+# An image built with it is a test artifact: shipped, it would send every sign-in to a host
+# that is not there — failing in the BROWSER while the server looks healthy.
+ARG NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST
+ENV NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST=$NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST
+
+# OPTIONAL — omit it and the image simply ships with error monitoring off, which is the
+# capability's whole contract. It has to be a BUILD arg all the same: the browser half is
+# initialized from the inlined value, so supplying the DSN only at run time would give you
+# a server that reports and a browser that silently does not.
+ARG NEXT_PUBLIC_SENTRY_DSN
+ENV NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN
+
+# The build stamp, needed HERE as well as in the runner — and for a different reason.
+# The runner's copy is read from process.env at run time by /api/health; this one becomes
+# the `release` tag on every error-monitoring event, and a release has to be INLINED into
+# the client bundle, which only a NEXT_PUBLIC_* is. One `--build-arg BUILD_SHA` still
+# drives both, so there is no second value for a deployer to remember.
+ARG BUILD_SHA=unknown
+ENV NEXT_PUBLIC_BUILD_SHA=$BUILD_SHA
+
+# `next.config.ts` calls `validateClientEnv()`, so a malformed public build-arg FAILS THIS
+# BUILD. Server env is NOT validated here (it is checked at boot by instrumentation.ts), so
+# no secret is required to build.
 #
 # `pnpm build`, NOT `pnpm build:ci`: this image must inline the REAL public values passed as
-# build args. `build:ci` fills gaps with non-secret dummies, which is right for a compile-only
-# gate and would be a silently broken production image here.
+# build args, never the CI fixture.
 RUN pnpm build
 
 # NOT `FROM base`, and that is the point: `base` exists to carry corepack/pnpm for the
@@ -134,6 +116,9 @@ RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 # NEXT_TELEMETRY_DISABLED was inherited from `base` before this stage stopped deriving
 # from it; it is restated here so dropping that inheritance changes nothing observable.
+# PORT is a DEFAULT: Cloud Run injects its own PORT (8080) at run time, which overrides this,
+# and the standalone server.js listens on process.env.PORT. HOSTNAME=0.0.0.0 is what makes
+# it reachable from outside the container — Cloud Run requires listening on all interfaces.
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \

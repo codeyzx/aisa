@@ -1,8 +1,7 @@
 /**
  * No operation is exposed through BOTH a form and a programmatic action entry.
  *
- * `docs/reference/contracts/data.md` (and the `asset.action.ts` header) state the
- * rule: an operation has ONE entry. The two entry KINDS are distinguished by name
+ * `docs/reference/contracts/data.md` states the rule: an operation has ONE entry. The two entry KINDS are distinguished by name
  * — `<verb><Entity>FormAction` (form: FormData in, redirect out) and
  * `<verb><Entity>Action` (programmatic: typed args in, `ActionResult` out). They
  * share one internal write; exposing the SAME operation through both kinds forks

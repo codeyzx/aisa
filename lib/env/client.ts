@@ -35,8 +35,11 @@ const FirebaseClientSchema = z.object({
   NEXT_PUBLIC_FIREBASE_APP_ID: requiredVar('NEXT_PUBLIC_FIREBASE_APP_ID'),
 })
 
+/**
+ * The browser talks to ONE emulator: Auth, to sign in. Every Firestore read is
+ * server-side, so there is no client Firestore emulator host.
+ */
 const ClientEmulatorSchema = z.object({
-  NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST: z.string().optional(),
   NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST: z.string().optional(),
 })
 
@@ -77,22 +80,17 @@ export const getFirebaseClientConfig = once(() => {
   }
 })
 
-/** Client-side emulator hosts. Both unset in a normal (non-emulator) run. */
+/** Client-side Auth emulator host. Unset in a normal (non-emulator) run. */
 export const getClientEmulatorConfig = once(() => {
   const env = validate(
     ClientEmulatorSchema,
     {
-      NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST:
-        process.env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST,
       NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST:
         process.env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST,
     },
     'client emulator',
   )
-  return {
-    firestoreHost: env.NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST,
-    authHost: env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST,
-  }
+  return { authHost: env.NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST }
 })
 
 /**

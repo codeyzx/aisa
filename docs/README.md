@@ -35,6 +35,8 @@ missing its metadata.
 - [`how-to/verify-change.md`](how-to/verify-change.md) — the verify chain AND the driven steps.
   Green is necessary, never sufficient.
 - [`how-to/deploy.md`](how-to/deploy.md) — the executed container runbook.
+- [`how-to/setup-google-form.md`](how-to/setup-google-form.md) — connect the founder Google
+  Form to `aisa-api` through Apps Script.
 - [`how-to/backup-and-restore.md`](how-to/backup-and-restore.md) — snapshot export/restore and
   migrations, including the gates that stop them reaching a real project by accident.
 - [`how-to/maintain-project-readme.md`](how-to/maintain-project-readme.md) — keeping the README
@@ -54,11 +56,9 @@ is meant to be deleted from.
   adding a route.**
 - [`reference/contracts/data.md`](reference/contracts/data.md) — the `schema → repo → action`
   path every entity follows, plus the composite-index rule nothing else enforces.
-- [`reference/contracts/auth.md`](reference/contracts/auth.md) — session cookies and the
-  server-authoritative data access layer; the client never holds a trusted identity.
-- [`reference/contracts/impersonation.md`](reference/contracts/impersonation.md) — a
-  deliberate, sanctioned auth bypass, and the highest-risk surface here. **Never
-  reverse-engineer it from the code.**
+- [`reference/contracts/auth.md`](reference/contracts/auth.md) — Firebase email/password
+  sign-in, the Firebase session cookie, and the server-authoritative data access layer; the
+  client never holds a trusted identity.
 - [`reference/contracts/ui.md`](reference/contracts/ui.md) — how components are sourced and
   extended, and which state mechanism to reach for, in what order.
 - [`reference/contracts/testing.md`](reference/contracts/testing.md) — the three test layers
@@ -71,22 +71,14 @@ is meant to be deleted from.
 - [`reference/contracts/project-readme.md`](reference/contracts/project-readme.md) — what a
   project README must answer, and who owns keeping it true.
 
-Optional capabilities, each independently removable:
+The AISA data contract — every collection the Python services write and this app reads:
 
-- [`reference/contracts/storage.md`](reference/contracts/storage.md) — putting bytes somewhere
-  and getting them back.
-- [`reference/contracts/realtime.md`](reference/contracts/realtime.md) — the one route that
-  reads Firestore from the browser.
-- [`reference/contracts/ai.md`](reference/contracts/ai.md) — the inference seam: provider,
-  model choice, deadline.
-- [`reference/contracts/export.md`](reference/contracts/export.md) — handing a human a file.
-
-> **Why more contracts than the four capabilities suggest.** They are separate files rather
-> than one `capabilities.md`, and `impersonation` is separate from `auth`, on purpose. A
-> capability earns its own file by being independently deletable — folding four together would
-> mean editing a shared document to remove one, which works against the deletion-first model.
-> Impersonation is separate because it is an auth BYPASS, and burying it inside a longer
-> document lowers the odds someone reads it before touching it.
+- [`TESTING.md`](TESTING.md) — the T01–T11 scenarios run against production, with actual
+  results and evidence ids.
+- [`AI_USAGE.md`](AI_USAGE.md) — how AI coding assistants were used and what people decided.
+- [`reference/contracts/aisa-firestore.md`](reference/contracts/aisa-firestore.md) — collection
+  shapes and enum values. The Python Pydantic models are its source of truth; the dashboard
+  only reads.
 
 ## Generated reference
 
@@ -111,8 +103,6 @@ fails while any of them disagrees with the code they are generated from.
   request, end to end.
 - [`explanation/capability-model.md`](explanation/capability-model.md) — why capabilities are
   removable seams, and what makes one removable.
-- [`explanation/realtime-model.md`](explanation/realtime-model.md) — why exactly one route
-  reads the database from the browser, and what that costs.
 - [`explanation/deployment-model.md`](explanation/deployment-model.md) — why deployment is
   shaped this way, including why no deploy job ships in CI.
 - [`explanation/reusability-model.md`](explanation/reusability-model.md) — how the standard

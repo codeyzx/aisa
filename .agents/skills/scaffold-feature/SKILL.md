@@ -1,6 +1,6 @@
 ---
 name: scaffold-feature
-description: Use when adding a new Firestore-backed entity/feature to this repo — a list+form vertical like assets or invoices. Copies the features/_template files and names the wiring nothing else enforces (feature-owned collection path, the RBAC capability, the composite index). NOT for editing an existing feature or a one-off query.
+description: Use when adding a new Firestore-backed entity/feature to this repo — a list+form vertical like invoices. Copies the features/_template files and names the wiring nothing else enforces (feature-owned collection path, the RBAC capability, the composite index). NOT for editing an existing feature or a one-off query.
 ---
 
 # Scaffold a feature from the template
@@ -53,9 +53,9 @@ per-file wiring; this skill is the order and the cross-file wiring that nothing 
    index; a sort TOGGLE is what needs the mirrored one. `pnpm indexes:check` can only see query
    shapes something actually ran, so drive your list before trusting it.
 7. **Scaffold the test layer — feature-owned, but it lives under `test/`.** Create
-   `test/builders/<entity>.ts` (a typed `<Entity>Create` builder, modeled on
-   `test/builders/asset.ts`) and `test/integration/<entity>-repo.test.ts` (modeled on
-   `test/integration/asset-repo.test.ts`). They do NOT go in the feature folder: the
+   `test/builders/<entity>.ts` (a typed `<Entity>Create` builder) and
+   `test/integration/<entity>-repo.test.ts` (modeled on
+   `test/integration/template-widget.test.ts`, which drives the template-generated repo). They do NOT go in the feature folder: the
    [testing contract](../../../docs/reference/contracts/testing.md) organizes test code by
    runtime dependency — unit tests colocate, integration tests live in `test/` because they
    need the emulator — and it groups builders into one `test/builders/` toolkit beside
@@ -63,11 +63,6 @@ per-file wiring; this skill is the order and the cross-file wiring that nothing 
    [removal checklist](../../../docs/reference/contracts/data.md#removal-checklist-deleting-an-entity);
    a feature scaffolded without them is both less tested and misremembered as more deletable
    than it is.
-8. **Attachment (optional) — reuse, do not re-derive.** The base template ships without an
-   upload so a feature that has none stays clean. If yours keeps a file, the staging → durable
-   lifecycle is generic in `lib/storage/attachment-lifecycle.ts` (pass your own
-   `'<entity>.attachment.orphan'` tag); the per-layer wiring to copy from `features/asset/` is
-   the cookbook in [add a feature](../../../docs/how-to/add-feature.md#adding-an-attachment-reuse-the-lifecycle-dont-re-derive-it).
 
 ## Verify
 

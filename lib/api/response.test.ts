@@ -146,11 +146,7 @@ describe('apiFailFrom', () => {
 describe('apiFailFromDenial', () => {
   it('maps the denial set onto the closed HTTP taxonomy', () => {
     expect(apiFailFromDenial(request(), 'unauthenticated').status).toBe(401)
-    // password_change_required has no wire code of its own on purpose: an HTTP
-    // client's remedy is the same as any other permission denial.
-    expect(
-      apiFailFromDenial(request(), 'password_change_required').status,
-    ).toBe(403)
+    expect(apiFailFromDenial(request(), 'forbidden').status).toBe(403)
   })
 })
 

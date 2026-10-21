@@ -76,7 +76,7 @@ export async function registerNode(): Promise<void> {
     // adding a capability that reads env WITHOUT registering it is precisely the
     // bug that list prevents, and it can no longer be prevented in one place and
     // forgotten in another. The registry also knows which capabilities are turned
-    // ON, so a disabled one (AI, unless `AI_ENABLED`) is never asked for
+    // ON, so a disabled one is never asked for
     // credentials, and deleting a capability is `trash lib/<capability>/` plus one
     // registry line rather than an edit here.
     //
@@ -91,7 +91,7 @@ export async function registerNode(): Promise<void> {
     // joined into a single Error message. Observed on the real image, not
     // reasoned about: joined, the whole aggregate is ONE string field, and
     // `lib/log` bounds a string at 512 characters — so a container missing its
-    // Firebase, S3 and impersonation config printed the first group and
+    // Firebase, storage and signing config printed the first group and
     // `…(864 chars)`. Aggregation exists precisely so a fresh clone sees EVERY
     // missing var in one boot; truncating it back to the first group would have
     // silently undone the feature this block is here for. As entries, each group

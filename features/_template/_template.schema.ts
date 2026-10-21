@@ -57,7 +57,7 @@ export const __Entity__Schema = z.object({
   //     .union([z.number(), z.string().trim().min(1, 'Amount is required')])
   //     .transform((v) => Number(v))
   //     .pipe(z.number().int().min(0)),
-  // See features/asset/asset.schema.ts (`value`) and the data contract.
+  // See the data contract.
   status: __Entity__StatusSchema.default('active'),
   createdAt: TimestampSchema,
   updatedAt: TimestampSchema,

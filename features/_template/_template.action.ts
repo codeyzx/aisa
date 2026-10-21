@@ -51,8 +51,7 @@ import { __entity__FormOpts } from './__entity__.form-opts'
  * BOTH mutations, so a new field is added in ONE place (not three that desync).
  * Reshape for your fields; map '' → undefined for OPTIONAL ones — a controlled
  * input posts '' for "empty", and an empty string on the doc is not the same as
- * an absent field. See `features/asset/asset.action.ts` for a fuller version
- * (numeric coercion + an attachment key).
+ * an absent field.
  */
 function __entity__FormInput(values: __Entity__FormValues) {
   return {

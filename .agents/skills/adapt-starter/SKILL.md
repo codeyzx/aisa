@@ -17,30 +17,16 @@ the decision order and the traps.
 Order matters: renaming after deleting means renaming less, and configuring before deleting
 means configuring things you are about to remove.
 
-1. **Rename** — project name, package name, the demo Firebase project id, the seeded demo
-   accounts. Grep for the placeholder rather than trusting a list.
+1. **Rename** — project name, package name, the demo Firebase project id. Grep for the
+   placeholder rather than trusting a list.
 2. **Delete** the capabilities you do not need (below).
-3. **Delete the examples** — the `assets` reference feature and the `(examples)` route group
-   exist to show the wiring, not to ship. Removing them is expected, not a loss. It is not a
-   one-`trash` job, though: the `asset` vertical spreads across five layers (feature, UI group,
-   export routes, the `test/` layer, and seed/e2e/nav/index wiring). Follow the enumerated
-   checklist in `docs/reference/contracts/data.md` ("Removal checklist") rather than trashing
-   the route group and assuming it is gone.
-4. **Configure** what remains: `.env` from `.env.example`, then the capability configs.
-5. **Verify** — `pnpm verify`, then drive it. See `docs/how-to/verify-change.md`.
+3. **Configure** what remains: `.env` from `.env.example`, then the capability configs.
+4. **Verify** — `pnpm verify`, then drive it. See `docs/how-to/verify-change.md`.
 
 ## Deleting a capability
 
-Each optional capability owns its own contract, and each contract ends with a **removal
-checklist** written by whoever built it. Use that checklist — it is the only place that knows
-what a given capability touched:
-
-- storage → `docs/reference/contracts/storage.md`
-- realtime → `docs/reference/contracts/realtime.md`
-- ai → `docs/reference/contracts/ai.md`
-- export → `docs/reference/contracts/export.md`
-
-`docs/how-to/remove-capability.md` owns the general workflow.
+`docs/how-to/remove-capability.md` owns the general workflow and links each removal
+checklist that still exists (an entity's is in `docs/reference/contracts/data.md`).
 
 **The trap: a capability is not deleted when its code is gone.** It is deleted when its
 config, its env vars, its nav entries, its RBAC capability string, and its docs entry are
@@ -57,8 +43,6 @@ finished; the hits are your real checklist.
   and they are what keeps a destructive script from reaching a real database.
 - **The structure and docs checks**, unless you are deliberately giving up the guarantee. If
   you delete a rule, delete its claim from the docs in the same commit.
-- **Impersonation**, without reading `docs/reference/contracts/impersonation.md` first. It is
-  a sanctioned auth bypass; removing it wrongly can leave the bypass reachable.
 
 ## Traps that cost the most time
 

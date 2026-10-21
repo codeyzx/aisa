@@ -3,11 +3,9 @@ GENERATED FILE — DO NOT EDIT BY HAND.
 
 Regenerate with: pnpm docs:generate
 Generated from:
-  - lib/env/client.ts
   - lib/env/server.ts
-  - lib/storage/config.ts
-  - lib/ai/config.ts
-  - lib/auth/impersonation.config.ts
+  - lib/env/client.ts
+  - lib/aisa-api/config.ts
   - lib/observability/config.ts
   - lib/log/levels.ts
 
@@ -24,66 +22,6 @@ Every environment variable this repo reads, whether it is required, and whether 
 Two facts here are load-bearing and everything else follows from them. REQUIRED means the boundary refuses to proceed without it — there is no bypass flag anywhere in the env layer, so a missing required value is a failed build or a refused boot, never a warning. And a `NEXT_PUBLIC_` variable is INLINED into the browser bundle: it is public whatever it contains, and it is fixed at build time rather than at run time.
 
 Where a value is validated follows from that split. Public variables are checked during the build, because a bundle that already shipped cannot be corrected. Private variables are checked at boot, capability by capability, so a deployment that ships an enabled capability refuses to start without its secret instead of failing on the first request that needed it.
-
-## Public Firebase and emulator config
-
-Declared in `lib/env/client.ts`. Validated at BUILD time by the gate `next.config.ts` calls. These are inlined into the browser bundle, so a missing one has to fail the build — it cannot be fixed afterwards.
-
-### `NEXT_PUBLIC_FIREBASE_API_KEY`
-
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
-- Scope: client — INLINED into the browser bundle at build time, so treat it as public
-
-Firebase web API key. Not a secret, but environment-specific.
-
-### `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
-- Scope: client — INLINED into the browser bundle at build time, so treat it as public
-
-Firebase auth domain for the web SDK.
-
-### `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
-- Scope: client — INLINED into the browser bundle at build time, so treat it as public
-
-Firebase project the browser talks to. Must name the same project as the server-side project id, or sign-in succeeds against an account the server cannot see.
-
-### `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
-
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
-- Scope: client — INLINED into the browser bundle at build time, so treat it as public
-
-Firebase storage bucket for the web SDK.
-
-### `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
-
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
-- Scope: client — INLINED into the browser bundle at build time, so treat it as public
-
-Firebase messaging sender id for the web SDK.
-
-### `NEXT_PUBLIC_FIREBASE_APP_ID`
-
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
-- Scope: client — INLINED into the browser bundle at build time, so treat it as public
-
-Firebase web app id.
-
-### `NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST`
-
-- Requirement: optional — may be left unset
-- Scope: client — INLINED into the browser bundle at build time, so treat it as public
-
-Point the BROWSER Firestore SDK at a local emulator. Unset for a normal run. Must move together with its server-side twin.
-
-### `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST`
-
-- Requirement: optional — may be left unset
-- Scope: client — INLINED into the browser bundle at build time, so treat it as public
-
-Point the BROWSER auth SDK at a local emulator. Unset for a normal run.
 
 ## Server runtime config
 
@@ -112,17 +50,24 @@ Which project the server talks to. Required on both the emulator and the real-pr
 
 ### `FIREBASE_CLIENT_EMAIL`
 
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
+- Requirement: optional — may be left unset
 - Scope: server only — read at run time and never sent to the browser
 
-Service-account identity from a service-account JSON key. Not demanded while an emulator host is set — an emulator authenticates with nothing.
+Service-account identity from a service-account JSON key. Optional: set it together with FIREBASE_PRIVATE_KEY, or leave both unset to use Application Default Credentials (the Cloud Run runtime service account). Exactly one of the pair set is refused at boot.
 
 ### `FIREBASE_PRIVATE_KEY`
 
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
+- Requirement: optional — may be left unset
 - Scope: server only — read at run time and never sent to the browser
 
 Service-account private key, the full PEM. A literal backslash-n sequence is normalized to real newlines at read time, because env UIs store it that way.
+
+### `FIREBASE_AUTH_SERVICE_ACCOUNT`
+
+- Requirement: optional — may be left unset
+- Scope: server only — read at run time and never sent to the browser
+
+Optional. The service account Firebase AUTH calls run as, impersonated from the ADC identity through IAM Credentials. For a runtime that holds no `firebaseauth.*` permission and may not mint a key; that identity needs `roles/iam.serviceAccountTokenCreator` on this account. Unset: Auth uses the same credential as Firestore. Ignored against the emulator.
 
 ### `LOG_LEVEL`
 
@@ -146,81 +91,76 @@ Commit stamp reported by the health route, populated by the image build. Never s
 
 Build timestamp reported by the health route, populated by the image build.
 
-## Object storage
+## Public Firebase and emulator config
 
-Declared in `lib/storage/config.ts`. Owned by the storage capability, so deleting the capability deletes the schema with it. Generic on purpose: nothing in the code names a backend, so swapping backends is an env change.
+Declared in `lib/env/client.ts`. Validated at BUILD time by the gate `next.config.ts` calls. These are inlined into the browser bundle, so a missing one has to fail the build — it cannot be fixed afterwards. The browser uses them only to sign in.
 
-### `S3_ENDPOINT`
+### `NEXT_PUBLIC_FIREBASE_API_KEY`
 
 - Requirement: REQUIRED — the boundary refuses an absent or empty value
-- Scope: server only — read at run time and never sent to the browser
+- Scope: client — INLINED into the browser bundle at build time, so treat it as public
 
-Object-storage endpoint the SERVER uses. Requests are path-style, so this is the bare host and not a bucket URL.
+Firebase web API key. Not a secret, but environment-specific.
 
-### `S3_PUBLIC_ENDPOINT`
+### `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+
+- Requirement: REQUIRED — the boundary refuses an absent or empty value
+- Scope: client — INLINED into the browser bundle at build time, so treat it as public
+
+Firebase auth domain for the web SDK.
+
+### `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+
+- Requirement: REQUIRED — the boundary refuses an absent or empty value
+- Scope: client — INLINED into the browser bundle at build time, so treat it as public
+
+Firebase project the browser signs in against. Must name the same project as the server-side project id, or sign-in succeeds against an account the server cannot see.
+
+### `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET`
+
+- Requirement: REQUIRED — the boundary refuses an absent or empty value
+- Scope: client — INLINED into the browser bundle at build time, so treat it as public
+
+Firebase storage bucket for the web SDK config.
+
+### `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID`
+
+- Requirement: REQUIRED — the boundary refuses an absent or empty value
+- Scope: client — INLINED into the browser bundle at build time, so treat it as public
+
+Firebase messaging sender id for the web SDK config.
+
+### `NEXT_PUBLIC_FIREBASE_APP_ID`
+
+- Requirement: REQUIRED — the boundary refuses an absent or empty value
+- Scope: client — INLINED into the browser bundle at build time, so treat it as public
+
+Firebase web app id.
+
+### `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST`
 
 - Requirement: optional — may be left unset
-- Scope: server only — read at run time and never sent to the browser
+- Scope: client — INLINED into the browser bundle at build time, so treat it as public
 
-Object-storage endpoint the BROWSER uses, when it differs from the server one. Presigned URLs are signed against a host, so they are minted with this. Defaults to S3_ENDPOINT; set it wherever the app and the reader reach storage at different addresses, as under Compose.
+Point the BROWSER auth SDK at a local emulator. Unset for a normal run; an image built with it set is a test artifact.
 
-### `S3_REGION`
+## AISA API
 
-- Requirement: optional — defaults to `us-east-1`
-- Scope: server only — read at run time and never sent to the browser
+Declared in `lib/aisa-api/config.ts`. Where the Python `aisa-api` lives and the key it expects. Every dashboard write goes through a server action that calls it, so both are server-only.
 
-Signature v4 needs a region even where the backend ignores it. Some managed backends mandate a specific value.
-
-### `S3_BUCKET`
+### `AISA_API_URL`
 
 - Requirement: REQUIRED — the boundary refuses an absent or empty value
 - Scope: server only — read at run time and never sent to the browser
 
-Bucket every upload lands in.
+Absolute base URL of the Python `aisa-api`. Every write the dashboard makes (responses, category corrections, rules, STOP/LANJUT, uploads) goes there.
 
-### `S3_ACCESS_KEY_ID`
-
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
-- Scope: server only — read at run time and never sent to the browser
-
-Object-storage access key id.
-
-### `S3_SECRET_ACCESS_KEY`
+### `AISA_API_KEY`
 
 - Requirement: REQUIRED — the boundary refuses an absent or empty value
 - Scope: server only — read at run time and never sent to the browser
 
-Object-storage secret access key.
-
-## Inference
-
-Declared in `lib/ai/config.ts`. Owned by the AI capability, which ships turned OFF. Intent is stated separately from the credential so a forgotten or mistyped key is a loud refusal rather than silently-disabled inference.
-
-### `AI_ENABLED`
-
-- Requirement: optional — may be left unset
-- Scope: server only — read at run time and never sent to the browser
-- Accepted values: `true`, `false`, `1`, `0`
-
-Whether inference ships turned on. A strict enum, not a truthiness check: an unrecognized value is rejected at boot rather than read as off. Unset means off, and off means no key is read and no provider is initialized.
-
-### `ANTHROPIC_API_KEY`
-
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
-- Scope: server only — read at run time and never sent to the browser
-
-Inference credential, read by the provider SDK itself — so the name is fixed rather than chosen. Only meaningful while inference is on; then the app refuses to boot without it rather than failing on first use.
-
-## Impersonation
-
-Declared in `lib/auth/impersonation.config.ts`. Owned by the impersonation capability. Its own key rather than a reused one, which is what keeps the capability deletable.
-
-### `IMPERSONATION_SECRET`
-
-- Requirement: REQUIRED — the boundary refuses an absent or empty value
-- Scope: server only — read at run time and never sent to the browser
-
-HMAC signing key for the impersonation ticket. At least 32 characters, because the secret's whole value is its entropy. Generate one per environment and never reuse it. Shipped empty on purpose: any value shipped here would validate, and something that works is never replaced.
+Shared key sent as the `X-AISA-Key` header on every `aisa-api` call. Server only; never reaches the browser.
 
 ## Error monitoring
 

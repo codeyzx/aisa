@@ -1,7 +1,7 @@
 /**
- * The three auth facts a fork must never break: an anonymous visitor cannot see a
- * protected page, a seeded account can sign in for real, and a capability the
- * account does not hold is refused.
+ * The auth facts that must never break: an anonymous visitor cannot see a
+ * protected page, a seeded account signs in for real (browser → Auth emulator →
+ * session cookie), a wrong password is refused, and signing out ends the session.
  *
  * The guard chain is two layers and only the second is a boundary — `proxy.ts`
  * bounces a request with NO session cookie (optimistic, it never verifies), and
@@ -11,34 +11,43 @@
  */
 import { expect, test } from '@playwright/test'
 
-import { signIn } from './sign-in.ts'
+import { seededEmail, signIn } from './sign-in.ts'
 
 test('an anonymous visit to a protected page lands on /login, carrying ?next', async ({
   page,
 }) => {
-  await page.goto('/assets')
+  await page.goto('/hari-ini')
 
   // `?next` is what makes the bounce recoverable: sign in and you arrive where
   // you were going, instead of on a generic dashboard having lost your link.
-  await expect(page).toHaveURL(/\/login\?next=%2Fassets$/)
+  await expect(page).toHaveURL(/\/login\?next=%2Fhari-ini$/)
   await expect(page.getByRole('button', { name: 'Masuk' })).toBeVisible()
 })
 
-test('a seeded admin can sign in and reach the dashboard', async ({ page }) => {
-  await signIn(page, 'admin')
+test('the manager can sign in, reach Hari ini, and sign out', async ({
+  page,
+}) => {
+  await signIn(page)
 
-  await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Hari ini' }),
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: 'Menu pengguna' }).click()
+  await page.getByRole('menuitem', { name: 'Keluar' }).click()
+  await expect(page).toHaveURL(/\/login/)
+
+  // The cookie is gone, not merely the page: a protected URL bounces again.
+  await page.goto('/hari-ini')
+  await expect(page).toHaveURL(/\/login\?next=%2Fhari-ini$/)
 })
 
-test('a non-admin is refused the admin console', async ({ page }) => {
-  await signIn(page, 'user')
+test('a wrong password is refused and says so', async ({ page }) => {
+  await page.goto('/login')
+  await page.getByLabel('Email').fill(seededEmail('admin'))
+  await page.getByLabel('Kata sandi').fill('bukan-kata-sandinya')
+  await page.getByRole('button', { name: 'Masuk' }).click()
 
-  await page.goto('/admin')
-
-  // Refused, NOT 404 and not a blank shell: the capability check maps a denial to
-  // /403, which says what happened and offers the way back. The seeded `user`
-  // holds only asset:read and storage:read (lib/auth/rbac.ts), so admin:access is
-  // genuinely absent rather than mocked away.
-  await expect(page).toHaveURL(/\/403$/)
-  await expect(page.getByText('403 — Akses ditolak')).toBeVisible()
+  await expect(page.getByText('Email atau kata sandi salah')).toBeVisible()
+  await expect(page).toHaveURL(/\/login/)
 })

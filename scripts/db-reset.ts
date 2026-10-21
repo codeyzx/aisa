@@ -97,7 +97,7 @@ if (!apply) {
     '\nNothing was deleted — this was the plan, not the run.\n' +
       'To actually delete the above:\n' +
       '  pnpm db:reset -- --apply\n' +
-      'Then `pnpm setup:local` reseeds the test accounts and example data.',
+      'Then `pnpm setup:local` reseeds the fake AISA data.',
   )
   process.exit(0)
 }

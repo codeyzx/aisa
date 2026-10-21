@@ -11,10 +11,10 @@
  * `'use server'` file can present one — a `function` declaration AND a `const`
  * bound to an arrow / function expression (`export const NAME = async () => …`),
  * which is an equally callable RPC entry point and would otherwise skip the gate
- * while every static check stayed green. The one sanctioned exception —
- * `stopImpersonationFormAction`, which cannot hold a capability gate and is gated
- * by a signed ticket instead — carries an inline ast-grep suppression in source
- * and is recorded as a specific exemption here. (Spelling that directive out in
+ * while every static check stayed green. The sanctioned exception —
+ * `changeOwnPasswordAction`, which cannot hold a capability gate and is gated by
+ * a fresh reauthentication token instead — carries an inline ast-grep suppression
+ * in source and is recorded as a specific exemption here. (Spelling that directive out in
  * this comment would make the scanner read IT as one, and then report it unused.)
  *
  * `_template.*` files are excluded from the tsconfig program, so (unlike ast-grep)

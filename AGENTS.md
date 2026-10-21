@@ -56,8 +56,8 @@ carrying who owns it, what proves it, and what it deliberately does not define.
 
 Start with **`http-api.md`** (read its boundary section — usually you should _not_ be adding
 a route) and **`data.md`** (the `schema → repo → action` path plus the composite-index rule
-nothing else enforces). **`impersonation.md`** is the highest-risk surface in the repo: a
-sanctioned auth bypass. Never reverse-engineer it from the code.
+nothing else enforces). **`aisa-firestore.md`** is the AISA data contract: the Python
+Pydantic models are its source of truth, and the dashboard only reads.
 
 `docs/README.md` is the index and states which doc owns what. Procedures live in
 `docs/how-to/`, rationale in `docs/explanation/`, generated facts in `docs/reference/`.
@@ -76,13 +76,23 @@ procedure.
 
 Gotchas nothing else catches:
 
-- The **env fail-fast** has no bypass flag. Prove it by moving `.env` aside and watching
-  `pnpm build` fail — not by trusting a green `build:ci`, which supplies dummy public values
-  on purpose.
+- The **env fail-fast** has no bypass flag, and it lives at server **boot**, not in the
+  build: `pnpm build` succeeds with no `.env` because no public var is required. Prove it by
+  starting the built server with the required env missing
+  (`env -i PATH="$PATH" HOME="$HOME" node .next/standalone/server.js`) and watching it log
+  `[boot] environment is invalid, refusing to serve` and exit 1 — not by trusting a green
+  build.
 - A `.where(A,'==') + .orderBy(B)` query needs a **composite index** the emulator will not
   flag. Drive the query, then run `pnpm indexes:check`.
 - **`pnpm test:e2e:ci` builds and drives the real image.** `next start` does not serve the
-  shipped artifact and Next itself says so.
+  shipped artifact and Next itself says so. It is `pnpm test:e2e:fast` (`scripts/e2e-fast.ts`):
+  one image build, then `--shards N` (1–9, default 4) app containers on ports 3201 upward, each
+  with its own seeded Firestore emulator (8181 upward), all sharing ONE Auth emulator on
+  `127.0.0.1:9099` — that address is baked into the E2E image's browser bundle, so a spec that
+  changes a seeded account leaks into every shard. It refuses to start while anything holds
+  9099 or a shard's Firestore port (quit `pnpm dev` first). Each shard is a container, a JVM
+  and a browser; with anything else running use `--shards 2`. Other arguments (spec files,
+  `--grep`) go to every shard's `playwright test`; logs land in `test-results/e2e-fast/`.
 - **Local `pnpm install` is not evidence about CI**, and the interpreter running your
   `pnpm` scripts may not be the pinned one — `pnpm node:check` will say so.
 

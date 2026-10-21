@@ -60,7 +60,7 @@ export const config = {
     // `/api` UNCONDITIONALLY, dots and all, and it must stay its own entry.
     // The page pattern below excludes any path containing a dot so that static
     // files are not gated — but that exclusion does not know the difference
-    // between `/logo.svg` and `/api/export/assets/v1.2`. Without this line a
+    // between `/logo.svg` and `/api/reports/v1.2`. Without this line a
     // dotted `/api` path skips the proxy entirely, so a cookie-less request to
     // it gets Next's routing answer instead of the `UNAUTHENTICATED` envelope
     // this file promises for every `/api/` request. The lanes above are only as

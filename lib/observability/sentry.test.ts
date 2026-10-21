@@ -158,7 +158,7 @@ describe('scrubEvent — the arbitrary carriers', () => {
       errorEvent({
         tags: {
           cid: 'cid-123',
-          capability: 'asset:write',
+          capability: 'aisa:configure',
           code: 'INTERNAL',
           // Not allow-listed — the shapes a hurried `setTag` actually takes.
           userEmail: 'admin@aixel.test',
@@ -169,7 +169,7 @@ describe('scrubEvent — the arbitrary carriers', () => {
 
     expect(event.tags).toStrictEqual({
       cid: 'cid-123',
-      capability: 'asset:write',
+      capability: 'aisa:configure',
       code: 'INTERNAL',
     })
   })

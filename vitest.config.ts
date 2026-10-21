@@ -42,9 +42,8 @@ export default defineConfig({
     // the suite reproduces the server, not the laptop. Same false-negative trap
     // as `env -i pnpm build` on a machine that has a .env.
     //
-    // THE PUBLIC FIXTURE is what lets a test reach the client-facing config AT
-    // ALL. `getFirebaseClientConfig()` validates for real — there is no bypass
-    // flag — so a test that resolves it with no env would throw. Spreading the
+    // THE PUBLIC FIXTURE supplies any required client-facing config a test would
+    // otherwise lack (none today — see scripts/public-env-fixture.ts). Spreading the
     // SHARED fixture (scripts/public-env-fixture.ts, also used by `build:ci`)
     // supplies explicit non-secret dummy values instead of switching the check
     // off, so the validator stays live everywhere: a renamed NEXT_PUBLIC_* still

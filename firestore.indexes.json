@@ -1,241 +1,49 @@
 {
   "indexes": [
     {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "value", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "value", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "status", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "value", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "value", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "value", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "assets",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "searchPrefixes", "arrayConfig": "CONTAINS" },
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "value", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "action", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "action", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "result", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "result", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "targetUid", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "targetUid", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "action", "order": "ASCENDING" },
-        { "fieldPath": "result", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "action", "order": "ASCENDING" },
-        { "fieldPath": "result", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "action", "order": "ASCENDING" },
-        { "fieldPath": "targetUid", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "action", "order": "ASCENDING" },
-        { "fieldPath": "targetUid", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "result", "order": "ASCENDING" },
-        { "fieldPath": "targetUid", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "result", "order": "ASCENDING" },
-        { "fieldPath": "targetUid", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "action", "order": "ASCENDING" },
-        { "fieldPath": "result", "order": "ASCENDING" },
-        { "fieldPath": "targetUid", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "ASCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "accountAuditEvents",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "action", "order": "ASCENDING" },
-        { "fieldPath": "result", "order": "ASCENDING" },
-        { "fieldPath": "targetUid", "order": "ASCENDING" },
-        { "fieldPath": "startedAt", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "widgets",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "order": "ASCENDING" },
-        { "fieldPath": "createdAt", "order": "DESCENDING" }
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAt",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "history",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "proposalId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "at",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "proposals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "effectiveCategory",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "responded",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        }
       ]
     }
   ],

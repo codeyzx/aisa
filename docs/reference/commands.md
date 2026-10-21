@@ -51,7 +51,7 @@ Start the Firebase Auth + Firestore emulators under the `demo-aisa` project. Lea
 node scripts/setup-local.ts
 ```
 
-Get a fresh clone from nothing to a signed-in app: creates `.env` from `.env.example`, generates the impersonation secret rather than copying it, starts the object-storage container, and seeds accounts. Non-destructive by contract, so re-running it is the supported way to check your setup.
+Get a fresh clone from nothing to a signed-in app: creates `.env` from `.env.example`, waits for the emulators, seeds the accounts and the fake AISA data when `settings/rules` is missing (or only the accounts when data exists but none do), and prints the test accounts. Non-destructive by contract, so re-running it is the supported way to check your setup.
 
 ### `pnpm seed`
 
@@ -276,10 +276,18 @@ The browser suite against the production image rather than the dev server, becau
 ### `pnpm test:e2e:ci`
 
 ```
-firebase emulators:exec --project demo-aisa --only auth,firestore "pnpm seed && pnpm test:e2e:container"
+pnpm test:e2e:fast
 ```
 
-Seeded data plus the containerised browser suite inside a managed emulator — the one-command form used by the pipeline.
+The one-command form used by the pipeline: the same command as `test:e2e:fast`.
+
+### `pnpm test:e2e:fast`
+
+```
+node scripts/e2e-fast.ts
+```
+
+Build the E2E image once, then split the browser suite over `--shards N` (1–9, default 4), each shard with its own container (port 3201 upward) and its own seeded Firestore emulator, sharing one Auth emulator on 127.0.0.1:9099. Other arguments (spec files, `--grep`) go to every shard's `playwright test`. Each shard costs a container, a JVM and a browser in memory; use `--shards 2` on a busy machine.
 
 ## Build and ship
 
@@ -289,7 +297,7 @@ Seeded data plus the containerised browser suite inside a managed emulator — t
 next build
 ```
 
-The real production build, with the real environment. `next.config.ts` calls the public-env validator, so a missing or renamed `NEXT_PUBLIC_*` fails here — which is the only place it can fail, since those values are inlined into the browser bundle and cannot be fixed after the build.
+The real production build, with the real environment. `next.config.ts` calls the public-env validator, so a malformed `NEXT_PUBLIC_*` (today only the optional Sentry DSN) fails here — which is the only place it can fail, since those values are inlined into the browser bundle and cannot be fixed after the build.
 
 ### `pnpm start`
 

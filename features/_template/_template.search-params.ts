@@ -14,13 +14,11 @@
 // SCOPE: this is the standard baseline (docs/explanation/reusability-model.md) —
 // a status filter and cursor paging, nothing else. A search box, a sortable
 // header, a page-size control and a table/card toggle are opt-in extensions you
-// argue per entity; `app/(app)/(examples)/assets/search-params.ts` is a version
-// that carries all four. Read `docs/reference/contracts/ui.md` before adding one:
+// argue per entity. Read `docs/reference/contracts/ui.md` before adding one:
 // a page size is a COST input — it becomes the number of documents Firestore is
 // billed for — so it must be a closed literal set, never `parseAsInteger`.
 //
-// The examples keep this module beside their route instead
-// (`app/(app)/(examples)/assets/search-params.ts`). Either place holds the
+// You may keep this module beside the route instead. Either place holds the
 // contract, but if you move it there the schema stops being a sibling — change
 // `./__entity__.schema` to `@/features/<entity>/<entity>.schema` or nothing
 // resolves.

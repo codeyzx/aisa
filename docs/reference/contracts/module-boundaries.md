@@ -29,9 +29,9 @@ them. Their compile-time proof is `pnpm templates:check` instead.
 ## Layering: three tiers, one direction
 
 - **shared** — `lib/`, `components/`, `hooks/`. Domain-agnostic infrastructure. Nothing here
-  knows what an "asset" is.
+  knows what a "proposal" is.
 - **feature** — `features/`. The domain, one folder per entity.
-- **app** — `app/`. Delivery and composition: routes, pages, the example surface.
+- **app** — `app/`. Delivery and composition: routes and pages.
 
 The forbidden edges, enforced by **`import-direction`**:
 
@@ -49,7 +49,8 @@ The ast-grep twins are `no-import-feature-or-app-from-shared` and `no-import-app
 `no-import-example-from-core`. The example surface is deletable by contract; a core file
 importing one breaks a downstream project's build the day they delete what this starter told
 them to delete, and it lands on the person with the least context to diagnose it. The direction
-is deliberately one-way: an example importing core is the entire point of an example.
+is deliberately one-way: an example importing core is the entire point of an example. No
+example surface ships today; the rule stays so one added later remains deletable.
 
 ## The client/server boundary
 
@@ -94,7 +95,7 @@ is deliberately one-way: an example importing core is the entire point of an exa
   something other than its own page, which means the same URL answers differently depending on
   how the reader arrived — so the surface is implemented twice, and the two copies' guards,
   `returnTo` validation and metadata are then free to drift apart. Ordinary route GROUPS —
-  `(app)`, `(examples)` — are untouched: they organise files without changing a URL. A dialog is
+  `(app)` — are untouched: they organise files without changing a URL. A dialog is
   still fine; open it from client state.
 
 ## Boundaries this file enforces, semantics owned elsewhere

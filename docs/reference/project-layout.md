@@ -27,39 +27,34 @@ What is listed: every directory the repository intends to contain, plus one leve
   - `workflows/` — The pipeline definition.
 - `.vscode/` — Editor settings and recommended extensions, checked in so the tree formats the same for everyone.
 - `app/` — Routes. Pages, layouts and HTTP route handlers.
-  - `(app)/` — The authenticated shell: dashboard, admin, and the example routes.
+  - `(app)/` — The authenticated shell: the AISA pages.
   - `403/` — The refusal page a denied capability lands on.
-  - `api/` — HTTP route handlers — session, export, health, storage.
-  - `login/` — Sign-in and password reset.
-  - `password/` — Password change for a signed-in user.
+  - `api/` — HTTP route handlers — session and health.
+  - `login/` — Sign-in: Firebase email/password, then a session cookie.
 - `components/` — Shared presentation. Nothing here reaches for a feature.
-  - `pdf/` — Presentation shared by generated documents.
-  - `shell/` — The application shell: sidebar, navigation, impersonation banner.
+  - `shell/` — The application shell: sidebar, navigation, topbar.
   - `ui/` — The primitive component set the rest of the UI is built from.
 - `docs/` — The documentation surface. Its own index maps it.
 - `e2e/` — Browser specs driven against a running app.
 - `features/` — Vertical slices, one directory per entity, each owning its schema, repo, actions and UI.
   - `_template/` — The copy-me entity template. Excluded from the normal typecheck, checked separately.
-  - `asset/` — The worked example entity, wired through every seam at once.
+  - `aisa/` — The AISA read model: zod mirrors of the Firestore contract, repos, labels, and the server actions that call `aisa-api`.
 - `hooks/` — Shared React hooks that no single feature owns.
+- `integrations/` — Code that runs outside this app and feeds AISA (the Google Apps Script form hook).
+  - `apps-script/` — The Apps Script bound to the intake Google Form; posts each response to `aisa-api`.
 - `lib/` — Shared non-visual code: the seams every feature builds on.
-  - `actions/` — Server actions that belong to no single feature: account, password, impersonation.
-  - `ai/` — The inference seam: provider, model choice, config.
+  - `aisa-api/` — The server-only client for the Python `aisa-api`: config, fetch, and outcome shape.
   - `api/` — The HTTP contract: response envelope, error taxonomy, correlation id, typed client fetcher.
-  - `audit/` — The account audit trail.
-  - `auth/` — Sessions, claims, roles, guards, revocation, impersonation.
+  - `auth/` — The session DAL, roles and capabilities, guards.
   - `data/` — The data path shared by every entity: the action contract, converters, pagination, counters, timestamps, batching.
   - `env/` — Environment configuration and the boot-time capability manifest.
-  - `export/` — Handing a human a file: CSV, spreadsheet, PDF, and the download seam.
   - `firebase/` — SDK bootstrap for both runtimes, plus the typed collection accessors.
   - `format/` — Display formatting: currency, dates, numbers, locale.
-  - `http/` — Rate limiting, origin checks, and content-disposition handling.
-  - `list-toolbar/` — The shared search, filter and scope toolbar for list views.
+  - `http/` — Rate limiting and origin checks.
   - `log/` — The structured logger and its levels.
   - `observability/` — Error monitoring: config and the field allow-list that decides what may leave.
   - `repos/` — Repositories no single feature owns.
   - `schemas/` — Schemas no single feature owns.
-  - `storage/` — The object-storage seam: keys, limits, the upload contract.
 - `public/` — Static assets served as-is.
 - `rule-tests/` — Fixtures proving the structural lint rules fire and do not over-fire.
 - `rules/` — Repo-specific structural lint rules.
@@ -68,6 +63,8 @@ What is listed: every directory the repository intends to contain, plus one leve
   - `migration/` — The migration runner and its template.
   - `snapshot/` — Database export and restore.
   - `structure/` — The architecture gate.
+- `services/` — The Python AISA services (aisa-api). Owned outside this app; the dashboard only calls them.
+  - `api/` — aisa-api: the FastAPI service every dashboard write goes through, and the Pydantic models the Firestore contract mirrors.
 - `test/` — Test infrastructure shared across suites.
   - `builders/` — Fixture builders shared by suites.
   - `integration/` — Emulator-backed tests.

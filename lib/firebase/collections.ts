@@ -54,9 +54,8 @@ export function typedCollectionGroup<T>(
  * USE IT ONLY WHERE VALIDATION WOULD BE WRONG, not merely inconvenient. The real
  * case is REPAIR AND DELETION: a document that no longer matches the schema is
  * exactly the one you most need to delete, and a converted read would throw on it
- * — making a corrupt row permanently undeletable. `features/asset/asset.repo.ts`
- * deletes through here for that reason, and the integration suite pins it by
- * planting a schema-violating document and deleting it.
+ * — making a corrupt row permanently undeletable. A repo deletes through here
+ * for that reason.
  *
  * Everything that READS TO SHOW must use `typedCollection` instead: an unvalidated
  * read hands the app `any`, so a drifted field surfaces far from the query that

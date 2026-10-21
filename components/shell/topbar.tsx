@@ -1,10 +1,8 @@
 'use client'
 
 import { type ReactNode } from 'react'
-import Link from 'next/link'
-import { LogOut, UserRoundCog } from 'lucide-react'
+import { LogOut } from 'lucide-react'
 
-import { can } from '@/lib/auth/rbac'
 import { type Session } from '@/lib/auth/session.contract'
 import { useSignOut } from '@/lib/auth/use-sign-out'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -33,7 +31,7 @@ interface TopbarProps {
 
 export function Topbar({ session, children }: TopbarProps) {
   // Both halves of signing out — cookie AND Firebase refresh token — live in
-  // `useSignOut`, shared with the mandatory password-change screen.
+  // `useSignOut`.
   const handleSignOut = useSignOut()
 
   return (
@@ -71,29 +69,6 @@ export function Topbar({ session, children }: TopbarProps) {
               </span>
             </DropdownMenuLabel>
           </DropdownMenuGroup>
-          {/* Impersonation entry — shown ONLY to a session that may start an
-              impersonation (`impersonation:start`), the authority this item
-              exists to exercise. It links to /admin (the picker);
-              `prefetch={false}` is REQUIRED so rendering/hovering never
-              prefetches that route and runs `listUsers` — the roster loads only
-              on an actual click. While impersonating, `session.role` is the
-              target's, so `can()` is false and this disappears with no special
-              case: an impersonated admin genuinely lacks `impersonation:start`.
-              Every navigation mode lands on the same full page — there is no
-              intercepted modal variant. */}
-          {can(session, 'impersonation:start') ? (
-            <>
-              <DropdownMenuSeparator />
-              <DropdownMenuGroup>
-                <DropdownMenuItem
-                  render={<Link href="/admin" prefetch={false} />}
-                >
-                  <UserRoundCog />
-                  Impersonate pengguna
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </>
-          ) : null}
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
             <DropdownMenuItem variant="destructive" onClick={handleSignOut}>

@@ -5,7 +5,7 @@
  * types JSON cannot express. `JSON.stringify(timestamp)` yields
  * `{"_seconds":1,"_nanoseconds":0}` — which restores as a plain OBJECT, not a
  * `Timestamp`. The document then looks fine in the emulator UI and the
- * `zodConverter` throws on the very next read, because `AssetSchema` expects a
+ * `zodConverter` throws on the very next read, because the schema expects a
  * date. A `GeoPoint` degrades the same way; a `DocumentReference` restores as a
  * string and stops being a link; `Bytes` silently corrupts.
  *

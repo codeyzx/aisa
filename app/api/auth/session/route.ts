@@ -4,7 +4,6 @@ import * as z from 'zod'
 import { apiFail, apiFailFrom, apiOk } from '@/lib/api/response'
 import { SESSION_COOKIE, SESSION_MAX_AGE_MS } from '@/lib/auth/constants'
 import { SECURE_COOKIE_ATTRIBUTES } from '@/lib/auth/cookie-options'
-import { IMPERSONATION_COOKIE } from '@/lib/auth/impersonation'
 import { isDefinitiveTokenRejection } from '@/lib/auth/token-rejection'
 import { adminAuth } from '@/lib/firebase/admin-auth'
 import { rateLimit } from '@/lib/http'
@@ -144,14 +143,9 @@ export async function POST(request: Request) {
 }
 
 /**
- * Clear the session cookie AND any impersonation ticket (clear-only — no
- * refresh-token revocation, so logout stays cheap and the short cookie window
- * bounds a leaked cookie).
- *
- * Clearing the impersonation ticket is load-bearing, not tidy-up: it is bound to
- * the ADMIN's uid and lives ~15 min, so leaving it would let the admin's next
- * sign-in within that window silently RESUME the overlay — signing out would not
- * actually end impersonation.
+ * Clear the session cookie (clear-only — no refresh-token revocation, so logout
+ * stays cheap and the cookie window bounds a leaked cookie; the client also
+ * signs the Firebase SDK out, see `lib/auth/use-sign-out.ts`).
  *
  * Takes `request` only because every `lib/api/response.ts` helper resolves the
  * cid from it — the envelope's id must span this hop like any other.
@@ -166,6 +160,5 @@ export async function DELETE(request: Request) {
 
   const cookieStore = await cookies()
   cookieStore.delete({ name: SESSION_COOKIE, path: '/' })
-  cookieStore.delete(IMPERSONATION_COOKIE)
   return apiOk(request, null)
 }

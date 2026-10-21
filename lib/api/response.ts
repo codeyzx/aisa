@@ -128,15 +128,7 @@ export function apiFailFrom(request: Request, error: unknown): Response {
   return jsonResponse(fail(cid, apiError), cid, API_ERROR_STATUS[apiError.code])
 }
 
-/**
- * Answer with the failure envelope for an authorization denial.
- *
- * The HTTP taxonomy is deliberately closed and smaller than the denial set, so
- * `password_change_required` lands on `PERMISSION_DENIED` rather than earning a
- * new wire code. That is honest for this boundary: an HTTP client's remedy is
- * the same either way — it cannot act on the distinction, and only the human in
- * the browser can, who meets the page-level redirect instead.
- */
+/** Answer with the failure envelope for an authorization denial. */
 export function apiFailFromDenial(
   request: Request,
   denial: SessionDenial,

@@ -18,10 +18,9 @@ These are the contracts a fork inherits. Breaking one turns a database swap into
    are database-neutral already. Every mutation still returns the same envelope, still
    carries a correlation id on an internal failure, and still never leaks a driver error to
    a user. See `docs/reference/contracts/data.md`.
-2. **Auth.** Session cookies, the server-authoritative DAL, the guard chain and impersonation
-   are Firebase **Auth**, not Firestore. They are a separate product and a separate seam —
-   swapping the database must not touch them. See `docs/reference/contracts/auth.md` and
-   `docs/reference/contracts/impersonation.md`.
+2. **Auth.** The Firebase sign-in, the session cookie, the server-authoritative DAL
+   and the guard chain store nothing in the database — swapping it must not touch them. See
+   `docs/reference/contracts/auth.md`.
 3. **Module boundaries.** The import-direction rules are machine-enforced by
    `pnpm structure:check`. A repo layer must not import a feature; a feature must not import
    `app/`. Those checks must still pass, unchanged, afterwards.
@@ -39,6 +38,8 @@ These are the contracts a fork inherits. Breaking one turns a database swap into
 
 - `lib/firebase/*` — the Admin app and the typed-collection helper.
 - The repo layer of each feature (`features/*/**.repo.ts`).
+- For AISA data, the Python `aisa-api` too: the dashboard only reads AISA collections, and
+  every AISA write is made by that service, so moving the data moves its writer.
 - Pagination. `lib/data/pagination.contract.ts` is already database-neutral; the Firestore
   cursor implementation behind it is not, and that is the intended replacement point.
 - `firestore.rules` and `firestore.indexes.json` disappear. **Their guarantees do not.**
@@ -47,10 +48,10 @@ These are the contracts a fork inherits. Breaking one turns a database swap into
 ## The two things forks get wrong
 
 **1. Rules were doing authorization work.** `firestore.rules` is a real access-control layer,
-enforced by the database. Delete it and that enforcement is simply gone — the app still
-compiles, still runs, and every guard that lived in rules is now absent. Before removing it,
-enumerate what it enforced and re-implement each rule in the query layer, then prove each one
-with a test that FAILS without the check.
+enforced by the database. Today it is deny-all — no client may read or write directly — and
+the replacement must keep the same property: the new database reachable only from the
+server. If a fork has added carve-outs, enumerate each and re-implement it in the query
+layer, then prove it with a test that FAILS without the check.
 
 **2. Composite indexes were hiding a performance contract.** `pnpm indexes:check` exists
 because a `.where(A) + .orderBy(B)` query needs a declared composite index that the emulator
@@ -84,15 +85,6 @@ If you are forking from a tagged base, say which tag in your first commit, and k
 verification evidence reachable. The point of a verified fork base is that the fork can state
 what was true at the point it diverged — a fork that cannot name its base has inherited
 claims it cannot support.
-
-This project may use `postgresql-fork-candidate-v1` for provisional work while the
-Firestore Phase 12 gate is still running. A candidate is not `FORK READY`, is not
-the official `postgresql-fork-base-v1`, and must record its exact SHA plus the
-checks deliberately deferred. Candidate commits are provisional: once the official
-tag exists, replay them from that exact official tag in dependency order and rerun
-the affected checks. Do not merge the Firestore source `main` wholesale or copy
-candidate evidence into the official completion report. Final PostgreSQL
-completion still requires `postgresql-fork-base-v1` and the driven proof below.
 
 ## Done means
 

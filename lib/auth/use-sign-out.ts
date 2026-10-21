@@ -2,12 +2,8 @@
 
 /**
  * Signing out, as one hook, because it is two operations that must BOTH happen
- * and neither is obvious.
- *
- * Extracted the moment a second surface needed it (the mandatory
- * password-change screen, beside the topbar menu). Duplicating the pair would
- * have meant two copies of a rule whose failure mode is invisible: a screen that
- * looks signed out while the account is still reachable.
+ * and neither is obvious — dropping either leaves a screen that looks signed
+ * out while the account is still reachable.
  */
 import { useRouter } from 'next/navigation'
 import { signOut } from 'firebase/auth'

@@ -60,9 +60,7 @@ const securityHeaders = [
   // by a third party can no longer hold a `window.opener` handle to an
   // authenticated page of this app and poke at it. It costs nothing because this
   // app has NO cross-origin popup flow — sign-in is
-  // `signInWithEmailAndPassword` (browser → Google over fetch, no popup window),
-  // and the two `window.open` call sites (storage/asset attachment downloads)
-  // already pass `noopener,noreferrer`, so they never wanted an opener link.
+  // `signInWithEmailAndPassword` (browser → Google over fetch, no popup window).
   // A fork that adds `signInWithPopup` MUST revisit this line — that flow talks
   // back through `window.opener` and this header severs exactly that.
   { key: 'Cross-Origin-Opener-Policy', value: 'same-origin' },
@@ -144,6 +142,19 @@ const nextConfig: NextConfig = {
    * is still visible — just without its arguments printed beside it.
    */
   logging: { serverFunctions: false },
+  /**
+   * "Unggah pitch deck" sends the PDF through a server action, and aisa-api
+   * accepts decks up to 20 MB. Both limits sit above that by the multipart
+   * overhead. Without them a deck over 1 MB is refused by the action, and one
+   * over 10 MB would be TRUNCATED by the proxy's body buffer (it only logs a
+   * warning) and reach aisa-api as a corrupt PDF.
+   * See node_modules/next/dist/docs/01-app/03-api-reference/05-config/01-next-config-js/
+   * serverActions.md and proxyClientMaxBodySize.md.
+   */
+  experimental: {
+    serverActions: { bodySizeLimit: '21mb' },
+    proxyClientMaxBodySize: '21mb',
+  },
   headers() {
     return Promise.resolve([{ source: '/:path*', headers: securityHeaders }])
   },

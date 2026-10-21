@@ -1,12 +1,12 @@
 # What this starter is for
 
 This repository is the standard starting point for **Aixel internal web applications**:
-Next.js App Router with React Server Components on top of Firestore, Firebase Auth, and an
-S3-compatible object store, shipped as a self-hosted container.
+Next.js App Router with React Server Components on top of Firestore, shipped as a container.
+This fork is the AISA manager dashboard: it reads Firestore server-side, sends every write
+to the Python `aisa-api`, and signs managers in with Firebase email/password accounts.
 
 It exists to answer one question once. Every internal app needs the same first two weeks —
-sign-in that is actually server-authoritative, a role model, a typed data path, file
-uploads, exports, audit, deploy — and answering that fresh each time produces a set of
+sign-in that is actually server-authoritative, a role model, a typed data path, deploy — and answering that fresh each time produces a set of
 apps that are subtly different in exactly the places where being different is expensive.
 Here the answers are made once, written down with their reasoning, and forked.
 
@@ -51,14 +51,14 @@ something else:
 
 - **Internal and authenticated.** There is no public marketing surface and no SEO story —
   the app is walled off from indexing on three legs at once, on purpose.
-- **Small, known user population with roles**, not self-serve signup. Authorization is
-  capability-based over a small role set, and administration (accounts, audit,
-  impersonation) is part of the product rather than an afterthought.
+- **Small, known user population**, not self-serve signup. Authorization is
+  capability-based over a small role set. This fork has a single shared sign-in and no
+  per-person accounts.
 - **Indonesian by default.** UI copy is Bahasa Indonesia, and locale, timezone and currency
   are pinned in one file — a non-Indonesian fork changes them there, but the default is a
   choice about who this is for, not an oversight.
-- **Self-hosted in a container**, not deployed to a platform-managed serverless host — see
-  [the deployment model](deployment-model.md).
+- **Shipped as a container image**, not tied to one platform's build system. This fork
+  runs that image on Cloud Run — see [the deployment model](deployment-model.md).
 - **Linux.** That is what CI runs and what the shipped image is, so it is the only platform
   this starter has evidence about. Other platforms are expected to work and are not
   exercised; the honest scope statement is the point.
@@ -71,9 +71,6 @@ something else:
   kit in a house abstraction you would have to learn on top of the real thing. Where a seam
   exists, it exists to be deleted or swapped, not to hide what is underneath — the typed
   collection accessor is the clearest example: it adds validation and takes nothing away.
-- **Not a finished application.** The demo surfaces exist to prove capabilities work and
-  compose, and they are built to be deleted in one cut. Shipping them to real users would
-  mean shipping a tour.
 - **Not multi-tenant, and not built for anonymous public traffic.** Neither assumption is
   in the data model or the auth chain, and adding either is a real project, not a
   configuration.

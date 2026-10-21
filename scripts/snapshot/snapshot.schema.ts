@@ -19,7 +19,7 @@ import * as z from 'zod'
  *
  * `/` IS THE WHOLE POINT OF THIS CONSTRAINT. Firestore path strings are
  * slash-separated, so an id containing one silently RE-TARGETS the operation:
- * `db.collection('assets/AST-1/audit')` addresses a sub-collection the plan never
+ * `db.collection('items/X-1/audit')` addresses a sub-collection the plan never
  * printed, and under `--wipe` that is what `recursiveDelete` walks and destroys.
  * The same string is also interpolated into a file path (`<dir>/<id>.json`),
  * where a slash escapes the snapshot directory. `.` and `..` are rejected for the

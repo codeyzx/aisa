@@ -3,9 +3,8 @@
 # `runFormAction`, never a bare `'use server'` export.
 #
 # WHY THIS IS THE RULE WITH TEETH: `runAction` is where the capability check
-# lives. `features/asset/asset.action.ts` says so in its own comment —
-# "`runAction('example:write')` resolves the session and re-checks the
-# capability SERVER-SIDE on every call". These files are `'use server'`, so
+# lives — it resolves the session and re-checks the capability SERVER-SIDE on
+# every call. These files are `'use server'`, so
 # every export is a browser-reachable RPC entry point. An export that skips
 # the wrapper skips the auth gate, and it does so while typechecking, linting
 # and building perfectly green. Nothing else in this repo catches it.
@@ -18,21 +17,12 @@
 # `_template.action.ts` is deliberately IN scope. It complies today, and a
 # template the rules do not check is a template that teaches drift.
 #
-# THE ONE EXCEPTION, AND THE BAR FOR THE NEXT ONE.
+# THE EXCEPTION, AND THE BAR FOR THE NEXT ONE.
 # This rule checks a MECHANISM (does it wrap `runAction`?) as a proxy for a
-# PROPERTY (is it gated?). They agree everywhere except one place:
-# `lib/actions/impersonation.action.ts:stopImpersonationFormAction` carries
-# the repo's only `ast-grep-ignore` for this rule.
+# PROPERTY (is it gated?). No export carries a suppression today (sign-in is a
+# route handler, `app/api/auth/session`, not an action).
 #
-# It qualifies because the rule's own claim above — "an export that skips the
-# wrapper skips the auth gate" — is FALSE of it. It authenticates (`getSession`
-# -> `/login`) and authorizes (a valid signed ticket = proof an admin started
-# this). It CANNOT comply: `runFormAction`'s contract is a capability gate, and
-# a capability gate on that export is the bug, not the fix — while impersonating
-# the session IS the target and holds none of the admin's capabilities, so an
-# admin-gated exit is a locked door from the inside.
-#
-# So the bar for a second suppression is: **the export is gated, and the gate
+# The bar for a suppression is: **the export is gated, and the gate
 # cannot be a capability.** "It is inconvenient", "the check is elsewhere", or
 # "I verified it by hand" do not clear it. If you are reaching for this because
 # the rule is noisy, the rule is right and you are the finding.

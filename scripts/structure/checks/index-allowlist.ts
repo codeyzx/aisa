@@ -5,18 +5,14 @@
  * cohesive folder-as-module is allowed ONLY by this explicit allowlist, so every
  * `index.ts` in the tree is a deliberate, reviewed decision rather than a default.
  *
- * The three allowed today are each a single cohesive unit — the in-memory rate
- * limiter, the logger, and the client-only list-toolbar public surface — with
+ * The two allowed today are each a single cohesive unit — the in-memory rate
+ * limiter and the logger — with
  * named (never wildcard) exports that do not bridge the server/client boundary.
  * Adding an entry here is the review gate: justify the folder-as-module first.
  */
 import type { Check, Violation } from '../types.ts'
 
-const ALLOWED_INDEX = new Set([
-  'lib/http/index.ts',
-  'lib/log/index.ts',
-  'lib/list-toolbar/index.ts',
-])
+const ALLOWED_INDEX = new Set(['lib/http/index.ts', 'lib/log/index.ts'])
 
 function isIndex(rel: string): boolean {
   return rel.endsWith('/index.ts') || rel.endsWith('/index.tsx')

@@ -11,7 +11,7 @@ import { cn } from '@/lib/utils'
 
 /**
  * The title contract for the whole app: a page says only its OWN name
- * (`title: 'Assets'`) and lands as `Assets · AISA`. No page spells the
+ * (`title: 'Proposal'`) and lands as `Proposal · AISA`. No page spells the
  * product — that is what `template` is for, and it is why renaming is one edit.
  *
  * `default` is REQUIRED once `template` exists (Next's docs are explicit), and

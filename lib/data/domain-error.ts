@@ -36,51 +36,6 @@ export class ConflictError extends DomainError {
 }
 
 /**
- * The caller holds the capability but this particular operation is refused by
- * policy — an impersonated session attempting an account mutation. Maps to
- * `forbidden`, the same answer the capability gate would have given, because the
- * caller's remedy is identical: stop, and act as yourself.
- */
-export class ForbiddenError extends DomainError {
-  readonly code = 'forbidden'
-}
-
-/**
- * Another operation holds the account-mutation lease. Maps to
- * `lease_unavailable`: nothing was attempted and nothing changed, so the remedy
- * is to retry the SAME request shortly — not to reload, and not to give up.
- */
-export class LeaseUnavailableError extends DomainError {
-  readonly code = 'lease_unavailable'
-}
-
-/**
- * The mutation would remove administrator access the application must keep — the
- * actor's own (self-demotion / self-disable) or the last one standing. Maps to
- * `admin_lockout`. One class for all three because the refusal is one rule:
- * a live administrator must remain, and an administrator may not remove
- * themselves.
- */
-export class AdminLockoutError extends DomainError {
-  readonly code = 'admin_lockout'
-}
-
-/**
- * The external mutation LANDED but a required follow-up did not — session
- * revocation, or settling the durable audit event. Maps to
- * `reconciliation_required`.
- *
- * This is the one DomainError that must not be read as "it failed". Retrying is
- * the wrong move (the change is already applied) and so is reporting success
- * (the sessions it was meant to end may still be alive). The throw site logs the
- * underlying cause before raising this, because `runAction` deliberately does not
- * log a typed domain failure and this one always warrants a line.
- */
-export class ReconciliationRequiredError extends DomainError {
-  readonly code = 'reconciliation_required'
-}
-
-/**
  * A per-uid COST BUDGET is spent for this window (`lib/http`'s `rateLimit`).
  * Maps to `resource_exhausted`.
  *

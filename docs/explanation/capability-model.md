@@ -1,8 +1,8 @@
 # The capability model: deletion is the design
 
 Most starters are judged by what they include. This one is judged by what comes **out**
-cleanly. A capability here — storage, AI, export, realtime, impersonation, observability,
-rate limiting — is built so a fork can delete its directory and have its configuration stop
+cleanly. A capability here — error monitoring, rate limiting, the `aisa-api` client — is
+built so a fork can delete its directory and have its configuration stop
 being required, with no dangling secret and no orphaned schema left behind in a file
 somebody else owns.
 
@@ -65,7 +65,7 @@ refused at the boundary **and** never advertised.
 
 They stay separate for two reasons. The mechanical one: the grant table is
 client-reachable so navigation can call it, while a config toggle is server-only. The real
-one: an admin denied AI because the deployment turned it off has not been denied by
+one: an admin denied a feature because the deployment turned it off has not been denied by
 permission, and only one of those two facts is fixable by changing a role. Collapsing them
 would make the product lie about which.
 
@@ -77,22 +77,6 @@ its own, with its own removal checklist. The optional capabilities are separate 
 than one shared `capabilities.md` precisely because deleting one would otherwise mean
 editing a document three surviving capabilities depend on — which works directly against the
 model.
-
-Impersonation is split from auth for a different reason: it is a sanctioned auth **bypass**
-and the highest-risk surface in the repo. Folding it into a longer auth contract lowers the
-odds someone reads it before touching it, and that is the one thing that must not happen.
-
-## The examples are deletable by construction
-
-The demo surfaces live in one route group that comes out in a single cut, and the
-dependency only ever points **example → feature/lib**, never the reverse. A lint rule
-enforces that direction, so the day someone reaches the other way the build says so, rather
-than the deletion discovering it months later.
-
-That leaves exactly one thing the static proof cannot catch: navigation entries pointing at
-routes that no longer exist. A dead link is not a compile error. Removing the demo section
-from application navigation is part of the real deletion, and confirming it is a browser
-step — see [verify a change](../how-to/verify-change.md).
 
 ## Adding a capability
 

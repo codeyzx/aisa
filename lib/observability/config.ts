@@ -4,7 +4,7 @@ import { once, validate } from '../env/validate'
 
 /**
  * Error-monitoring configuration — owned BY the capability, beside the code that
- * uses it, exactly like `lib/storage/config.ts` and `lib/ai/config.ts`. Deleting
+ * uses it, like every other capability config. Deleting
  * error monitoring is `trash lib/observability/` + `trash instrumentation-client.ts`
  * plus one call in `lib/env/client.ts` — no orphan schema left behind.
  *

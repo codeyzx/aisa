@@ -54,18 +54,19 @@ Two consequences worth knowing before you touch this:
   run without `E2E_BASE_URL`, because the alternative — Playwright's
   `reuseExistingServer` — would silently adopt a `pnpm dev` server that happened
   to be on the port and report a DEVELOPMENT build as passing.
-- **The E2E image is a TEST artifact, not a deployable one.** The browser reaches
-  the Auth emulator only through `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST`, and
-  `NEXT_PUBLIC_*` is inlined at BUILD time — so an image that can sign in against
-  an emulator is necessarily a different image from a production one. That is
-  inherent to Next's inlining, not a choice. The Containerfile marks those two
-  ARGs test-only and states the failure if they ship.
+- **The E2E image is NOT a deployable image.** The browser signs in against the
+  Auth emulator only when `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST` is inlined at
+  build time, so the E2E runners (`scripts/e2e-fast.ts`, `scripts/e2e-container.ts`)
+  build through the same `productionBuildArgs` as `pnpm smoke:image` but add that
+  one build arg (and the dummy public Firebase fixture). Everything else is the production
+  artifact.
 
-### `e2e/` is a write path, and it is fenced
+### `e2e/` is fenced to loopback
 
-The suite signs in with a password this repo publishes (`scripts/_seed-users.ts`)
-and it creates and edits assets. Pointed at a real environment it would
-authenticate and write real documents with no cleanup. `e2e/target.ts` therefore
+The suite signs in as the seeded emulator accounts (`e2e/sign-in.ts` imports them
+from `scripts/_seed-users.ts`).
+The specs today (`auth.spec.ts`, `health.spec.ts`) only sign in and read, but a
+suite that can authenticate is one spec away from writing, so `e2e/target.ts`
 **refuses a non-loopback `E2E_BASE_URL`** — a real gate, not a comment.
 
 Note what this is NOT covered by: `structure:check`'s `cli-safety` enforces the
@@ -151,7 +152,7 @@ rather than with a second Firestore) and no JVM
 required for the rules suite regardless).
 
 **There is no `lib/clock.ts` either**, for the same reason: vitest already models
-the clock. A bespoke `Clock` seam threaded through `createAsset` would pay for a
+the clock. A bespoke `Clock` seam threaded through a repo would pay for a
 test in _production_ code.
 
 ## `pnpm indexes:check` — what fills the report
@@ -162,8 +163,8 @@ missing one — is owned by `docs/reference/contracts/data.md`. What is testing'
 concern is **what fills the guard's report**: `scripts/check-indexes.ts` reads back
 the index each query _would_ have needed, and **it only knows about queries that
 ACTUALLY RAN against that emulator instance.** So the report is a function of what
-you drove, and `test/integration/asset-repo.test.ts` drives `listAssets({ status })`
-specifically to fill it. `test/integration/template-widget.test.ts` does the same for
+you drove, and `test/integration/aisa-repo.test.ts` runs the per-proposal history
+query (`where + orderBy`) specifically to fill it. `test/integration/template-widget.test.ts` does the same for
 the entity generated from `features/_template/` — which is how the copy-me scaffold's
 index requirement became a checked fact instead of a comment. It was not one before:
 the first run of that suite reported the generated list's index missing.
@@ -213,28 +214,16 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8110 FIREBASE_PROJECT_ID=demo-aisa pnpm indexe
 `initializeApp({ projectId })` gets `undefined`. Setting both makes the routing
 explicit rather than lucky.
 
-**Do not run `pnpm seed` to get fixtures.** `scripts/seed-emulator.ts:seedAssets`
-**deletes the entire `assets` collection** before re-seeding. On your own emulator
-that wipes your own fixture mid-run, and the symptom reads as a pagination bug.
-Use `test/builders/` — and scope assertions to ids your test created, never to a
-collection-wide count, so leftover rows cannot move them.
+**Seeded documents use fixed ids.** `scripts/_seed-aisa.ts` overwrites the same
+documents on every run, and `test/integration/aisa-repo.test.ts` calls it in
+`beforeAll`. Scope assertions to ids the seed or your test wrote, never to a
+collection-wide count, so leftover rows on a shared emulator cannot move them.
 
 **Emulator-backed suites run SERIALLY (`--no-file-parallelism`), and must.**
 `pnpm test` and `pnpm test:integration` both carry the flag. Vitest's default is
-one worker per FILE, and every integration file talks to the SAME emulator — one
-Firestore, one Auth directory. Two of them running at once is not "slow tests
-racing", it is two suites mutating shared singletons:
-
-- `adminLocks/accountMutation` is ONE document by design (see `lib/auth/admin-lease.ts`),
-  so `admin-lease.test.ts` and any suite performing an account mutation fight over
-  the same lock and both observe the other's generation.
-- `countAdmins()` reads the WHOLE Auth directory, so any suite creating accounts
-  in another worker changes what a lockout test counts.
-
-This was found the honest way: `admin-lease.test.ts` failed in bulk the moment the
-suites ran in parallel. Removing the flag reintroduces it, and the failure
-looks like a flaky lease rather than a scheduling bug, so do not "optimise" it
-back. `pnpm test:unit` is untouched and still parallel; use it for the fast loop.
+one worker per FILE, and every integration file talks to the SAME emulator. Two of them running at once would be two suites writing the same fixed-id
+documents in one database, so keep the flag. `pnpm test:unit` is untouched and
+still parallel; use it for the fast loop.
 
 ## `vitest.config.ts` is load-bearing in every block
 
@@ -264,56 +253,36 @@ Nothing here is decoration; each block has a silent-failure story.
 
 ### The public env fixture — why the suite supplies values instead of switching validation off
 
-Every repo reaches the Firebase config layer through `lib/firebase/*`, so a test
-importing `@/features/asset/asset.repo` with no public env throws
-`Invalid client Firebase environment` — and `paginate()`,
-`zodConverter`, `assetsCollection()`, and every repo function become unreachable
-from a test. `vitest.config.ts` closes that by spreading
-`PUBLIC_ENV_FIXTURE` (`scripts/public-env-fixture.ts`) into `test.env`, so a test
-may import a repo — do not treat "a test cannot import a repo" as a law. Keep
-pure logic in its own module anyway (`lib/data/batch.ts`'s arithmetic,
-`lib/data/deadline.ts`'s timeout constant): separated from I/O, it stays reachable
-with no emulator and no JVM.
+`vitest.config.ts` spreads `PUBLIC_ENV_FIXTURE` (`scripts/public-env-fixture.ts`)
+into `test.env`: dummy values for the six required `NEXT_PUBLIC_FIREBASE_*` keys, so
+validation keeps running instead of being switched off.
 
-**Explicit dummy values, not a bypass — this is the whole point.** The predecessor
-was a bypass flag that made `validate()` hand back its input unparsed (its
-rationale survives as a comment in `lib/env/validate.ts`). That is strictly worse in two ways. It made the type lie: the schema
-said `string` while the value could be `undefined`, so the hollow config sailed
-past every reader that happened not to look. And it meant the one guard against a
-bad boot could itself be switched off — a build that passed with no env had proven
-nothing at all. With a fixture, `getFirebaseClientConfig()` parses for real in
-every run, so **a renamed or forgotten `NEXT_PUBLIC_*` still fails** here and in
-CI: the fixture would no longer satisfy the schema. A flag could never catch that;
-it existed precisely to not look.
+**Explicit dummy values, not a bypass.** The predecessor was a bypass flag that
+made `validate()` hand back its input unparsed (its rationale survives as a comment
+in `lib/env/validate.ts`). That made the type lie — the schema said `string` while
+the value could be `undefined` — and it meant the one guard against a bad boot
+could itself be switched off.
 
 **One source, two consumers.** The same module feeds `vitest.config.ts` and
 `pnpm build:ci` (`scripts/build-ci.ts`). A second copy of the literals in either
-place would be a list to keep in sync, and the copy that drifted would be the one
-that let a real gap through. The values are placeholders and must never be real
-credentials — the file is committed, and a build that shipped them would point a
-downstream fork at someone else's Firebase project. `build:ci` applies them
-**without overriding** what a caller already set, so the Containerfile's real
-build args win; it also never runs in the image build, which uses plain
-`pnpm build`.
+place would be a list to keep in sync. Any value added must be a placeholder and
+never a real credential — the file is committed.
 
 **Server config is untouched by the fixture.** It is read lazily through
 `lib/env/server.ts` and the capability configs, so a data-layer test still sees
 the real `FIRESTORE_EMULATOR_HOST` / `FIREBASE_PROJECT_ID` from `process.env` —
-which is what routes `adminDb()` at the emulator with no credential.
-
-The env fail-fast is untouched: `env -i pnpm build` **with `.env` moved aside**
-still fails on env validation, as intended. **A vitest process is not a bundle**
-— it inlines nothing, ships nothing, and has no client boundary to poison — which
-is why supplying values here costs nothing that matters.
+which is what routes `adminDb()` at the emulator with no credential. The env
+fail-fast for server config is at server boot, not in a test or a build — see
+`docs/how-to/verify-change.md`.
 
 This is not machine-local: **vitest reads no `.env` file** (Vitest 4 ships no
-dotenv and has no `loadEnv`/`envDir`), so the wall stands identically everywhere
-and the fixture creates no "works on my machine" gap.
+dotenv and has no `loadEnv`/`envDir`), so the wall stands identically everywhere.
 
-`test/data-layer-reachable.test.ts` is the guard on all of the above: it asserts
-both that a repo is importable and that `validateClientEnv()` still throws on a
-module graph with the public env cleared. Its import is **dynamic** on purpose — a
-top-level import that throws dies at collection, which is the silent-zero mode.
+`test/data-layer-reachable.test.ts` guards the import side: it asserts that a repo
+(`features/aisa/aisa.repo`) is importable with no emulator and no credential, and
+that `validateClientEnv()` passes with no public env. Its imports are **dynamic**
+on purpose — a top-level import that throws dies at collection, which is the
+silent-zero mode.
 
 ## `test/builders/`
 
@@ -321,15 +290,12 @@ Small, typed from the schema they build, never re-declaring it:
 
 - `signedInAs(role)` — `Session` read from `@/lib/auth/session`. `role` is not
   defaulted: every caller is a test about authorization, and the role split
-  (`user` holds `asset:read` but not `asset:write`) is what gives it teeth.
-- `anAsset()` / `assets(n)` — return `AssetCreate`. **No `createdAt`**: the server
-  owns it, so stagger by advancing `vi.setSystemTime` between creates. The
-  stagger is then produced by the code under test, not asserted by a fixture
-  against a value it wrote itself.
+  (`user` holds `aisa:read` but not `aisa:respond` or `aisa:configure`) is what
+  gives it teeth.
 
-**Do not extract a repo double into `test/`.** The `vi.mock` stub block in
-`features/asset/asset.action.test.ts` is a hand-kept copy of the repo's export list;
-hoisted into `test/` it becomes a parallel taxonomy that goes stale **green** the
-first time a repo function is added. One call site is not a pattern. If a second
-appears, derive it (`vi.mock(path, async (importOriginal) => …)`) — a filter over
-the real module rather than a copy of it.
+**Do not extract a module double into `test/`.** A `vi.mock` stub block in one test
+file is a hand-kept copy of a module's export list; hoisted into `test/` it becomes a
+parallel taxonomy that goes stale **green** the first time a function is added. One
+call site is not a pattern. If a second appears, derive it
+(`vi.mock(path, async (importOriginal) => …)`) — a filter over the real module
+rather than a copy of it.

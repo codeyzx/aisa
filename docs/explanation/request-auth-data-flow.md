@@ -1,6 +1,6 @@
 # How a request becomes a write
 
-One walk through the whole path — gate, cookie, DAL, then `schema → repo → action` — and
+One walk through the whole path — gate, cookie, DAL, then the write to `aisa-api` — and
 why each stage is where it is. The rules each stage must obey live in
 [auth](../reference/contracts/auth.md),
 [http-api](../reference/contracts/http-api.md) and
@@ -17,7 +17,7 @@ page cannot accidentally add an unguarded surface, because the page was never th
 never will. So a 401 or a redirect from the gate means "you sent no cookie" — it never
 means "your cookie is bad", and a forged cookie walks straight past.
 
-Deliberate, for two reasons. Verifying at the gate would mean an Admin SDK round trip on
+Deliberate, for two reasons. Verifying at the gate would mean recomputing a signature on
 every request including static assets, to produce an answer the DAL is about to produce
 again anyway. And a gate that _looks_ authoritative is worse than one that is obviously
 not: someone would eventually rely on it and skip the real check.
@@ -33,16 +33,19 @@ an open-redirect vector, so it is validated rather than trusted — the same rea
 caller-supplied return path in this codebase is run through the shared path validator
 before it is used.
 
-## 2. The cookie exists so the password never touches this origin
+## 2. Firebase sign-in, one session cookie
 
-Sign-in happens between the browser and Firebase: the password goes browser → Google, and
-this app never sees it. What arrives here is an already-verified ID token, which the session
-route exchanges for an httpOnly cookie.
+Each manager has a Firebase account. The login form signs in with the Firebase web SDK —
+browser straight to Google, so the password never reaches this app — and posts the
+resulting ID token to the session route, which verifies it and asks Firebase for a
+session cookie. That cookie is set httpOnly: nothing in the browser holds a trusted
+identity, and no script can read the cookie.
 
-The exchange is the point. An ID token is short-lived and lives in JavaScript's reach; an
-httpOnly cookie is not readable by script and is what server components can act on without
-a client round trip. Minting is a real verification, and the cookie's own attributes — same
-site, path, lifetime, and secure in production — are what the rest of the chain assumes.
+The cookie is a Google-signed token carrying the account's `role` claim. The server
+verifies it on every request WITH a revocation check, so revoking an account's tokens or
+disabling it ends its sessions before the cookie expires. The cookie's attributes — same
+site, path, a five-day lifetime, and secure in production — bound how long a leaked one is
+worth anything otherwise.
 
 Because the cookie is set by an API route rather than by a render, the client's cached
 server HTML is stale the instant login or logout succeeds. Refreshing the router afterwards
@@ -51,8 +54,9 @@ but still showing the signed-out shell.
 
 ## 3. The DAL is the real "who is acting"
 
-`lib/auth/session.ts` verifies the cookie with the Firebase Admin SDK, checking revocation
-rather than expiry alone, and maps it to a session object. **This is the boundary.**
+`lib/auth/session.ts` verifies the cookie with Firebase Admin (signature, expiry,
+revocation) and maps it to a session with the account's uid, email and role. **This is
+the boundary.** An unreachable provider throws rather than reading as "signed out".
 Everything before it was routing; everything after it can rely on an identity.
 
 Three consequences worth understanding rather than memorising:
@@ -64,10 +68,9 @@ Three consequences worth understanding rather than memorising:
 - **Reading the cookie forces dynamic rendering**, and that is a feature. It is what
   guarantees a fresh verification instead of a page baked at build time with somebody's
   session inside it.
-- **Revocation is only as good as the claims change that triggers it.** Changing a role
-  without revoking leaves the old cookie carrying the old claims until it expires on its
-  own. The check is there; the discipline of pairing the two is the part a fork has to
-  keep.
+- **The role rides in the signed token.** It is fixed when the cookie is minted, so a
+  change to an account's `role` claim reaches an existing browser only at its next
+  sign-in — or sooner if the account's tokens are revoked, which ends the session.
 
 Guards (`requireSession`, `requireCapability`) sit on top and answer the authorization
 question. They **redirect** rather than throw, because on a page the correct outcome of "you
@@ -82,41 +85,25 @@ is UX only — it hides links a role cannot use, and hiding a link has never pro
 anything. There is deliberately no route-to-capability registry: each page states its own
 guard, which is why a guarded route can exist with no sidebar entry at all.
 
-Impersonation crosses this boundary on purpose and is the highest-risk surface in the
-repo — read [impersonation](../reference/contracts/impersonation.md) before touching it,
-never the code first.
+## 4. Writes leave through `aisa-api`; reads stay here
 
-## 4. `schema → repo → action`
+Past the identity boundary, the dashboard does not write Firestore at all. Every AISA
+mutation is a server action in `features/aisa/aisa.action.ts` that gates on a capability,
+validates its input, calls the Python `aisa-api` with the shared `X-AISA-Key` header, and
+revalidates the affected paths. The key stays on the server; the browser only ever talks
+to the action. The action never throws across the boundary back into a React tree; it
+returns a result the UI can render.
 
-Past the identity boundary, the write path has three parts and one direction.
+Reads go the other way: server components read Firestore directly through the Admin SDK,
+via the feature's typed collection accessor and repo. The Firestore rules deny every
+browser request, so these server reads are the only way data reaches the page.
 
-- **The schema owns shape.** One Zod schema per entity, and everything downstream derives
-  from it — the read converter that hydrates documents, the form's field types, the export
-  columns. This is why adding a field is usually a one-file change: nothing else keeps a
-  second copy of the shape to update.
-- **The repo owns Firestore access, and is thin.** It is the only place an entity's
-  documents are read or written, but it earns functions rather than collecting them: what
-  belongs here is what genuinely needs render-scoped dedupe, cursor pagination, or a
-  transaction. A one-off read belongs at its call site, built on the typed collection
-  accessor, because a repo that grows a method per screen becomes a second query API that
-  is worse than the one Firestore already has.
-- **The action owns the mutation.** It gates on a capability, validates its input, calls
-  the repo, writes an audit record, and revalidates the affected paths — in that order.
-  It never throws across the boundary back into a React tree; it returns a result the UI
-  can render.
-
-**The repo trusts its callers, and that is only true because the actions above it
-validate.** That is a system property, not a local one: it is the reason a repo has no
-defensive re-parsing, and the reason writing to a repo from anywhere except an action
-quietly breaks the model.
-
-Two things about this path are not visible from reading the code alone. Access to a
-collection is bound to a feature-owned path so no consumer ever spells a path literal
-twice. And a query that filters on one field and sorts on another needs a composite index
-that the emulator does not require — so it passes every local check and fails only in
-production. That failure mode, and the guard for it, are owned by
-[data](../reference/contracts/data.md), and it is the single most common way a change that
-looks finished is not.
+The starter's general `schema → repo → action` path — one Zod schema owning shape, a thin
+repo owning Firestore access, an action owning the mutation — still exists for a feature
+that writes Firestore itself (`features/_template/`), and its rules are owned by
+[data](../reference/contracts/data.md). That contract also owns the one failure mode no
+local check catches: a query that filters on one field and sorts on another needs a
+composite index the emulator does not require.
 
 ## 5. The mirror path: reads out through HTTP
 

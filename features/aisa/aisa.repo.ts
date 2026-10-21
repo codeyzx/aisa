@@ -1,0 +1,153 @@
+import 'server-only'
+
+import { cache } from 'react'
+
+import {
+  dailyStatsCollection,
+  digestsCollection,
+  historyCollection,
+  jobsCollection,
+  jobStepsCollection,
+  proposalsCollection,
+  rulesSettingsCollection,
+  runtimeSettingsCollection,
+} from './aisa.collection'
+import { RULES_DOC_ID, RUNTIME_DOC_ID } from './aisa.path'
+import type {
+  DailyStats,
+  Digest,
+  Job,
+  Proposal,
+  Rules,
+  Runtime,
+  Step,
+} from './aisa.schema'
+
+/**
+ * How many proposals the list page loads, newest first. Filtering happens in
+ * memory over this window rather than as Firestore `where` clauses: five
+ * independent filters plus a sort would need a composite index per combination,
+ * and a one-manager inbox is well inside this bound. The page says so when the
+ * window is full, so a truncated list never reads as the whole inbox.
+ */
+export const PROPOSAL_WINDOW = 500
+
+export const getProposal = cache(
+  async (id: string): Promise<Proposal | null> => {
+    const snap = await proposalsCollection().doc(id).get()
+    return snap.data() ?? null
+  },
+)
+
+/** Newest proposals, bounded by `PROPOSAL_WINDOW`. */
+export const listRecentProposals = cache(async (): Promise<Proposal[]> => {
+  const snap = await proposalsCollection()
+    .orderBy('createdAt', 'desc')
+    .limit(PROPOSAL_WINDOW)
+    .get()
+  return snap.docs.map((doc) => doc.data())
+})
+
+/** Every proposal the manager has not responded to — the digest's population. */
+export const listUnrespondedProposals = cache(async (): Promise<Proposal[]> => {
+  const snap = await proposalsCollection().where('responded', '==', false).get()
+  return snap.docs.map((doc) => doc.data())
+})
+
+/** Proposals created strictly after `since`. A single-field range, no index. */
+export async function countProposalsSince(since: Date): Promise<number> {
+  const snap = await proposalsCollection()
+    .where('createdAt', '>', since)
+    .count()
+    .get()
+  return snap.data().count
+}
+
+export const getLatestDigest = cache(async (): Promise<Digest | null> => {
+  const snap = await digestsCollection()
+    .orderBy('sentAt', 'desc')
+    .limit(1)
+    .get()
+  return snap.docs[0]?.data() ?? null
+})
+
+export const getRules = cache(async (): Promise<Rules | null> => {
+  const snap = await rulesSettingsCollection().doc(RULES_DOC_ID).get()
+  return snap.data() ?? null
+})
+
+export const getRuntime = cache(async (): Promise<Runtime | null> => {
+  const snap = await runtimeSettingsCollection().doc(RUNTIME_DOC_ID).get()
+  return snap.data() ?? null
+})
+
+/** The last `days` daily stats, oldest first (ready to chart left→right). */
+export const listDailyStats = cache(
+  async (days: number): Promise<DailyStats[]> => {
+    const snap = await dailyStatsCollection()
+      .orderBy('date', 'desc')
+      .limit(days)
+      .get()
+    return snap.docs.map((doc) => doc.data()).toReversed()
+  },
+)
+
+export interface JobWithSteps extends Job {
+  steps: Step[]
+}
+
+async function withSteps(job: Job): Promise<JobWithSteps> {
+  const snap = await jobStepsCollection(job.id).orderBy('seq', 'asc').get()
+  return { ...job, steps: snap.docs.map((doc) => doc.data()) }
+}
+
+/**
+ * The newest jobs with their steps. `focusJobId` (the "Lihat log penilaian"
+ * link) is always included, even when it has scrolled out of the window.
+ */
+export async function listJobsWithSteps(
+  limit: number,
+  focusJobId?: string,
+): Promise<JobWithSteps[]> {
+  const snap = await jobsCollection()
+    .orderBy('startedAt', 'desc')
+    .limit(limit)
+    .get()
+  const jobs = snap.docs.map((doc) => doc.data())
+  if (focusJobId && !jobs.some((job) => job.id === focusJobId)) {
+    const focus = (await jobsCollection().doc(focusJobId).get()).data()
+    if (focus) jobs.unshift(focus)
+  }
+  return Promise.all(jobs.map(withSteps))
+}
+
+export async function listHistory(limit: number) {
+  const snap = await historyCollection()
+    .orderBy('at', 'desc')
+    .limit(limit)
+    .get()
+  return snap.docs.map((doc) => doc.data())
+}
+
+/**
+ * One proposal's audit rows (responses, corrections), newest first.
+ * `where(proposalId) + orderBy(at)` — needs the `history` composite index in
+ * firestore.indexes.json.
+ */
+export async function listProposalHistory(proposalId: string) {
+  const snap = await historyCollection()
+    .where('proposalId', '==', proposalId)
+    .orderBy('at', 'desc')
+    .limit(50)
+    .get()
+  return snap.docs.map((doc) => doc.data())
+}
+
+/** Digests sent at or after `since` — the denominator for tokens per ringkasan. */
+export async function countDigestsSince(since: Date): Promise<number> {
+  const snap = await digestsCollection()
+    .where('sentAt', '>=', since)
+    .count()
+    .get()
+  return snap.data().count
+}

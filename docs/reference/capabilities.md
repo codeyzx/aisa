@@ -36,40 +36,25 @@ Which project the server talks to. Not a capability you can remove: without a pr
 - Gate: `() => !isEmulatorTarget()`
 - Config validated by: `getFirebaseAdminConfig` in `lib/env/server.ts`
 
-The service-account certificate. Always on, but genuinely not needed on every target — demanding a production key to boot against a local emulator would be config theatre, so the requirement follows the target rather than a toggle you set.
+The project id plus, optionally, a service-account key pair; with no key the Admin SDK uses Application Default Credentials. Not checked against an emulator target, which authenticates with nothing.
 
-### S3 storage
-
-- Ships: ON, with no toggle
-- Config validated by: `getStorageConfig` in `lib/storage/config.ts`
-
-Uploads and downloads through an S3-compatible backend. Ships on and has no toggle: while the capability is present its credentials are boot-required.
-
-### AI
-
-- Ships: conditionally — see the gate below
-- Gate: `isAiEnabled`
-- Config validated by: `getAiConfig` in `lib/ai/config.ts`
-
-Inference. The one capability that ships turned OFF, so a fresh clone runs with no account at the provider. Turning it on is what makes the credential boot-required.
-
-### impersonation
+### aisa-api
 
 - Ships: ON, with no toggle
-- Config validated by: `getImpersonationConfig` in `lib/auth/impersonation.config.ts`
+- Config validated by: `getAisaApiConfig` in `lib/aisa-api/config.ts`
 
-A sanctioned auth bypass that lets an admin act as another user. Ships on and has no toggle, so its signing secret is boot-required while the feature is present. The highest-risk surface here.
+The Python service every dashboard write goes through (responses, corrections, rules, STOP/LANJUT, uploads). Required: without it the dashboard would render but every action would fail.
 
 ## Public config groups validated at build
 
 The public-side counterpart. A capability that owns public configuration is listed by one call here rather than declaring its schema centrally, so deleting the capability removes a line instead of leaving an orphan schema behind.
 
 - `getFirebaseClientConfig` in `lib/env/client.ts` — The public Firebase web config. Not removable — it is how the browser reaches the project at all.
-- `getClientEmulatorConfig` in `lib/env/client.ts` — Browser-side emulator targets. Both values unset in a normal run, which is what makes a build point at real Firebase.
+- `getClientEmulatorConfig` in `lib/env/client.ts` — The browser-side Auth emulator target. Unset in a normal run, which is what makes a build sign in against real Firebase.
 - `getObservabilityConfig` in `lib/observability/config.ts` — Error monitoring. Off unless a DSN is set: with none, the SDK is never initialized and every capture is a no-op.
 
 ## Permissions withheld by deployment config
 
-While its capability is switched off, the following permission is refused at the server boundary and never advertised in the UI: `ai:invoke`.
+No permission is currently withheld by deployment config.
 
 The variables each capability requires are listed in [`configuration.md`](configuration.md), which owns that detail.

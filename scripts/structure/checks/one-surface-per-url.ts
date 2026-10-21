@@ -3,7 +3,7 @@
  *
  * Both features exist to show a route as something OTHER than its own page —
  * typically a modal over whatever the reader was already looking at. The
- * starter used them for `/admin`, `/assets/new`, and `/assets/[id]/edit`, and
+ * starter once used them for `/admin` and an entity's new/edit pages, and
  * removed them on a finding that generalises to any modal route:
  *
  *   A DIALOG CANNOT BE SERVER-RENDERED. Base UI's portal resolves its container

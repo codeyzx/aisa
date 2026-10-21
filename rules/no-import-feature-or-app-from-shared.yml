@@ -11,9 +11,8 @@
 # hits today) — the cheapest moment to hold a line is before the first violation.
 #
 # THE TRAP, NAMED: do NOT "fix" a violation by copying domain code DOWN into
-# `lib/`. That is exactly how the `asset.*` files once lived in `lib/schemas`,
-# `lib/repos`, and `lib/export`. Keep domain in `features/`; push only genuinely
-# domain-agnostic helpers into `lib/`.
+# `lib/`. Keep domain in `features/`; push only genuinely domain-agnostic
+# helpers into `lib/`.
 id: no-import-feature-or-app-from-shared
 language: TypeScript
 severity: error

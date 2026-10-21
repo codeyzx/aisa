@@ -1,7 +1,7 @@
 rules_version = '2';
 
-// Deny-all. Every read and write in this boilerplate goes through the Admin SDK
-// server-side (lib/firebase/admin-auth.ts, lib/firebase/admin-db.ts), which
+// Deny-all. Every read in the dashboard goes through the Admin SDK server-side
+// (lib/firebase/admin-db.ts), and every write through the Python aisa-api, which
 // bypasses rules entirely — so the browser has no legitimate reason to touch
 // Firestore directly, and any request that reaches these rules is either a
 // mistake or an attack.
@@ -13,97 +13,9 @@ rules_version = '2';
 // If a future feature genuinely needs direct client access (e.g. realtime
 // listeners), carve out that ONE collection with an explicit, tested rule and
 // leave the default deny in place.
-//
-// There are exactly TWO such cases, and they are opposites:
-//  - `/realtime` (app/(app)/(examples)/realtime) listens to `assets` with the
-//    Web SDK. Unlike every other read in this repo, that read is SUBJECT to
-//    these rules, so it needs a carve-out that grants data.
-//  - `authSessions/{uid}` is the revocation MARKER. Its carve-out grants no
-//    application data at all; it exists so a signed-in browser can be TOLD its
-//    session is over. Writes remain denied everywhere, for everyone.
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // ── Revocation, shared by both carve-outs ────────────────────────────────
-    //
-    // The arithmetic here is the same rule `lib/auth/revocation.contract.ts`
-    // states and the server boundary and client watcher both apply:
-    //
-    //     allowed  ⟺  auth_time >= revokedAfterEpoch
-    //
-    // Rules cannot import TypeScript, so this is a hand-kept implementation of
-    // ONE written contract rather than a second opinion. `revocationCutoff`
-    // (`floor(now/1000) + 1`) is what makes the `>=` safe: a token minted during
-    // the revoking second cannot equal a cutoff that already skipped past it.
-    //
-    // An ABSENT marker allows. Every account predates its first revocation, so
-    // reading absence as revocation would deny every existing user the day this
-    // ships. A marker that EXISTS but holds a non-integer denies, because
-    // comparing an int to a string is an evaluation error and an erroring rule
-    // denies — the fail-closed direction, and it is asserted, not assumed.
-    function markerRef() {
-      return /databases/$(database)/documents/authSessions/$(request.auth.uid);
-    }
-
-    function notRevoked() {
-      return !exists(markerRef())
-        || request.auth.token.auth_time >= get(markerRef()).data.revokedAfterEpoch;
-    }
-
-    // The claim gate, mirroring `requireReadySession` on the server: an account
-    // still holding a temporary password may do nothing but replace it. Strict
-    // `!= true` for the same reason the TypeScript reader uses `=== true` — a
-    // claim is untrusted input, and only the exact boolean gates.
-    function passwordReady() {
-      return request.auth.token.get('mustChangePassword', false) != true;
-    }
-
-    // ── CARVE-OUT 1: the revocation marker ───────────────────────────────────
-    //
-    // A signed-in client may read its OWN marker and nothing else. This read is
-    // deliberately NOT subject to `notRevoked()`, and that is the whole point:
-    // once the marker has revoked the token, gating the marker behind it would
-    // hide the very document that carries the sign-out signal, and the browser
-    // would keep its stale session open having been told nothing. The reader
-    // learns one integer about itself — no application data, no other account.
-    //
-    // Writes are denied to every client. The marker is monotonic and Admin-SDK
-    // owned (`advanceRevokedAfterEpoch`); a client that could write it could
-    // lower its own cutoff and un-revoke itself.
-    match /authSessions/{uid} {
-      allow read: if request.auth != null && request.auth.uid == uid;
-    }
-
-    // ── CARVE-OUT 2: assets, for the realtime listener ───────────────────────
-    //
-    // Read-only, `assets` only, signed-in only, not revoked, not owing a
-    // password change.
-    //
-    // Why "any signed-in user" and not a role check: the real gate is
-    // `requireCapability('asset:read')` server-side, and rules cannot import
-    // TypeScript. Any role list written here would be a hand-kept COPY of
-    // ROLE_CAPABILITIES (lib/auth/rbac.ts) that nothing type-checks and nothing
-    // would tell you had drifted — the parallel taxonomy this repo forbids.
-    //
-    // This rule is not a WEAKENING of that gate; it is the gate's current
-    // EXTENSION, reached without duplicating the map. Every role in
-    // ROLE_CAPABILITIES holds `asset:read` today — `admin: [...CAPABILITIES]`
-    // and `user: ['asset:read', 'storage:read']` — so "any signed-in user"
-    // and "everyone holding asset:read" are THE SAME SET.
-    //
-    // ⚠️ THE DRIFT CONDITION, stated so it cannot be discovered by accident:
-    // the day a role is added that does NOT hold `asset:read`, this rule
-    // becomes wrong — that role will still read `assets` through the Web SDK
-    // while the server gate refuses it, and NOTHING here will say so. There is
-    // no test that can catch it, because the fact it depends on lives in
-    // TypeScript. If you add such a role, you must revisit this rule in the
-    // same change.
-    //
-    // The revocation and password conditions carry NO such caveat: both are
-    // properties of the token itself, and both are asserted below.
-    match /assets/{assetId} {
-      allow read: if request.auth != null && notRevoked() && passwordReady();
-    }
-
     match /{document=**} {
       allow read, write: if false;
     }

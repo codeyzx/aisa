@@ -67,35 +67,19 @@ export const REQUIRED_METADATA_FIELDS = [
 /**
  * The normative layer contracts. Each one owns ONE seam, and the test for
  * earning a file is deletability: every contract below names something a fork
- * can remove on its own, with its own removal checklist. That is why the
- * optional capabilities (`storage`, `realtime`, `ai`, `export`) are separate
- * files rather than one combined `capabilities.md` — deleting a capability
- * would otherwise mean editing a document three other capabilities share, which
- * works directly against the deletion-first model this starter is built on.
- *
- * `impersonation` is separate from `auth` for a different reason: it is a
- * sanctioned auth BYPASS and the highest-risk surface in the repo. Folding it
- * into a longer auth contract reduces the odds someone reads it before touching
- * it, which is the one thing that must not happen.
- *
- * `reference-feature` is deliberately NOT here. It described the `assets`
- * example, which is a worked demonstration rather than a rule: the procedure it
- * implied now lives in `docs/how-to/add-feature.md` and the "what assets proves"
- * argument in `docs/explanation/architecture.md`.
+ * can remove on its own. Optional capabilities get separate files rather than
+ * one combined `capabilities.md` — deleting a capability would otherwise mean
+ * editing a document other capabilities share, which works directly against
+ * the deletion-first model this starter is built on.
  */
 const contractDocs: DocEntry[] = [
-  'ai',
   'auth',
   'data',
-  'export',
   'http-api',
-  'impersonation',
   'module-boundaries',
   'observability',
   'operations',
   'project-readme',
-  'realtime',
-  'storage',
   'testing',
   'ui',
 ].map((name) => ({
@@ -163,6 +147,11 @@ export const docsManifest: DocEntry[] = [
   { path: 'docs/how-to/verify-change.md', type: 'how-to', normative: false },
   { path: 'docs/how-to/deploy.md', type: 'how-to', normative: false },
   {
+    path: 'docs/how-to/setup-google-form.md',
+    type: 'how-to',
+    normative: false,
+  },
+  {
     path: 'docs/how-to/backup-and-restore.md',
     type: 'how-to',
     normative: false,
@@ -170,6 +159,20 @@ export const docsManifest: DocEntry[] = [
 
   // The normative contracts.
   ...contractDocs,
+
+  // The AISA data contract. Its source of truth is the Python Pydantic models in
+  // `services/`, owned outside this app, so it is tracked as reference rather than
+  // held to this repo's normative metadata rule.
+  {
+    path: 'docs/reference/contracts/aisa-firestore.md',
+    type: 'reference',
+    normative: false,
+  },
+
+  // AISA hackathon records: actual test results and how AI assistants were used. Facts
+  // about this build, not rules, so not normative.
+  { path: 'docs/TESTING.md', type: 'reference', normative: false },
+  { path: 'docs/AI_USAGE.md', type: 'reference', normative: false },
 
   // Generated reference facts.
   ...generatedReferenceDocs,
@@ -193,11 +196,6 @@ export const docsManifest: DocEntry[] = [
   },
   {
     path: 'docs/explanation/capability-model.md',
-    type: 'explanation',
-    normative: false,
-  },
-  {
-    path: 'docs/explanation/realtime-model.md',
     type: 'explanation',
     normative: false,
   },

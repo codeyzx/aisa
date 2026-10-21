@@ -5,8 +5,7 @@
  * safe way to read it without asserting a shape onto an unknown.
  *
  * It exists so the fail-safe distinction "a DEFINITIVE answer vs an inability to
- * reach the directory" is read the same way everywhere it matters — the
- * impersonation overlay (`lib/auth/session.ts`) and the admin user picker — rather
+ * reach the directory" is read one way (`lib/auth/token-rejection.ts`) rather
  * than re-open-coded per site. Numeric gRPC codes are the API normalizer's
  * concern (`lib/api/errors.normalize.ts`); this reads the string form only.
  */

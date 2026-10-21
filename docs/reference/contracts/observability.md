@@ -27,8 +27,8 @@ and both callers then skip `Sentry.init` entirely.
   declares it `z.string().optional()`. The env layer fails fast with no bypass
   flag, so a required-but-blank DSN would mean nobody can build this starter
   without a monitoring account.
-- The config module is deliberately **not** `import 'server-only'` — the one
-  structural difference from `lib/storage/config.ts` and `lib/ai/config.ts`.
+- The config module is deliberately **not** `import 'server-only'`, unlike the
+  server config modules (`lib/aisa-api/config.ts`, `lib/env/server.ts`).
   Every value in it is `NEXT_PUBLIC_*` and `instrumentation-client.ts` reads it
   in the browser. A DSN is public by construction; it ships in every client
   bundle.
@@ -56,8 +56,7 @@ against the shipped SDK, not from memory:
   header on the scope, and `requestDataIntegration` copies them onto
   `event.request.headers` verbatim. `@sentry/core`'s deny-list filtering runs on
   the **span path only**, not the event path — so with tracing off the `cookie`
-  header, carrying this app's `__session` Firebase session token, would ship
-  intact.
+  header, carrying this app's signed `session` cookie, would ship intact.
 - `event.request.url` and `contexts.nextjs.request_path` carry the **query
   string** (Next's own `onRequestError` docs give `/blog?name=foo` as the shape
   of `request.path`), which in this app can hold a search term, an id, or a
@@ -98,8 +97,8 @@ scrubber is not the only thing between a credential and the wire.
   allow-list means it is silently dropped, which is the safe direction.
 - **MUST redact email addresses by shape** in `event.message` and in every
   `exception.values[].value`. Emails are the one piece of PII that arrives
-  through the MESSAGE rather than a structured field — Firebase Admin errors name
-  the account they failed on, and a hand-thrown message can too. There is no
+  through the MESSAGE rather than a structured field — a provider or hand-thrown
+  error message can name the address it failed on. There is no
   field to allow-list, so the redaction is a pattern.
 - **MUST leave the stack trace intact.** The payload still has to be useful; a
   scrubber that strips frames has removed the reason for reporting at all.
@@ -208,7 +207,7 @@ decides an error is worth reporting.
 
 ## Removal checklist
 
-Error monitoring is a deletable capability like storage, AI and export. It is
+Error monitoring is a deletable capability. It is
 already optional at run time, so deleting it is about shipping less code, not
 about turning it off.
 

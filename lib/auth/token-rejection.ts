@@ -19,19 +19,10 @@ import { firebaseErrorCode } from '@/lib/firebase/error-code'
  *
  * A bare `catch { return null }` treats both as "invalid", so a Google-side
  * outage signs a validly-authenticated user out mid-session. This predicate is
- * the same shape as `isDefinitiveLookupMiss` in `account.repo.ts`: an allow-list
- * of definitive codes, everything else treated as an outage — fail-safe by
- * default, because a code this list has not seen must not be read as "invalid".
- *
- * ── THE SAFE DIRECTION IS THE OPPOSITE OF IMPERSONATION'S ────────────────────
- * The impersonation overlay (`session.ts`) also distinguishes definitive from
- * outage, but there an outage fails CLOSED — it blocks, because resuming would
- * silently restore admin authority. Token verification is the inverse: an outage
- * must fail toward PRESERVING the existing session (throw, so the caller surfaces
- * "temporarily unavailable" rather than destroying the cookie), because the
- * fail-unsafe direction here is signing a valid user out. Same underlying rule —
- * never treat "couldn't reach the provider" as a verdict — opposite safe
- * direction by boundary.
+ * an allow-list of definitive codes, everything else treated as an outage —
+ * fail-safe by default, because a code this list has not seen must not be read
+ * as "invalid". The safe direction is PRESERVING the session: the caller throws,
+ * so the reader sees "temporarily unavailable" and keeps their cookie.
  */
 
 /**

@@ -5,7 +5,7 @@
 - Source of truth: `lib/api/**` (`envelope.ts`, `errors.contract.ts`, `errors.normalize.ts`, `cid.ts`, `response.ts`, `client.ts`), `lib/http/**` (`index.ts`, `origin.ts`), `next.config.ts`'s `headers()`, `proxy.ts`, and the handlers under `app/api/**/route.ts`
 - Verified by: `pnpm check:static && pnpm test` (the colocated `lib/api/*.test.ts` and `lib/http/*.test.ts` suites, including `errors.contract.test.ts`'s hand-restated status table), then a driven request against the production container — the origin check below shipped broken past every static gate
 - Read when: before adding or changing anything under `app/api/**`, before adding an error code, before metering a route, and before touching a security header
-- Does not define: server actions and the `ActionResult` contract (`docs/reference/contracts/data.md`); who is allowed to do a thing (`docs/reference/contracts/auth.md`); how a download route builds its bytes (`docs/reference/contracts/export.md`)
+- Does not define: server actions and the `ActionResult` contract (`docs/reference/contracts/data.md`); who is allowed to do a thing (`docs/reference/contracts/auth.md`)
 
 The contract for HTTP route handlers (`app/api/**/route.ts`) — the response
 envelope, the error taxonomy, the correlation ID, the typed client fetcher, the
@@ -111,7 +111,8 @@ import { apiFail, apiFailFrom, apiOk } from '@/lib/api/response'
 export async function POST(request: Request) {
   const session = await getSession()
   if (!session) return apiFail(request, 'UNAUTHENTICATED')
-  if (!can(session, 'asset:write')) return apiFail(request, 'PERMISSION_DENIED')
+  if (!can(session, 'aisa:respond'))
+    return apiFail(request, 'PERMISSION_DENIED')
 
   const parsed = BodySchema.safeParse(await request.json())
   if (!parsed.success) {
@@ -173,12 +174,6 @@ Firebase SDKs already speak so the mapping is a rename and not a reinterpretatio
 | `UNAVAILABLE`        | 503    | Transient — retrying may work (also: client offline) |
 | `INTERNAL`           | 500    | Our fault, and the caller can do nothing about it    |
 
-The taxonomy is deliberately SMALLER than the set of internal denials. A session
-owing a mandatory password change lands on `PERMISSION_DENIED` rather than earning
-a wire code of its own: an HTTP client's remedy is identical either way, and only
-the human in the browser can act on the distinction — which they meet as the
-page-level redirect instead.
-
 `normalizeError(error)` maps any throw into it: zod first, then a Firebase `code`
 (string like `permission-denied` / `auth/id-token-expired`, **or** the raw gRPC
 number the Admin SDK actually throws), then `INTERNAL`. Two mappings are
@@ -222,7 +217,7 @@ which layer answered.
 "Every `/api/` request" includes ones with a **dot in the path**, and that costs a
 dedicated `'/api/:path*'` entry in `config.matcher`. The general page pattern
 excludes any dotted path so static files are not gated, and that exclusion cannot
-tell `/logo.svg` from `/api/export/assets/v1.2` — without the dedicated entry a
+tell `/logo.svg` from `/api/reports/v1.2` — without the dedicated entry a
 dotted `/api` path skips the proxy entirely and gets Next's routing answer instead
 of the envelope. Do not "simplify" this by adding `api` to the negative lookahead:
 `(?!api|…)` also swallows `/api-docs`, a page route that merely shares the prefix,
@@ -251,9 +246,9 @@ because no test that calls `proxy()` can see a request the matcher never routed.
 
 ## Every route conforms — cite any of them
 
-There is no non-conforming route: every handler under `app/api/` answers through
-`lib/api/response.ts`, and both envelope clients (`lib/auth/client.ts`,
-`hooks/use-upload.ts`) read the envelope rather than an ad-hoc shape. If you are
+There is no non-conforming route: every handler under `app/api/` (`auth/session`
+and `health`) answers through `lib/api/response.ts`, and the envelope client
+(`lib/auth/client.ts`) reads the envelope rather than an ad-hoc shape. If you are
 adding a route, one of the existing ones is a valid template.
 
 ## Rate limiting
@@ -266,9 +261,9 @@ global limiter would force uniform handling onto a path that must stay per-route
 import { rateLimit } from '@/lib/http'
 
 // A module constant beside the call site — never an env key.
-const AI_BUDGET = { limit: 20, windowMs: 60_000 }
+const SESSION_MINT_BUDGET = { limit: 10, windowMs: 60_000 }
 
-const limit = rateLimit(`ai:${session.uid}`, AI_BUDGET)
+const limit = await rateLimit(`session:${uid}`, SESSION_MINT_BUDGET)
 if (!limit.ok) {
   return apiFail(request, 'RESOURCE_EXHAUSTED', {
     retryAfter: limit.retryAfter,
@@ -296,58 +291,39 @@ not a comment. Every caller must `await rateLimit(...)`; an empty key REJECTS.
 
 **2. On the session route it is not a credential guard.**
 
-`/api/auth/session` is **not a login endpoint**, and the whole design follows
-from that. The password never reaches this origin: `app/login/login-form.tsx`
-calls `signInWithEmailAndPassword` — browser straight to Google — and only then
-hands the server an already-verified `idToken`. So:
+`/api/auth/session` is **not a login endpoint**. The password never reaches this
+origin: `app/login/login-form.tsx` calls `signInWithEmailAndPassword` — browser
+straight to Google — and only then hands the server an already-verified `idToken`.
+So a wrong password sends this route **zero** requests, and credential guessing is
+bounded by Firebase's own throttle (`auth/too-many-requests`, which
+`lib/api/errors.normalize.ts` maps to `RESOURCE_EXHAUSTED`).
 
-- A wrong password sends this route **zero** requests.
-- **Credential stuffing never transits this app.** That boundary is Firebase's
-  own throttle, and `lib/api/errors.normalize.ts` already maps
-  `auth/too-many-requests` → `RESOURCE_EXHAUSTED`. Building our own would be a
-  parallel taxonomy of something the system already owns.
+What the budget protects is **`createSessionCookie` quota**: after `verifyIdToken`
+(a local JWT check) and before the mint, the route takes one token from the key
+`session:<uid>` (`SESSION_MINT_BUDGET`, 10 per minute) — keyed on the uid inside the
+token it just verified, so a forged token dies free at the local verify and one valid
+token cannot be replayed into unbounded mints.
 
-What the budget actually protects is **`createSessionCookie` quota**.
-
-### The key is a resolved uid. Never an IP.
+### Never key on an IP
 
 `rateLimit` **throws** when handed an empty key rather than synthesizing a
 placeholder.
 
-There is no IP fallback, and there must never be one. Here `x-forwarded-for` is
-**client-controlled**: this app is not on Vercel, the shipped compose file
-publishes the app port with no proxy in front, and Next 16 exposes no trusted
-request IP. A limiter keyed on a forgeable header reports protection it does not
-have — on the auth boundary. Do not add an `extractRequestIp` helper whose first
-branch trusts `x-vercel-forwarded-for`: that header is meaningful only behind
-Vercel's proxy, not here.
+There is no IP key, and there must never be one. `x-forwarded-for` is
+**client-controlled**: the shipped compose file publishes the app port with no
+proxy in front, and Next 16 exposes no trusted request IP. A limiter keyed on a
+forgeable header reports protection it does not have — on the auth boundary. Do
+not add an `extractRequestIp` helper whose first branch trusts
+`x-vercel-forwarded-for`: that header is meaningful only behind Vercel's proxy.
 
-A uid key also means **a NAT'd office cannot lock itself out**: 500 employees are
-500 keys.
-
-If anyone ever reinstates an IP key, it must **DENY** on a headerless request. A
+If anyone ever introduces an IP key, it must **DENY** on a headerless request. A
 limiter you bypass by deleting a header fails silently forever; a lockout fails
 loudly on the first drive, in front of the person who caused it.
 
-### Where to meter, and why it is not where you would guess
+### Rules
 
-On the session route the meter sits **after `verifyIdToken`, before
-`createSessionCookie`**, counting **successful mints**.
-
-Verified in `node_modules/firebase-admin`:
-
-- `BaseAuth.verifyIdToken(idToken, checkRevoked = false)` only makes a network
-  call when `checkRevoked || isEmulator`. The route passes neither, so
-  verification is a **local** JWT check against certs cached ~6h.
-- `createSessionCookie` is the **only** Google round trip, and it runs **only on
-  the success path**.
-
-So a **failure-only counter would meter the free, local path and leave the only
-paid call unbounded**: one attacker holding one valid token could replay it and
-burn unlimited `createSessionCookie` quota while paying zero slots. Forged tokens
-die free at the local verify and are deliberately **not** metered.
-
-- **MUST** key on a resolved uid, namespaced by purpose (`session:`, `ai:`).
+- **MUST** key on something the server resolved, namespaced by purpose
+  (`session:`), never on a request header.
 - **MUST** keep the budget as a module constant beside its call site, passed as
   an argument — never an env key — and reachable from a test (a load-bearing
   constant a test cannot reach is unfalsifiable).
@@ -358,21 +334,6 @@ die free at the local verify and are deliberately **not** metered.
   `DELETE /api/auth/session` is unlimited on purpose: cookie-authed, no upstream
   call, and a limiter there could only stop someone signing out.
 
-### The test that matters
-
-The assertion that separates a correct limiter from a broken one is **not** "N
-requests trip it":
-
-- N events by **one** uid trip it. ✅
-- N events by **N distinct** uids do **not**. ← a shared counter passes the first
-  test while locking every user out.
-- A loop of **garbage** tokens **never** trips it. ← a 429 here proves the
-  limiter is metering the free path.
-
-A plain "curl loop → 429" passes the **wrong** build: garbage tokens trip a
-failure-counting limiter instantly, so the broken build looks right and the
-correct one looks broken.
-
 ## The CSRF origin check compares against the HOST, not the request URL
 
 `lib/http/origin.ts` decides whether a state-changing request came from a page
@@ -380,7 +341,7 @@ this app served. It compares the `Origin` header to **the host the browser
 addressed** — `X-Forwarded-Host` when a proxy set one (its FIRST entry, since a
 chain of proxies appends), otherwise `Host`. Both cookie-mutating handlers on
 `/api/auth/session` run it before anything else, because without it an attacker
-page can POST its own ID token and log a victim into the ATTACKER's account.
+page could sign a victim's browser in (login CSRF) or sign it out.
 
 **Never compare against `new URL(request.url).origin`.** That was the original
 implementation and it shipped broken. In the standalone server that origin
@@ -430,8 +391,7 @@ pages and route handlers alike: `Content-Security-Policy: frame-ancestors 'none'
 `poweredByHeader: false` removes `X-Powered-By` in the same file.
 
 **`Cross-Origin-Embedder-Policy` is absent on purpose.** `require-corp` demands a
-CORP/CORS opt-in from every cross-origin subresource, and this app talks to
-Firebase endpoints that make no such promise — it would break auth to buy a
+CORP/CORS opt-in from every cross-origin subresource, which would buy a
 cross-origin isolation nothing here uses.
 
 Two of them carry a fork trigger, stated in the config beside each value: a fork
@@ -483,11 +443,10 @@ Removing `lib/api`:
 
 Removing `lib/http`:
 
-- `trash lib/http/index.ts` (the limiter) and delete the `rateLimit` call in
-  `app/api/auth/session/route.ts` plus its `SESSION_MINT_BUDGET` constant.
-- **Not the whole directory.** `lib/http/content-disposition.ts` also lives here
-  and is shared by the export download response and the presigned-storage URL —
-  it belongs to those capabilities' own removal checklists, not this one.
+- `trash lib/http/` (the limiter and the origin check) and delete the `rateLimit`
+  call in `app/api/auth/session/route.ts` plus its `SESSION_MINT_BUDGET` constant.
+  Without the limiter one valid ID token can be replayed into unbounded
+  `createSessionCookie` calls.
 - The CSRF origin check goes with it. **Read the section above before deciding
   that is acceptable** — dropping `isSameOrigin` from the session route reopens
   login CSRF, and `sameSite=lax` alone does not cover a request that SETS the

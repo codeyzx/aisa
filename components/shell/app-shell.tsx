@@ -4,7 +4,6 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { type Session } from '@/lib/auth/session'
 
 import { AppSidebar } from './app-sidebar'
-import { ImpersonationBanner } from './impersonation-banner'
 import { type NavSection } from './nav-config'
 import { Topbar } from './topbar'
 
@@ -62,13 +61,7 @@ export function AppShell({
       </a>
       <AppSidebar role={session.role} sections={sections} />
       <SidebarInset className="min-w-0">
-        {/* Banner + topbar pin as ONE block. The banner must not be scrollable
-            away (an admin who stops seeing it is the whole hazard), and
-            stacking two independently-sticky bars at top-0 would hide the topbar
-            behind it. On an ordinary session the banner renders null, so this
-            block is just the topbar and the layout is unchanged. */}
         <div className="sticky top-0 z-30">
-          <ImpersonationBanner session={session} />
           <Topbar session={session} />
         </div>
         {/* The `<main>` landmark starts HERE, below the topbar — so it holds the

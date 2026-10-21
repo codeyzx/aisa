@@ -33,8 +33,8 @@ export function validate<T>(
       .map((issue) => `  - ${issue.message}`)
       .join('\n')
     // "Copy .env.example to .env" alone was ACTIVELY WRONG for the variable that
-    // triggers this most: `.env.example` ships IMPERSONATION_SECRET (and the
-    // Firebase credentials) EMPTY on purpose, so there is nothing there to copy
+    // triggers this most: `.env.example` ships the Firebase credentials EMPTY on
+    // purpose, so there is nothing there to copy
     // and the reader who follows the advice literally gets the same refusal
     // again. What the template cannot ship, it cannot ship for anyone — the
     // second line says where those values actually come from. No variable is

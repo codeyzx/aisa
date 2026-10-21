@@ -13,7 +13,7 @@
  * error.
  *
  * SCOPE IS THE WHOLE PROGRAM, with no path predicate. Every call in the tree —
- * feature (`features/asset/asset.collection.ts`) and infrastructure alike
+ * feature and infrastructure alike
  * (`lib/audit/account-audit.repo.ts`, `lib/repos/counter.repo.ts`,
  * `lib/auth/revocation.ts`) — already passes a constant, so there is no tier
  * where an inline path is legitimate and nothing to carve out. Reading no file

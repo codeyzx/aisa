@@ -39,11 +39,7 @@ export function audit(
     type: 'audit',
     action,
     target,
+    // Set AFTER `...meta`, so a caller cannot forge the identity through `meta`.
     uid: session.uid,
-    // `uid` is the subject; `actor` is the human behind it. Set AFTER `...meta`
-    // and UNCONDITIONALLY, so a caller cannot forge `actor` through `meta` on an
-    // ordinary session — when there is no impersonator this is `undefined`, which
-    // overrides any forged value and is dropped from the JSON line.
-    actor: session.impersonator?.uid,
   })
 }

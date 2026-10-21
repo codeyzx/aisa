@@ -4,8 +4,8 @@
 - Owns: how a component is sourced and extended, where the RSC / client boundary
   falls, and which state mechanism a piece of UI is allowed to reach for
 - Source of truth: `components/ui/*` (+ `components/ui/README.md` for
-  provenance), `components/shell/*`, `lib/list-toolbar/*`, and the reference list
-  page under `app/(app)/(examples)/assets/*`
+  provenance), `components/shell/*`, and the copy-me list page in
+  `features/_template/` (`_template.page.tsx`, `_template.search-params.ts`)
 - Verified by: `pnpm typecheck && pnpm lint && pnpm lint:rules && pnpm test`,
   then driving the list page in a browser **with the client bundle blocked** as
   well as loaded — a server-owned control that only works once React has hydrated
@@ -16,8 +16,7 @@
   client state of any kind
 - Does not define: how the rows are queried, sorted, paged, or counted
   (`docs/reference/contracts/data.md`), who is allowed to see a page
-  (`docs/reference/contracts/auth.md`), or how live data pushes into a component
-  (`docs/reference/contracts/realtime.md`)
+  (`docs/reference/contracts/auth.md`)
 
 How `components/ui` is sourced, extended, and kept honest — and which of the four
 state mechanisms a piece of UI is allowed to reach for. Read this before adding a
@@ -55,8 +54,7 @@ house rules: `interface` over type-object, named exports, `cn()`, `data-slot`.
   `.Root` reads `undefined` from a Server Component. `components/shell/page-container.tsx`
   can be `Page.Root` precisely because it is server-side; `ViewToggle` and
   `ConfirmDialog` cannot. This binds Context-backed compound components too
-  (`Notes.Root`, `Notes.Trigger`, …) the moment they need `'use client'`, and it
-  binds `lib/list-toolbar`'s exports for the same reason.
+  (a `Foo.Root` / `Foo.Trigger` pair) the moment they need `'use client'`.
 - **Props that are functions cannot cross the RSC boundary.** This is why
   `data-table` has no `'use client'`: its `DataTableColumn.cell` is a function,
   so a list page can define columns inline and stay a Server Component. Making
@@ -68,23 +66,23 @@ house rules: `interface` over type-object, named exports, `cn()`, `data-slot`.
 
 ## Which state mechanism (the ladder — the order IS the rule)
 
-`app/(app)/(examples)/state/` demonstrates all four side by side and is the
-canonical reference.
+No example route ships these side by side any more; the ladder is the rule, and
+`features/_template/_template.search-params.ts` is the reference for rung 2.
 
 ```
 1. Server state      RSC + server action + revalidatePath/revalidateTag
    |   The DEFAULT for anything persisted. Source of truth = Firestore.
    v
-2. URL state         nuqs — app/(app)/(examples)/state/search-params.ts
+2. URL state         nuqs — features/_template/_template.search-params.ts
    |   View/query state that should be shareable, bookmarkable and
    |   back-button-friendly: filter, sort, pagination, active tab, search.
    v
-3. React Context     app/(app)/(examples)/state/_components/notes.tsx
+3. React Context     e.g. SidebarContext in components/ui/sidebar.tsx
    |   Dependency injection / scoped providers (session, theme, feature config)
    |   and the backbone of compound components. NOT a state container — it does
    |   not store state, it TRANSPORTS it down a subtree.
    v
-4. zustand           app/(app)/(examples)/state/_components/density.tsx
+4. zustand           NOT installed — adding it is a deliberate dependency.
        LAST resort. Client-only ephemeral state that deserves neither the URL
        nor persistence: a draft cart, a multi-step wizard, client UI prefs, an
        optimistic queue.
@@ -115,12 +113,10 @@ Keep native `useSearchParams` for a one-off security boundary such as login's
 
 The ladder covers state this repo actually **holds**. Client-side **data fetching**
 with a cache — TanStack Query, SWR — is deliberately **not** a dependency: RSC +
-server actions cover persisted data, and the realtime capability covers data that
-pushes (`docs/reference/contracts/realtime.md`). Reach for TanStack Query only
+server actions cover persisted data. Reach for TanStack Query only
 when the app grows a real client-fetch surface the server cannot serve for you —
-it **also** fetches non-realtime data from the browser, or many genuinely distant
-components share the same live data and threading the realtime hook through props
-stops scaling. Until then it is weight the ladder does not need.
+many genuinely distant components share the same client-fetched data and threading
+it through props stops scaling. Until then it is weight the ladder does not need.
 
 ### State MUST / MUST-NOT
 
@@ -131,9 +127,10 @@ stops scaling. Until then it is weight the ladder does not need.
   by hand, a filter rebuilding it from an href template) and changing the key on
   one side drifts silently while both halves still compile.
 - **MUST derive a parser's value set from the schema that already owns it**, never
-  a hand-listed literal copy. `statusFilterValues` is
-  `['all', ...AssetStatusSchema.options]` — the enum owns the set, and a copy here
-  would be a parallel taxonomy that goes stale in silence.
+  a hand-listed literal copy. `app/(app)/proposal/search-params.ts` parses
+  `kategori` and `status` with `CategorySchema` / `ProposalStatusSchema` from
+  `features/aisa/aisa.schema.ts` — the enum owns the set, and a copy here would be
+  a parallel taxonomy that goes stale in silence.
 - **MUST use `shallow: false` when a URL write must re-query the server.** Without
   it the URL changes and the list does not — the Server Component never re-runs.
 - **MUST hand nuqs the `startTransition`** if you want `pending` to cover the
@@ -191,20 +188,18 @@ every list page into a client island.
 - column resizing or reordering
 - client-side grouping / expanding
 
-`/assets` meets that trigger — a right-pinned sticky actions column and a tri-state
-select-all header — so its table view is an interactive CLIENT ISLAND over
-`@tanstack/react-table` (pinned `8.21.3`; v9 is a hard rename, `useReactTable` →
-`useTable`): `app/(app)/(examples)/assets/_components/assets-table.tsx`. Only that
-one view is an island; the page stays a Server Component and the card branch stays
-server-rendered.
+No page in this app meets that trigger today, so no page uses
+`@tanstack/react-table`; it stays a dependency, pinned at `8.21.3` (v9 is a hard
+rename, `useReactTable` → `useTable`), for the first one that does. When it lands,
+only that one view becomes an island; the page stays a Server Component.
 
 The split is the whole discipline, and it keeps the library to presentation:
 
 - **The server stays authoritative for every FACT** — data, sort, filter, search,
   paging, counts, and selection scope. A sortable header is still a `<Link>` to the
-  next `?sort` (`assetsViewHref`, JS-off safe), reusing `data-table.tsx`'s
-  `DataTableSortLink` / `ariaSort`; the cursor drives paging; the zustand selection
-  store owns the picked ids.
+  next `?sort` (JS-off safe), reusing `data-table.tsx`'s `DataTableSortLink` /
+  `ariaSort`; the cursor drives paging; the picked ids follow the pure rules in
+  `components/ui/data-table-selection.ts`.
 - **TanStack owns only how the handed rows are DRAWN** — `columnPinning` (static:
   actions pinned right), over the CORE row model only. No
   `getSorted/Filtered/PaginationRowModel`: the server already did that work, and
@@ -230,10 +225,10 @@ answer.
 - **It must be the FIRST element child of `<table>`** — HTML drops a misplaced
   one with no error.
 - **Write what the table LISTS, not the page title** — name the columns, e.g.
-  "Daftar akun" followed by email, nama, peran, and the rest.
-- A raw `<table>` (the `/assets` island, which cannot use the `Table` wrapper
-  without nesting a second scroller) renders the same `DataTableCaption` — one
-  strategy, two renderers.
+  "Daftar proposal — nama, sektor, skor, kategori, tanggapan, tanggal masuk".
+- A table that does not use `DataTable` still carries a visually hidden caption:
+  `app/(app)/proposal/page.tsx` renders `Table` directly with an `sr-only`
+  `TableCaption`.
 
 ## Which control a list choice gets
 
@@ -265,7 +260,7 @@ usually one import edge away from where the value is declared.
 - **Reserve the bar's height** (`min-h-11` for `size="sm"` actions) so the first
   tick changes its contents, not its size.
 - **Select-all NAMES ITS SCOPE, visibly, before the first click** — "Pilih semua
-  25 aset di halaman ini", not "Pilih semua". On a server-paginated list the
+  25 proposal di halaman ini", not "Pilih semua". On a server-paginated list the
   control reaches ONE page while the count beside it names the whole filtered set,
   so a bare "select all" beside "Menampilkan 25 dari 87" tells the reader they
   picked 87. The page count in the string is what makes the claim checkable
@@ -283,7 +278,8 @@ usually one import edge away from where the value is declared.
 ## List page URL state: page size and view
 
 Both are URL state read by the Server Component, so both re-query and re-render
-without any client state. `/assets` is the canonical shape.
+without any client state. No page ships either control today; these are the rules
+for the first one that does.
 
 **Which mechanism, and why URL state at all, is the ladder above** (server → URL →
 Context → zustand) plus its rule for declaring a URL contract once. This section
@@ -293,24 +289,23 @@ below.
 - **A URL param that becomes a query `limit` MUST parse to a closed set.**
   `?pageSize` is not a preference like `?status` — it is a COST INPUT that lands
   in `paginate`'s `limit`, i.e. in documents Firestore bills for. Parse it with
-  `parseAsStringLiteral` over a literal tuple (`ASSET_PAGE_SIZES`), so the type IS
-  the set and anything else falls back to the default. **Never `parseAsInteger`**,
+  `parseAsStringLiteral` over a literal tuple, so the type IS the set and anything else falls back to the default. **Never `parseAsInteger`**,
   and a clamp behind one is not a fix: `?pageSize=100000` must not be an integer
   the code path ever holds, and a page that also runs `count()` makes a full scan
   worse. Convert to a number once, at the call site that needs one.
 - **The cursor rule splits by what the param changes**, and search-params.ts owns
   both halves so no call site decides:
-  - Changes the QUERY (status, sort, search, page size) → `assetsViewHref`, cursor
-    **dropped**. For status, sort, and search that is correctness (`paginate`
+  - Changes the QUERY (status, sort, search, page size) → a query href, cursor
+    **dropped** (`__entities__QueryHref` in the template). For status, sort, and search that is correctness (`paginate`
     refuses such a cursor anyway — the search term is part of the cursor's `scope`).
     For page size it is a product call — `paginate` would accept it, since a cursor
     carries no window size — because a cursor minted at 25 names a boundary a 50-row
     pagination never produces.
-  - Changes only the RENDERING (`?view=table|card`) → `assetsRenderHref`, cursor
+  - Changes only the RENDERING (`?view=table|card`) → a render href, cursor
     **kept**. Same rows, same order, same window; resetting paging would take the
     reader's place away to answer a question they did not ask.
 - **The empty state belongs to the query, not the view.** Compose it once and
-  hand the same node to both branches: "no retired assets" reads the same in a
+  hand the same node to both branches: "no archived proposals" reads the same in a
   table and a grid. The same node draws differently per view — `DataTable` puts
   it in the body and strips its panel chrome (border, radius); the card grid
   short-circuits to it whole, because there it is the surface.
@@ -323,62 +318,6 @@ below.
   maps and formatters (WCAG 1.4.10 — data reachable in only one view is data
   someone cannot reach). A card has no column header, so any value whose meaning
   came from one takes the word with it.
-
-## URL-backed list toolbars
-
-`lib/list-toolbar/` is the shared machinery for a list whose controls are confirmed
-by an RSC URL render but must respond immediately. It is not a generic feature
-configuration system: shared code owns the reusable state mechanics and layout slots;
-the feature owns its values, labels, query contract, and what the toolbar composes.
-`app/(app)/(examples)/assets/_components/assets-toolbar-*.ts*` is the reference adapter.
-
-- **The model is pure.** `lib/list-toolbar/model.ts` is a dependency-free state
-  machine: transitions receive confirmed values and emit an optional navigation effect.
-  It knows no React, Next router, Pacer, Firestore, or feature schema. Its optimistic
-  overlay, drafts, pending controls, and latest-wins reconciliation are therefore
-  unit-testable without a DOM or timer.
-- **One stable controller exists per mounted toolbar.** `createListToolbarScope<Values>()`
-  mints a feature-typed scope at module level; its `useListToolbar` hook creates one
-  vanilla zustand store/controller in a `useState` initializer. New server values,
-  the adapter, and React's transition are read through refs, so rerenders reconcile the
-  stable instance instead of recreating it. Never use a module-level toolbar store.
-- **Context transports the controller; selectors subscribe to state.** The provider
-  carries only that stable controller, not a reactive state object. Descendants in
-  other files use the feature's `useToolbarSelector` to subscribe to just the slice
-  they read via `useStoreWithEqualityFn`; a state change does not fan out through
-  Context. The controller's bound `.Control`, `.Subscribe`, `.Search`, `.Select`, and
-  `.View` components subscribe directly to their own store, so they also work when
-  Context is not the appropriate composition boundary.
-- **The feature owns navigation policy.** Its scope module declares the typed values
-  and projects the server query onto them. Its adapter converts a model effect to a
-  feature URL builder and decides cursor policy. For Assets,
-  `assets-toolbar-nav.ts` preserves the cursor only for a view-only change and drops it
-  for every query-changing effect; neither the generic model nor controller builds a
-  feature URL.
-- **Pacer is an implementation detail.** Search scheduling goes through
-  `hooks/use-debounced-callback.ts`, the repository's narrow adapter over TanStack
-  Pacer's `useDebouncer`; features receive a trailing callback with `cancel`, not a
-  Pacer instance. The controller records a draft on each keystroke, flushes it on
-  Enter, and cancels then commits a clear, so timer behavior cannot race a synchronous
-  intent.
-- **Provider extent follows coordination, not DOM convenience.** Put the provider
-  around the header controls, server-rendered list children, and footer so all controls
-  share one optimistic model. `ListToolbarRoot` / `Row` / `Leading` / `Controls` /
-  `Footer` are dumb layout slots only. The footer's count and cursor pager remain
-  feature/server-owned children; the toolbar never takes over query results or paging.
-
-Use the flat named exports from `lib/list-toolbar`, never a client-module dotted object.
-The client-reference limitation is the same one described in "Client vs server" above.
-
-**Why it stays in `lib/` with only one consumer.** This repo's default is to delete a
-one-consumer abstraction rather than defend it, so the exception needs a stated test:
-shared code is allowed to stay shared when it cannot name the feature it serves. Grep
-`lib/list-toolbar/` for `asset` or `/assets` and there is nothing to find — every URL is
-built in `assets-toolbar-nav.ts`, which the library calls through the adapter and never
-inspects. That is the seam that makes a second list a new adapter rather than a fork, and
-it is what "shared machinery, feature-owned policy" has to mean concretely. If a change
-ever puts a feature's param name, route, or label inside `lib/list-toolbar/`, the
-exception has lapsed — move the module into the feature instead of widening it.
 
 ## Wrapping a primitive
 
@@ -401,8 +340,8 @@ preset props.
   also forwards the primitive's `finalFocus` for the one case Base UI cannot
   default: a confirm whose success destroys its own trigger. A destructive ROW
   action passes `finalFocus={() => document.getElementById(finalFocusId)}` pointing
-  at a `tabIndex={-1}` list wrapper (`ASSETS_LIST_ID`), so when revalidation removes
-  the row, focus retreats to the list instead of falling to `<body>`.
+  at a `tabIndex={-1}` list wrapper, so when revalidation removes the row, focus
+  retreats to the list instead of falling to `<body>`.
 
 Corollary: if the wrapper would only be preset props, don't write it. Pass the
 props.
@@ -429,8 +368,8 @@ Split by **where the user's attention is**, not by taste:
 - **Failure → inline, next to the action.** The dialog stays open on failure, so
   the explanation belongs on the surface the user is already looking at, and it
   cannot time out before they read it. A `forbidden` error they miss is an error
-  they never learn. `ConfirmDialog` does this; `asset-form.tsx` does the same with
-  `<p role="alert">`.
+  they never learn. `ConfirmDialog` does this; `_template.form.tsx` does the same with a
+  destructive `<Alert>`.
 - **Success → `toast.success()`.** Success closes the dialog and often destroys
   the trigger (a deleted row takes its own buttons with it), so there is no
   inline surface left to write to. The toast is the only thing that can confirm
@@ -471,9 +410,7 @@ Named so their absence reads as a choice, not an oversight:
   not sortable here: alphabetical order looks useful and answers nothing anyone
   came with, and **search** (implemented — see
   `docs/reference/contracts/data.md`) is what serves
-  "find this one". `/assets` applies this honestly: only `createdAt` and `value`
-  are sortable (each answers "which is the most X"); code, name, and status are
-  not. That restraint is the standard working, not an omission — every `sortField`
+  "find this one". That restraint is the standard working, not an omission — every `sortField`
   carries an index bill, argued per column in
   `docs/reference/contracts/data.md`.
 - **No `orientation` on `ViewToggle`.** A segmented control is horizontal
@@ -485,26 +422,17 @@ Named so their absence reads as a choice, not an oversight:
 ## Removal checklist
 
 The state mechanisms are pull-based; there is no "state module" to delete. What
-is removable is the example and either dependency.
+is removable is a dependency.
 
-- `trash "app/(app)/(examples)/state"` and remove its nav entry from
-  `app/navigation.ts`.
-- **Dropping nuqs:** grep `nuqs`, replace each `search-params.ts` with hand
+- **Dropping nuqs:** grep `nuqs` — today it reaches `app/layout.tsx`
+  (`NuqsAdapter`), `lib/search-param.ts` (which wraps it) and the
+  `features/_template/` list page. Replace each `search-params.ts` with hand
   parsing in the RSC and `<Link>`/`router.push` on the write side, remove
-  `NuqsAdapter` from `app/layout.tsx` (it wraps `children` there), then
-  `pnpm remove nuqs`. **Grep, do not work from a list** — nuqs reaches well past
-  the examples: there are `search-params.ts` modules under
-  `app/(app)/(examples)/{state,assets,export}/` AND under `app/(app)/admin/`,
-  `app/(app)/admin/accounts/` and `app/(app)/admin/audit/`, plus client
-  components that call its hooks, plus `lib/search-param.ts` (which wraps it)
-  and `app/layout.tsx`. Removing only the example modules leaves the ADMIN
-  surface importing a package that is no longer installed. Note what you give up:
-  the single URL-contract declaration above.
-- **Dropping zustand:** grep `zustand`; each store becomes a Context provider
-  rendered by the nearest common RSC ancestor, passing `children` through. Note
-  that `lib/list-toolbar` and the assets selection store both use it, so dropping
-  it means retiring the URL-backed toolbar as well. Then `pnpm remove zustand`.
-- `pnpm typecheck && pnpm build:ci` must be green afterwards (no dangling
-  imports).
+  `NuqsAdapter`, then `pnpm remove nuqs`. **Grep, do not work from a list.** Note
+  what you give up: the single URL-contract declaration above.
+- **Dropping `@tanstack/react-table`:** nothing outside comments references it
+  today; `pnpm remove @tanstack/react-table`.
+- `pnpm typecheck && pnpm templates:check && pnpm build:ci` must be green
+  afterwards (no dangling imports).
 
 Use `trash` (recoverable), never `rm`.

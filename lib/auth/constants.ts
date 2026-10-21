@@ -8,8 +8,10 @@
 export const SESSION_COOKIE = 'session'
 
 /**
- * Session cookie lifetime. 5 days (Fork B: logout is clear-only — no refresh-token
- * revocation — so the window is deliberately short to bound a stolen cookie).
+ * Session cookie lifetime: 5 days. Logout clears the cookie but does not revoke
+ * the account's refresh tokens, so the window is short to bound a stolen cookie;
+ * revoking the account's refresh tokens (or disabling it) ends every session at
+ * once, because `getSession` verifies with `checkRevoked`.
  */
 export const SESSION_MAX_AGE_MS = 5 * 24 * 60 * 60 * 1000
 
@@ -24,18 +26,6 @@ export const SESSION_MAX_AGE_MS = 5 * 24 * 60 * 60 * 1000
  * /login, i.e. a health endpoint that is not a health endpoint.
  */
 export const PUBLIC_PREFIXES = ['/login', '/api/auth', '/api/health'] as const
-
-/**
- * Where a session carrying `mustChangePassword` is sent instead of the page it
- * asked for. Deliberately NOT public: it needs a verified session to know WHOSE
- * password is being replaced, so the proxy still bounces a cookie-less visitor
- * to /login before it is ever reached.
- *
- * It lives here rather than in `guards.ts` because both the guard that redirects
- * TO it and the page that must not redirect AWAY from it need to name it, and
- * they sit on opposite sides of the server-only line.
- */
-export const PASSWORD_CHANGE_PATH = '/password/change'
 
 /**
  * Is `pathname` on the public route surface? Matching is SEGMENT-AWARE: a prefix

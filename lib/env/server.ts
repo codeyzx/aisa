@@ -8,8 +8,7 @@ import { once, requiredVar, validate } from './validate'
 /**
  * PRIVATE (runtime) configuration that is NOT owned by a deletable capability:
  * the Firebase Admin credential, emulator hosts, the log level, and the build
- * stamp. A capability's own config lives WITH the capability (`lib/storage/
- * config.ts`, `lib/ai/config.ts`, `lib/auth/impersonation.config.ts`) so deleting
+ * stamp. A capability's own config lives WITH the capability so deleting
  * the directory deletes its config too; only `./registry` needs the one line
  * removed. See `docs/explanation/architecture.md`.
  *
@@ -47,16 +46,49 @@ const FirebaseProjectSchema = z.object({
   FIREBASE_PROJECT_ID: requiredVar('FIREBASE_PROJECT_ID'),
 })
 
-/** The service-account certificate. Required only on the non-emulator path. */
-const FirebaseAdminSchema = z.object({
+/**
+ * The credential for the non-emulator path. The project id is always required;
+ * the service-account key pair is OPTIONAL as a PAIR. Both set → the key is
+ * used. Both unset → Application Default Credentials (the Cloud Run runtime
+ * service account), which is how this app runs where no key may be minted.
+ * Exactly one set is refused: that is a half-pasted secret, and silently
+ * falling back to ADC would hide it behind whatever identity the host has.
+ * An empty string (a bare `KEY=` in a dotenv file) counts as unset.
+ */
+const FirebaseAdminFields = z.object({
   FIREBASE_PROJECT_ID: requiredVar('FIREBASE_PROJECT_ID'),
-  FIREBASE_CLIENT_EMAIL: requiredVar('FIREBASE_CLIENT_EMAIL'),
+  FIREBASE_CLIENT_EMAIL: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z.string().optional(),
+  ),
   // env UIs store newlines as the literal `\n` sequence; normalize on parse so
   // the PEM the Admin SDK receives is a real multi-line key.
-  FIREBASE_PRIVATE_KEY: requiredVar('FIREBASE_PRIVATE_KEY').transform((value) =>
-    value.replace(/\\n/g, '\n'),
+  FIREBASE_PRIVATE_KEY: z
+    .preprocess(
+      (value) => (value === '' ? undefined : value),
+      z.string().optional(),
+    )
+    .transform((value) => value?.replace(/\\n/g, '\n')),
+  // The service account Firebase AUTH calls run as, by impersonation from the
+  // ADC identity (`lib/firebase/admin-auth.ts`). Needed where the runtime
+  // identity holds no `firebaseauth.*` permission and no key may be minted —
+  // `createSessionCookie` and the revocation lookup behind `checkRevoked` would
+  // otherwise answer INSUFFICIENT_PERMISSION. Unset → Auth uses the same
+  // credential as Firestore.
+  FIREBASE_AUTH_SERVICE_ACCOUNT: z.preprocess(
+    (value) => (value === '' ? undefined : value),
+    z
+      .email('FIREBASE_AUTH_SERVICE_ACCOUNT must be a service-account email')
+      .optional(),
   ),
 })
+
+const FirebaseAdminSchema = FirebaseAdminFields.refine(
+  (env) =>
+    (env.FIREBASE_CLIENT_EMAIL === undefined) ===
+    (env.FIREBASE_PRIVATE_KEY === undefined),
+  'FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY must be set together (or both left unset to use Application Default Credentials)',
+)
 
 /**
  * Log threshold. An env key deliberately — the contrast with the rate-limit
@@ -108,6 +140,7 @@ const loadFirebaseAdminEnv = once(() =>
       FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID,
       FIREBASE_CLIENT_EMAIL: process.env.FIREBASE_CLIENT_EMAIL,
       FIREBASE_PRIVATE_KEY: process.env.FIREBASE_PRIVATE_KEY,
+      FIREBASE_AUTH_SERVICE_ACCOUNT: process.env.FIREBASE_AUTH_SERVICE_ACCOUNT,
     },
     'server Firebase Admin',
   ),
@@ -132,17 +165,24 @@ const loadFirebaseProjectEnv = once(() =>
   ),
 )
 
-/** Admin SDK service-account credential. Read on every authenticated request. */
+/**
+ * Admin SDK credential for a real project. `serviceAccount: null` means
+ * Application Default Credentials; `authServiceAccount` is the account Auth
+ * calls impersonate (null: none). Read on every authenticated request.
+ */
 export function getFirebaseAdminConfig(): {
   projectId: string
-  clientEmail: string
-  privateKey: string
+  serviceAccount: { clientEmail: string; privateKey: string } | null
+  authServiceAccount: string | null
 } {
   const env = loadFirebaseAdminEnv()
+  const clientEmail = env.FIREBASE_CLIENT_EMAIL
+  const privateKey = env.FIREBASE_PRIVATE_KEY
   return {
     projectId: env.FIREBASE_PROJECT_ID,
-    clientEmail: env.FIREBASE_CLIENT_EMAIL,
-    privateKey: env.FIREBASE_PRIVATE_KEY,
+    serviceAccount:
+      clientEmail && privateKey ? { clientEmail, privateKey } : null,
+    authServiceAccount: env.FIREBASE_AUTH_SERVICE_ACCOUNT ?? null,
   }
 }
 

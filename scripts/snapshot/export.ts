@@ -9,8 +9,8 @@
  *
  * ⚠️ CEILING — TOP-LEVEL COLLECTIONS ONLY. Enumeration is `db.listCollections()`,
  * which returns ROOT collections; sub-collections nested under a document are OUT
- * OF SCOPE and are not walked. The boilerplate's data model is flat (`assets`,
- * `counters`, `_migrations`, …), so this matches the data it ships with. A nested
+ * OF SCOPE and are not walked. Collections with sub-collections (for example
+ * `jobs/{id}/steps`) are therefore only exported at their top level. A nested
  * model would need a recursive walk this deliberately does not do.
  *
  * READ-ONLY: this never writes to Firestore. Its only writes are the JSON files.

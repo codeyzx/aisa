@@ -37,20 +37,30 @@
  * That cost is stated rather than hidden: this script refuses those platforms and
  * says why, instead of running and failing at sign-in with a wrong-password error.
  *
- * WHAT MUST ALREADY BE RUNNING: the emulators, seeded. This script does not start
- * them — `pnpm test:e2e:ci` is the wrapper that does (`firebase emulators:exec`
- * plus `pnpm seed`), matching how `test:integration` is put together.
+ * WHAT MUST ALREADY BE RUNNING: the emulators, seeded, named by
+ * `FIRESTORE_EMULATOR_HOST` and `FIREBASE_AUTH_EMULATOR_HOST`. This script does
+ * not start them — `pnpm test:e2e:ci` (`scripts/e2e-fast.ts`) does, once per
+ * shard, and runs this script for each shard. The container gets the SAME two
+ * hosts the caller has, which is correct only because of `--network host`.
+ *
+ * ARGUMENTS go straight to `playwright test` (spec files, `--grep`, `--shard`).
+ *
+ * `E2E_IMAGE` names an image a caller already built from this working tree with
+ * `E2E_PUBLIC_EXTRAS`; the build is then skipped. Without it, this script builds
+ * `E2E_TAG` itself.
  */
 import { spawnSync } from 'node:child_process'
 
 import {
-  LOCAL_TAG,
+  E2E_PUBLIC_EXTRAS,
+  E2E_TAG,
   buildProductionImage,
   containerName,
   docker,
   minimalRuntimeEnv,
   removeContainer,
   requireDocker,
+  shortSha,
 } from './_container.ts'
 
 /**
@@ -96,44 +106,56 @@ if (missing.length > 0) {
   process.exit(1)
 }
 
-const sha =
-  spawnSync('git', ['rev-parse', '--short', 'HEAD'], {
-    encoding: 'utf8',
-  }).stdout?.trim() || 'e2e'
-const builtAt = new Date().toISOString()
+const base = `http://localhost:${PORT}`
 
-console.log(`Building ${LOCAL_TAG} …\n`)
-// The two emulator hosts are inlined into the CLIENT bundle, and they have to be:
-// the browser signs in by talking to the Auth emulator ITSELF
-// (lib/firebase/client-auth.ts), and it only does that when
-// `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST` is present in the bundle. Without
-// them the browser tries real Firebase and every test dies on the login page with
-// no useful error — which is exactly how this was first written, and exactly what
-// the first real run showed.
-//
-// `127.0.0.1` here is the BROWSER's view, not the container's: Playwright runs on
-// the host, where the emulators are bound. That it matches the container's view
-// too is a consequence of `--network host`, not the reason for this value.
-buildProductionImage({
-  tag: LOCAL_TAG,
-  sha,
-  builtAt,
-  publicExtras: {
-    NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
-    NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
-  },
-})
+// Under `--network host` the container binds the host's port directly, so if
+// something already answers there, a second container dies of EADDRINUSE while
+// THAT server keeps answering /api/health — and the suite would drive somebody
+// else's app and report on it. Refuse before building anything.
+if (await fetch(`${base}/api/health`).catch(() => undefined)) {
+  console.error(
+    `Refusing to run: something already answers on ${base}.\n` +
+      'Stop it (another E2E run? `docker ps | grep e2e-`) or pick another port\n' +
+      'with E2E_PORT.',
+  )
+  process.exit(1)
+}
+
+const image = process.env.E2E_IMAGE || E2E_TAG
+if (!process.env.E2E_IMAGE) {
+  console.log(`Building ${image} …\n`)
+  buildProductionImage({
+    tag: image,
+    sha: shortSha(),
+    builtAt: new Date().toISOString(),
+    publicExtras: E2E_PUBLIC_EXTRAS,
+  })
+}
+
+/** Both of the container's log streams: a dead server tells its story on stderr. */
+function printContainerLogs(): void {
+  const logs = docker(['logs', name], { quiet: true })
+  console.error('\n--- container logs ---')
+  if (logs.stdout) console.error(logs.stdout)
+  if (logs.stderr) console.error(logs.stderr)
+  console.error('--- end logs ---')
+}
 
 // Named BEFORE the run so cleanup works even if `docker run` fails after the
 // daemon created the container — see `containerName`.
 const name = containerName('e2e')
-const base = `http://localhost:${PORT}`
 let exitCode = 1
 
 try {
-  // 127.0.0.1 for the emulator hosts, and that is only correct BECAUSE of
-  // `--network host`: inside the container, loopback is the host's loopback.
-  const runtimeEnv = minimalRuntimeEnv('127.0.0.1')
+  // The caller's own emulator hosts, and passing them through unchanged is only
+  // correct BECAUSE of `--network host`: inside the container, loopback is the
+  // host's loopback. The guard above proved both are set.
+  const runtimeEnv = {
+    ...minimalRuntimeEnv('127.0.0.1'),
+    FIRESTORE_EMULATOR_HOST: process.env.FIRESTORE_EMULATOR_HOST as string,
+    FIREBASE_AUTH_EMULATOR_HOST: process.env
+      .FIREBASE_AUTH_EMULATOR_HOST as string,
+  }
   const started = docker(
     [
       'run',
@@ -148,7 +170,7 @@ try {
         '--env',
         `${key}=${value}`,
       ]),
-      LOCAL_TAG,
+      image,
     ],
     { quiet: true },
   )
@@ -185,18 +207,18 @@ try {
 
     if (!ready) {
       console.error('\nThe container never answered a healthy /api/health.')
-      console.error('\n--- container logs ---')
-      console.error(docker(['logs', name], { quiet: true }).stdout)
-      console.error('--- end logs ---')
+      printContainerLogs()
     } else {
       console.log('Health OK (200, no-store). Running the browser suite …\n')
       // `E2E_BASE_URL` is what tells `e2e/target.ts` that something else owns the
       // app's lifecycle, so Playwright drives and never starts anything.
-      const playwright = spawnSync('playwright', ['test'], {
-        stdio: 'inherit',
-        env: { ...process.env, E2E_BASE_URL: base },
-      })
+      const playwright = spawnSync(
+        'playwright',
+        ['test', ...process.argv.slice(2)],
+        { stdio: 'inherit', env: { ...process.env, E2E_BASE_URL: base } },
+      )
       exitCode = playwright.status ?? 1
+      if (exitCode !== 0) printContainerLogs()
     }
   }
 } finally {

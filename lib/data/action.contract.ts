@@ -12,11 +12,8 @@
 
 /**
  * Every failure a server action can report. Each code has a producer:
- *  - `unauthenticated` / `password_change_required` / `forbidden` — the
- *    `runAction` auth gate, which asks `authorizeSession`. The middle code is
- *    NOT a flavour of `forbidden`: the user's remedy is different (replace the
- *    temporary password), and telling them they lack permission would send them
- *    looking for an administrator instead of to the password screen.
+ *  - `unauthenticated` / `forbidden` — the `runAction` auth gate, which asks
+ *    `authorizeSession`.
  *  - `invalid` — a Zod validation failure (the caller's input).
  *  - `not_found` / `conflict` — a typed `DomainError` a repo threw (see
  *    `domain-error.ts`); an EXPECTED, handled failure, not a bug.
@@ -31,45 +28,17 @@
  *    window, then send the SAME request again".
  *  - `unavailable` — we could not REACH something we depend on, from either end:
  *    a transport rejection `settleAction` caught client-side, or an upstream
- *    provider outage the server caught (a Firebase token verification that failed
- *    to reach Google — see `lib/auth/token-rejection.ts`). Both share the one
- *    remedy: try the SAME request again. It is deliberately NOT `unauthenticated`,
- *    which would tell a validly-signed-in caller their credential is bad and send
- *    them to re-authenticate against the provider that is down.
+ *    outage the server caught. Both share the one remedy: try the SAME request
+ *    again. It is deliberately NOT `unauthenticated`, which would tell a
+ *    validly-signed-in caller their credential is bad.
  *  - `internal` — an unknown, unhandled throw, returned OPAQUE.
- *
- * Three more belong to account administration (`lib/actions/account.action.ts`)
- * and each exists because NO existing code carries its remedy. That test is the
- * bar every addition must clear — a code whose remedy is "reload and retry" is
- * already `conflict`, and one whose remedy is "you cannot" is already
- * `forbidden`:
- *  - `lease_unavailable` — a second administrator holds the mutation lease right
- *    now. Remedy: wait a moment and retry, UNCHANGED. That is not `conflict`
- *    ("data changed, reload") — nothing changed and there is nothing to reload —
- *    and telling the admin to reload would send them to re-check a screen that is
- *    still correct.
- *  - `admin_lockout` — the mutation would strip administrator access the app
- *    must keep: the actor's own, or the last remaining one. Remedy: have another
- *    administrator do it, or promote one first. Not `forbidden`: the actor DOES
- *    hold the capability, and "you have no permission" would send them looking
- *    for an admin who cannot help either. Self-demotion, self-disable and
- *    final-admin removal share this ONE code because they share that remedy.
- *  - `reconciliation_required` — the Auth mutation LANDED but a follow-up
- *    (session revocation, or settling the audit event) did not. Remedy: do NOT
- *    retry; a human checks the account history. This is the one outcome that is
- *    neither success nor failure, and collapsing it into either is the specific
- *    lie the two-step audit protocol exists to prevent.
  */
 export const ACTION_ERROR_CODES = [
   'unauthenticated',
-  'password_change_required',
   'forbidden',
   'invalid',
   'not_found',
   'conflict',
-  'lease_unavailable',
-  'admin_lockout',
-  'reconciliation_required',
   'resource_exhausted',
   'unavailable',
   'internal',
@@ -86,18 +55,10 @@ export type ActionErrorCode = (typeof ACTION_ERROR_CODES)[number]
  */
 export const ACTION_ERROR_MESSAGE: Record<ActionErrorCode, string> = {
   unauthenticated: 'Anda harus masuk terlebih dahulu',
-  password_change_required:
-    'Ganti kata sandi sementara Anda terlebih dahulu sebelum melanjutkan',
   forbidden: 'Anda tidak memiliki izin',
   invalid: 'Validasi gagal',
   not_found: 'Tidak ditemukan',
   conflict: 'Data telah berubah. Muat ulang lalu coba lagi.',
-  lease_unavailable:
-    'Administrator lain sedang melakukan perubahan akun. Tunggu sebentar lalu coba lagi.',
-  admin_lockout:
-    'Operasi ditolak: akses administrator harus tetap ada. Minta administrator lain melakukannya, atau tambahkan administrator baru terlebih dahulu.',
-  reconciliation_required:
-    'Perubahan hanya diterapkan sebagian dan perlu diperiksa. Jangan diulang — periksa riwayat akun terlebih dahulu.',
   // Opens with the same three words as `API_ERROR_MESSAGE.RESOURCE_EXHAUSTED`
   // ("Terlalu banyak permintaan") because it is the same fact over the other
   // transport, then adds the remedy the HTTP twin puts in `retryAfter` instead —

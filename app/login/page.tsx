@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 export default async function LoginPage() {
   // Already authed → nothing to do here.
   const session = await getSession()
-  if (session) redirect('/dashboard')
+  if (session) redirect('/hari-ini')
 
   return (
     <div className="flex min-h-svh flex-col items-center justify-center gap-8 p-6">

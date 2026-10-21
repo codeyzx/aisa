@@ -36,3 +36,8 @@ docs
 README.md
 AGENTS.md
 CLAUDE.md
+
+# Local emulator data and the Python services are not part of the dashboard image.
+.emulator-data
+firebase-export-*
+services

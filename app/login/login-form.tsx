@@ -1,8 +1,10 @@
 'use client'
 
 /**
- * Client sign-in form. Firebase email/password → ID token → server session
- * cookie, then a router refresh so server components re-render authed.
+ * Client sign-in form. Firebase email/password (browser straight to Google — the
+ * password never reaches this origin) → ID token → `/api/auth/session`, which
+ * sets the httpOnly session cookie; then a router refresh so server components
+ * re-render authed.
  *
  * Canonical form pattern: TanStack Form (v1) + the shadcn `Field` primitives, a
  * zod v4 schema used directly as a Standard Schema validator (no adapter). The
@@ -11,14 +13,15 @@
  * an invalid submit. `FieldError` reads the field's `meta.errors` directly.
  */
 import { useState } from 'react'
-import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useForm } from '@tanstack/react-form'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth'
 import { LoaderCircle } from 'lucide-react'
 import * as z from 'zod'
 
 import { establishSession } from '@/lib/auth/client'
+import { ApiCallError } from '@/lib/api/envelope'
+import { firebaseErrorCode } from '@/lib/firebase/error-code'
 import { firebaseAuth } from '@/lib/firebase/client-auth'
 import { safeInternalPath } from '@/lib/safe-path'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -43,6 +46,31 @@ const schema = z.object({
   password: z.string().min(1, 'Kata sandi wajib diisi'),
 })
 
+/**
+ * Firebase's wrong-credential codes. Current SDKs answer every one of them with
+ * `auth/invalid-credential` (email-enumeration protection); the older codes are
+ * kept so an older project setting still reads as "wrong", not "unavailable".
+ */
+const WRONG_CREDENTIAL_CODES: ReadonlySet<string> = new Set([
+  'auth/invalid-credential',
+  'auth/invalid-login-credentials',
+  'auth/wrong-password',
+  'auth/user-not-found',
+  'auth/invalid-email',
+  'auth/user-disabled',
+])
+
+/** One user-safe sentence per failure; never the raw provider code. */
+function signInErrorMessage(error: unknown): string {
+  const code =
+    error instanceof ApiCallError ? error.code : firebaseErrorCode(error)
+  if (code === 'UNAUTHENTICATED' || (code && WRONG_CREDENTIAL_CODES.has(code)))
+    return 'Email atau kata sandi salah'
+  if (code === 'RESOURCE_EXHAUSTED' || code === 'auth/too-many-requests')
+    return 'Terlalu banyak percobaan. Tunggu sebentar lalu coba lagi.'
+  return 'Tidak dapat masuk saat ini. Coba lagi.'
+}
+
 export function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -52,7 +80,7 @@ export function LoginForm() {
   const nextValues = searchParams.getAll('next')
   const next = safeInternalPath(
     nextValues.length === 1 ? nextValues[0] : undefined,
-    '/dashboard',
+    '/hari-ini',
   )
   const [authError, setAuthError] = useState<string | null>(null)
 
@@ -66,14 +94,20 @@ export function LoginForm() {
           value.email,
           value.password,
         )
-        const idToken = await credential.user.getIdToken()
-        await establishSession(idToken)
+        try {
+          await establishSession(await credential.user.getIdToken())
+        } catch (error) {
+          // No cookie was set, so drop the SDK's refresh token too: leaving it
+          // would keep the account reachable from this browser while the page
+          // says sign-in failed.
+          await signOut(firebaseAuth()).catch(() => undefined)
+          throw error
+        }
         // Drop the Router Cache so server components re-render authed, then go.
         router.refresh()
         router.push(next)
-      } catch {
-        // Never surface the raw Firebase code — one generic, user-safe message.
-        setAuthError('Email atau kata sandi salah')
+      } catch (error) {
+        setAuthError(signInErrorMessage(error))
       }
     },
   })
@@ -83,7 +117,7 @@ export function LoginForm() {
       <CardHeader>
         <CardTitle>Masuk</CardTitle>
         <CardDescription>
-          Masukkan kredensial Anda untuk mengakses akun.
+          Masuk dengan akun manajer dashboard AISA.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -110,7 +144,6 @@ export function LoginForm() {
                       name={field.name}
                       type="email"
                       autoComplete="email"
-                      placeholder="you@example.com"
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(event) =>
@@ -175,15 +208,6 @@ export function LoginForm() {
                 </Button>
               )}
             </form.Subscribe>
-
-            <div className="text-center text-sm">
-              <Link
-                href="/login/reset"
-                className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-              >
-                Lupa kata sandi?
-              </Link>
-            </div>
           </FieldGroup>
         </form>
       </CardContent>

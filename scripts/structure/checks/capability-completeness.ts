@@ -37,11 +37,43 @@ const CAPABILITY_CALLEES = new Set([
   'roleCan',
 ])
 
-/** Collect every capability string literal used across the tree. */
+/**
+ * The string a `const NAME: Capability = 'x:y'` identifier stands for, so a
+ * feature that names its authority once (`features/<entity>/<entity>.capability.ts`,
+ * the template's own convention) still counts as enforcing it at the call site
+ * that passes the const. Anything other than a const bound to a string literal
+ * resolves to nothing — the check does not guess.
+ */
+function constStringArgs(
+  checker: ts.TypeChecker,
+  node: ts.CallExpression,
+): string[] {
+  const values: string[] = []
+  for (const arg of node.arguments) {
+    if (!ts.isIdentifier(arg)) continue
+    let symbol = checker.getSymbolAtLocation(arg)
+    if (symbol && symbol.flags & ts.SymbolFlags.Alias)
+      symbol = checker.getAliasedSymbol(symbol)
+    const declaration = symbol?.valueDeclaration
+    if (
+      declaration &&
+      ts.isVariableDeclaration(declaration) &&
+      declaration.initializer &&
+      ts.isStringLiteralLike(declaration.initializer) &&
+      (ts.getCombinedNodeFlags(declaration) & ts.NodeFlags.Const) !== 0
+    ) {
+      values.push(declaration.initializer.text)
+    }
+  }
+  return values
+}
+
+/** Collect every capability string used across the tree. */
 function usedCapabilities(
   program: StructureProgram,
 ): { cap: string; file: string }[] {
   const used: { cap: string; file: string }[] = []
+  const checker = program.program.getTypeChecker()
   for (const sf of program.sourceFiles()) {
     const file = program.rel(sf.fileName)
     forEachNode(sf, (node) => {
@@ -49,6 +81,8 @@ function usedCapabilities(
         const name = calleeName(node)
         if (name && CAPABILITY_CALLEES.has(name)) {
           for (const cap of stringArgs(node)) used.push({ cap, file })
+          for (const cap of constStringArgs(checker, node))
+            used.push({ cap, file })
         }
       }
     })

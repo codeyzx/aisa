@@ -12,8 +12,7 @@
 // and a server-rendered table. NOT here, on purpose, because each is a per-entity
 // argument with its own bill: search, a sortable header, a page-size control, a
 // table/card toggle, bulk selection, export, and a delete row action (that one
-// also needs a client island for its confirm dialog). `features/asset/**` plus
-// `app/(app)/(examples)/assets/**` is the version that carries all of them.
+// also needs a client island for its confirm dialog).
 //
 // This page is a SERVER COMPONENT and nothing here needs to change that: the
 // filter is a link, the pager is a link, and the table is `components/ui/data-table`,
@@ -79,7 +78,6 @@ export const metadata: Metadata = {
  * If you add one, it belongs in the URL contract as a CLOSED literal set, never
  * `parseAsInteger`: this number reaches Firestore's `limit`, so it is the count
  * of documents you are billed for and an arbitrary integer is an arbitrary bill.
- * `app/(app)/(examples)/assets/search-params.ts` is that version.
  */
 const PAGE_SIZE = 25
 
@@ -128,7 +126,7 @@ const STATUS_VARIANT: Record<
  * thing to break when the filter grows: a count built from a different `where`
  * than the rows is a denominator that silently stops describing them. At that
  * point export the query builder from the repo and share it between the list and
- * the count — `assetsQuery` in `features/asset/asset.repo.ts` is that shape.
+ * the count.
  *
  * NOTE THE ABSENT `orderBy`, and do not tidy one on. A count has no order, and
  * asking for one is not free: `.where(status).orderBy(createdAt)` needs a

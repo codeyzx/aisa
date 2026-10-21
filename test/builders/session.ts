@@ -9,7 +9,7 @@ import { type Session } from '@/lib/auth/session'
  * added.
  *
  * `role` is deliberately not defaulted. Every test that uses this is a test
- * ABOUT authorization — `user` holds `asset:read` but not `asset:write`
+ * ABOUT authorization — `admin` and `user` hold different grants
  * (lib/auth/rbac.ts), and that split is what gives such a test teeth. A default
  * would let a caller forget the one decision the builder exists to make explicit.
  */
@@ -19,8 +19,8 @@ export function signedInAs(
 ): Session {
   return {
     uid: 'uid-1',
-    email: 'someone@aixel.test',
-    emailVerified: true,
+    email: null,
+    emailVerified: false,
     role,
     ...overrides,
   }

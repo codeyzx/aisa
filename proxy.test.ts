@@ -20,18 +20,18 @@ function request(url: string, opts?: { session?: boolean }): NextRequest {
  */
 describe('proxy', () => {
   it('preserves the requested path and query in ?next on a cookie-less page', () => {
-    const res = proxy(request('/assets?status=retired&sort=value:asc'))
+    const res = proxy(request('/proposal?status=dinilai&sort=score:desc'))
     expect(res.status).toBe(307)
     const location = new URL(res.headers.get('location') ?? '')
     expect(location.pathname).toBe('/login')
     // Round-trips through URL decoding — the reader lands back exactly here.
     expect(location.searchParams.get('next')).toBe(
-      '/assets?status=retired&sort=value:asc',
+      '/proposal?status=dinilai&sort=score:desc',
     )
   })
 
   it('answers a cookie-less /api/** request with JSON, never a login redirect', async () => {
-    const res = proxy(request('/api/assets'))
+    const res = proxy(request('/api/proposals'))
     expect(res.status).toBe(401)
     expect(res.headers.get('location')).toBeNull()
     const body = await res.json()
@@ -42,7 +42,7 @@ describe('proxy', () => {
   })
 
   it('lets a request carrying a session cookie through untouched', () => {
-    const res = proxy(request('/assets', { session: true }))
+    const res = proxy(request('/proposal', { session: true }))
     // NextResponse.next() carries no redirect Location.
     expect(res.headers.get('location')).toBeNull()
   })
@@ -96,7 +96,7 @@ describe('proxy', () => {
     // handled this correctly — `startsWith('/api/')` does not care about dots —
     // which is exactly why the defect lived in the MATCHER instead, where no
     // test that calls `proxy()` could see it. See the config block below.
-    const res = proxy(request('/api/export/assets/v1.2'))
+    const res = proxy(request('/api/reports/v1.2'))
     expect(res.status).toBe(401)
     expect(res.headers.get('location')).toBeNull()
     expect(await res.json()).toMatchObject({
@@ -110,7 +110,7 @@ describe('proxy', () => {
  * The matcher decides whether `proxy()` RUNS at all, so the lane assertions above
  * are worth exactly as much as this. The page pattern excludes any path
  * containing a dot (so static files are not gated), and that exclusion could not
- * tell `/logo.svg` from `/api/export/assets/v1.2` — so a dotted `/api` path
+ * tell `/logo.svg` from `/api/reports/v1.2` — so a dotted `/api` path
  * skipped the proxy entirely and a cookie-less request to it got Next's routing
  * answer instead of the `UNAUTHENTICATED` envelope this file guarantees.
  *
@@ -125,7 +125,7 @@ function matches(entry: string, pathname: string): boolean {
 }
 
 describe('proxy config.matcher', () => {
-  const dotted = ['/api/export/assets/v1.2', '/api/foo.bar']
+  const dotted = ['/api/reports/v1.2', '/api/foo.bar']
 
   it('excludes dotted paths from the general page pattern — the root cause', () => {
     // Documents WHY a dedicated /api entry is required. If this ever starts

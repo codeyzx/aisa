@@ -82,12 +82,8 @@ const T0 = new Date('2026-07-24T00:00:00.000Z')
 let created: string[] = []
 
 /**
- * Start from an empty collection — the one place this suite may, and
- * `asset-repo.test.ts` may not.
- *
- * That suite scopes every assertion to ids it created, because `pnpm seed` fills
- * the reference feature's collection and wiping it mid-drive would read as a
- * paging bug. The generated entity's collection has no such owner: no
+ * Start from an empty collection. The generated entity's collection has no
+ * owner: no
  * application code writes to it and no script seeds it, which is exactly why the
  * data contract records it as the one collection here that nothing writes. So
  * the ordering assertions below can say `toEqual` on a whole page instead of

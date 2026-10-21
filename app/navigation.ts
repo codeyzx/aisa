@@ -1,11 +1,10 @@
 import {
-  Download,
-  HardDrive,
-  LayoutDashboard,
-  Package,
-  Radio,
-  Sparkles,
-  ToggleLeft,
+  Activity,
+  FileText,
+  History,
+  Settings,
+  Sun,
+  TrendingUp,
 } from 'lucide-react'
 
 import { type NavSection } from '@/components/shell/nav-config'
@@ -19,53 +18,41 @@ export const APP_NAV_SECTIONS: NavSection[] = [
   {
     items: [
       {
-        title: 'Beranda',
-        href: '/dashboard',
-        icon: LayoutDashboard,
-        capability: null,
+        title: 'Hari ini',
+        href: '/hari-ini',
+        icon: Sun,
+        capability: 'aisa:read',
+      },
+      {
+        title: 'Proposal',
+        href: '/proposal',
+        icon: FileText,
+        capability: 'aisa:read',
+      },
+      {
+        title: 'Tren',
+        href: '/tren',
+        icon: TrendingUp,
+        capability: 'aisa:read',
+      },
+      {
+        title: 'Aktivitas AI',
+        href: '/aktivitas',
+        icon: Activity,
+        capability: 'aisa:read',
+      },
+      {
+        title: 'Riwayat',
+        href: '/riwayat',
+        icon: History,
+        capability: 'aisa:read',
+      },
+      {
+        title: 'Pengaturan',
+        href: '/pengaturan',
+        icon: Settings,
+        capability: 'aisa:read',
       },
     ],
   },
-  {
-    // The example features, grouped — the asset register included. A fork that
-    // drops the examples deletes this whole section AND the `app/(app)/(examples)/`
-    // folder (where `/assets` and every demo below already live) together.
-    title: 'Contoh',
-    items: [
-      {
-        title: 'Aset',
-        href: '/assets',
-        icon: Package,
-        capability: 'asset:read',
-      },
-      { title: 'AI', href: '/ai', icon: Sparkles, capability: 'ai:invoke' },
-      {
-        title: 'Ekspor',
-        href: '/export',
-        icon: Download,
-        capability: 'export:read',
-      },
-      {
-        title: 'Realtime',
-        href: '/realtime',
-        icon: Radio,
-        capability: 'asset:read',
-      },
-      {
-        title: 'State',
-        href: '/state',
-        icon: ToggleLeft,
-        capability: 'asset:read',
-      },
-      {
-        title: 'Penyimpanan',
-        href: '/storage',
-        icon: HardDrive,
-        capability: 'storage:write',
-      },
-    ],
-  },
-  // No Administration section: impersonation moved to the user dropdown, and the
-  // `/admin` route stays reachable as a direct/no-JS fallback (it keeps its own
-  // `requireCapability('admin:access')` guard) — it is simply not a sidebar link.
 ]

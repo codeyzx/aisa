@@ -12,13 +12,15 @@ build. A change is verified when it is **green AND driven**.
 
 1. Run the chain, stop at the first red step:
    `pnpm typecheck && pnpm templates:check && pnpm lint && pnpm lint:rules && pnpm format:check && pnpm test`
-2. Build: `pnpm build:ci` — a secret-less build that still VALIDATES. It supplies the shared
-   dummy public values from `scripts/public-env-fixture.ts`; there is no bypass flag, so a
-   renamed or forgotten `NEXT_PUBLIC_*` still fails here.
-3. Prove the env fail-fast is intact — this needs plain `pnpm build`, since `build:ci` fills
-   the public gap by design. Move `.env` aside so `next build` cannot read it from disk, then
-   confirm the build FAILS with `Invalid client Firebase environment`:
-   `mv .env .env.bak && env -i PATH="$PATH" HOME="$HOME" pnpm build; mv .env.bak .env`
+2. Build: `pnpm build:ci` — a secret-less build that still runs the public-env validation. It
+   supplies the shared dummy `NEXT_PUBLIC_FIREBASE_*` values from
+   `scripts/public-env-fixture.ts`; there is no bypass flag.
+3. Prove the env fail-fast is intact. It lives at server BOOT (`instrumentation-node.ts` over
+   `lib/env/registry.ts`), not in the build. Start the built standalone server with an empty
+   environment and confirm it logs `[boot] environment is invalid, refusing to serve`, names
+   every missing group (Firebase project, aisa-api), and exits 1:
+   `env -i PATH="$PATH" HOME="$HOME" node .next/standalone/server.js; echo "exit=$?"`
+   Next prints `Ready` before the check runs — the exit is the proof, not the banner.
 4. **Drive it.** Start the emulator and app on your port band, sign in, and exercise the change
    in a browser. Report the behaviour you observed — not the gate you passed.
 5. If the change added or altered a `.where(A,'==') + .orderBy(B)` query, exercise it against the
@@ -28,12 +30,9 @@ build. A change is verified when it is **green AND driven**.
 
 - **Reporting a green gate as proof.** It is the one check that provably misses this repo's bug
   class. Name a driven observation.
-- **`env -i pnpm build` passing.** It is vacuous while a `.env` sits on disk — `next build` reads
-  it. Move `.env` aside first (step 3).
-- **Reading a green `pnpm build:ci` as the fail-fast proof.** It deliberately supplies dummy
-  public values, so it proves the schema is satisfiable, not that a missing var bites. Only
-  step 3 proves that. Server config is not covered by either — it is validated at BOOT
-  (`lib/env/registry.ts`), so drive a real start to see it.
+- **Reading a passing `pnpm build` as the fail-fast proof.** The build no longer validates any
+  required var, so it passes with no `.env` at all. Only a real start (step 3) proves a missing
+  var bites. Check no `.env` sits inside `.next/standalone/` first, or the run is vacuous.
 - **Bare `pnpm format`.** It rewrites the whole tree, including others' uncommitted work. Scope it:
   `pnpm exec oxfmt <your paths>`.
 - **`pnpm indexes:check` on an un-driven emulator.** It only sees queries that actually ran; a

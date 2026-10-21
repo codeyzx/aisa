@@ -29,8 +29,8 @@
  * WHAT IT DELIBERATELY DOES NOT PROVE: anything that needs data. The container is
  * started with the emulator host variables SET BUT NOT REACHABLE (see
  * `runtimeEnv` below), which is enough for the boot fail-fast and enough for
- * /api/health — a liveness route that never touches Firestore. Sign-in, the asset
- * list, and every Firestore read are E2E's job (`pnpm test:e2e:ci`), not this
+ * /api/health — a liveness route that never touches Firestore. Sign-in and every
+ * Firestore read are E2E's job (`pnpm test:e2e:ci`), not this
  * script's, and this script must not be read as covering them.
  *
  * USAGE
@@ -184,10 +184,6 @@ if (!providedImage) {
  * touches Firestore. That is exactly the quiet failure `compose.yaml` documents —
  * a container that reports HEALTHY while every Firestore read would fail — and it
  * is why data-path coverage is E2E's job and is not claimed here.
- *
- * IMPERSONATION_SECRET is generated fresh per run (>= 32 chars, as the schema
- * demands). A literal here would be a committed signing key for an auth bypass
- * that boots cleanly, which is the one thing `.env.example` refuses to ship.
  */
 const runtimeEnv = minimalRuntimeEnv('127.0.0.1')
 

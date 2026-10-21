@@ -65,7 +65,7 @@ export function list__Entities__(
     direction: 'desc',
     // STAMP the cursor with the filter it was built under, so a cursor from one
     // status set can never page another (each mints a distinct token). Match this
-    // to your filter — see features/asset/asset.repo.ts.
+    // to your filter.
     scope: `status=${args.status ?? 'all'}`,
   })
 }

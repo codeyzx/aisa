@@ -43,8 +43,8 @@ const read = (root: string, relPath: string): string =>
  * The `existsSync` filter is the same rule pointing the other way, and without it
  * this reference lied in the one situation that matters most. `git ls-files
  * --cached` reads the INDEX, so a file deleted but not yet staged is still listed
- * — measured, a worktree with `features/asset/` removed from disk still reported
- * all sixteen of its files. So the layout doc went on describing a feature
+ * — measured, a worktree with a feature directory removed from disk still
+ * reported every one of its files. So the layout doc went on describing a feature
  * somebody had just deleted, and regenerating did not change a line.
  */
 function trackedPaths(root: string): string[] {
@@ -316,7 +316,8 @@ const COMMAND_NOTES: Record<string, CommandNote> = {
     group: 'Build and ship',
     note:
       'The real production build, with the real environment. `next.config.ts` ' +
-      'calls the public-env validator, so a missing or renamed `NEXT_PUBLIC_*` ' +
+      'calls the public-env validator, so a malformed `NEXT_PUBLIC_*` (today only ' +
+      'the optional Sentry DSN) ' +
       'fails here — which is the only place it can fail, since those values are ' +
       'inlined into the browser bundle and cannot be fixed after the build.',
   },
@@ -338,8 +339,9 @@ const COMMAND_NOTES: Record<string, CommandNote> = {
     group: 'Local data',
     note:
       'Get a fresh clone from nothing to a signed-in app: creates `.env` from ' +
-      '`.env.example`, generates the impersonation secret rather than copying ' +
-      'it, starts the object-storage container, and seeds accounts. ' +
+      '`.env.example`, waits for the emulators, seeds the accounts and the fake ' +
+      'AISA data when `settings/rules` is missing (or only the accounts when ' +
+      'data exists but none do), and prints the test accounts. ' +
       'Non-destructive by contract, so re-running it is the supported way to ' +
       'check your setup.',
   },
@@ -496,8 +498,18 @@ const COMMAND_NOTES: Record<string, CommandNote> = {
   'test:e2e:ci': {
     group: 'Tests',
     note:
-      'Seeded data plus the containerised browser suite inside a managed ' +
-      'emulator — the one-command form used by the pipeline.',
+      'The one-command form used by the pipeline: the same command as ' +
+      '`test:e2e:fast`.',
+  },
+  'test:e2e:fast': {
+    group: 'Tests',
+    note:
+      'Build the E2E image once, then split the browser suite over `--shards N` ' +
+      '(1–9, default 4), each shard with its own container (port 3201 upward) ' +
+      'and its own seeded Firestore emulator, sharing one Auth emulator on ' +
+      '127.0.0.1:9099. Other arguments (spec files, `--grep`) go to every ' +
+      "shard's `playwright test`. Each shard costs a container, a JVM and a " +
+      'browser in memory; use `--shards 2` on a busy machine.',
   },
   'image:check': {
     group: 'Build and ship',
@@ -624,14 +636,6 @@ interface EnvGroup {
 
 const ENV_GROUPS: EnvGroup[] = [
   {
-    file: 'lib/env/client.ts',
-    heading: 'Public Firebase and emulator config',
-    intro:
-      'Validated at BUILD time by the gate `next.config.ts` calls. These are ' +
-      'inlined into the browser bundle, so a missing one has to fail the build — ' +
-      'it cannot be fixed afterwards.',
-  },
-  {
     file: 'lib/env/server.ts',
     heading: 'Server runtime config',
     intro:
@@ -639,27 +643,19 @@ const ENV_GROUPS: EnvGroup[] = [
       'than at build, so they never enter the image builder.',
   },
   {
-    file: 'lib/storage/config.ts',
-    heading: 'Object storage',
+    file: 'lib/env/client.ts',
+    heading: 'Public Firebase and emulator config',
     intro:
-      'Owned by the storage capability, so deleting the capability deletes the ' +
-      'schema with it. Generic on purpose: nothing in the code names a backend, ' +
-      'so swapping backends is an env change.',
+      'Validated at BUILD time by the gate `next.config.ts` calls. These are ' +
+      'inlined into the browser bundle, so a missing one has to fail the build — ' +
+      'it cannot be fixed afterwards. The browser uses them only to sign in.',
   },
   {
-    file: 'lib/ai/config.ts',
-    heading: 'Inference',
+    file: 'lib/aisa-api/config.ts',
+    heading: 'AISA API',
     intro:
-      'Owned by the AI capability, which ships turned OFF. Intent is stated ' +
-      'separately from the credential so a forgotten or mistyped key is a loud ' +
-      'refusal rather than silently-disabled inference.',
-  },
-  {
-    file: 'lib/auth/impersonation.config.ts',
-    heading: 'Impersonation',
-    intro:
-      'Owned by the impersonation capability. Its own key rather than a reused ' +
-      'one, which is what keeps the capability deletable.',
+      'Where the Python `aisa-api` lives and the key it expects. Every dashboard ' +
+      'write goes through a server action that calls it, so both are server-only.',
   },
   {
     file: 'lib/observability/config.ts',
@@ -676,26 +672,32 @@ const ENV_NOTES: Record<string, string> = {
     'Firebase web API key. Not a secret, but environment-specific.',
   NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: 'Firebase auth domain for the web SDK.',
   NEXT_PUBLIC_FIREBASE_PROJECT_ID:
-    'Firebase project the browser talks to. Must name the same project as the ' +
-    'server-side project id, or sign-in succeeds against an account the server ' +
-    'cannot see.',
+    'Firebase project the browser signs in against. Must name the same project ' +
+    'as the server-side project id, or sign-in succeeds against an account the ' +
+    'server cannot see.',
   NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET:
-    'Firebase storage bucket for the web SDK.',
+    'Firebase storage bucket for the web SDK config.',
   NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID:
-    'Firebase messaging sender id for the web SDK.',
+    'Firebase messaging sender id for the web SDK config.',
   NEXT_PUBLIC_FIREBASE_APP_ID: 'Firebase web app id.',
-  NEXT_PUBLIC_FIRESTORE_EMULATOR_HOST:
-    'Point the BROWSER Firestore SDK at a local emulator. Unset for a normal ' +
-    'run. Must move together with its server-side twin.',
   NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST:
-    'Point the BROWSER auth SDK at a local emulator. Unset for a normal run.',
+    'Point the BROWSER auth SDK at a local emulator. Unset for a normal run; ' +
+    'an image built with it set is a test artifact.',
+  FIREBASE_AUTH_SERVICE_ACCOUNT:
+    'Optional. The service account Firebase AUTH calls run as, impersonated ' +
+    'from the ADC identity through IAM Credentials. For a runtime that holds no ' +
+    '`firebaseauth.*` permission and may not mint a key; that identity needs ' +
+    '`roles/iam.serviceAccountTokenCreator` on this account. Unset: Auth uses ' +
+    'the same credential as Firestore. Ignored against the emulator.',
   FIREBASE_PROJECT_ID:
     'Which project the server talks to. Required on both the emulator and the ' +
     'real-project path, which is why it is separated from the certificate it ' +
     'usually travels with.',
   FIREBASE_CLIENT_EMAIL:
-    'Service-account identity from a service-account JSON key. Not demanded ' +
-    'while an emulator host is set — an emulator authenticates with nothing.',
+    'Service-account identity from a service-account JSON key. Optional: set ' +
+    'it together with FIREBASE_PRIVATE_KEY, or leave both unset to use ' +
+    'Application Default Credentials (the Cloud Run runtime service account). ' +
+    'Exactly one of the pair set is refused at boot.',
   FIREBASE_PRIVATE_KEY:
     'Service-account private key, the full PEM. A literal backslash-n sequence ' +
     'is normalized to real newlines at read time, because env UIs store it that ' +
@@ -718,33 +720,12 @@ const ENV_NOTES: Record<string, string> = {
     'Never set it by hand.',
   BUILT_AT:
     'Build timestamp reported by the health route, populated by the image build.',
-  S3_ENDPOINT:
-    'Object-storage endpoint the SERVER uses. Requests are path-style, so this ' +
-    'is the bare host and not a bucket URL.',
-  S3_PUBLIC_ENDPOINT:
-    'Object-storage endpoint the BROWSER uses, when it differs from the ' +
-    'server one. Presigned URLs are signed against a host, so they are minted ' +
-    'with this. Defaults to S3_ENDPOINT; set it wherever the app and the ' +
-    'reader reach storage at different addresses, as under Compose.',
-  S3_REGION:
-    'Signature v4 needs a region even where the backend ignores it. Some managed ' +
-    'backends mandate a specific value.',
-  S3_BUCKET: 'Bucket every upload lands in.',
-  S3_ACCESS_KEY_ID: 'Object-storage access key id.',
-  S3_SECRET_ACCESS_KEY: 'Object-storage secret access key.',
-  AI_ENABLED:
-    'Whether inference ships turned on. A strict enum, not a truthiness check: ' +
-    'an unrecognized value is rejected at boot rather than read as off. Unset ' +
-    'means off, and off means no key is read and no provider is initialized.',
-  ANTHROPIC_API_KEY:
-    'Inference credential, read by the provider SDK itself — so the name is ' +
-    'fixed rather than chosen. Only meaningful while inference is on; then the ' +
-    'app refuses to boot without it rather than failing on first use.',
-  IMPERSONATION_SECRET:
-    'HMAC signing key for the impersonation ticket. At least 32 characters, ' +
-    "because the secret's whole value is its entropy. Generate one per " +
-    'environment and never reuse it. Shipped empty on purpose: any value shipped ' +
-    'here would validate, and something that works is never replaced.',
+  AISA_API_URL:
+    'Absolute base URL of the Python `aisa-api`. Every write the dashboard makes ' +
+    '(responses, category corrections, rules, STOP/LANJUT, uploads) goes there.',
+  AISA_API_KEY:
+    'Shared key sent as the `X-AISA-Key` header on every `aisa-api` call. Server ' +
+    'only; never reaches the browser.',
   NEXT_PUBLIC_SENTRY_DSN:
     'Where error events go. Unset means the SDK is never initialized and every ' +
     'capture is a no-op — no network request is made and no UI depends on it.',
@@ -771,8 +752,6 @@ const ENV_NOTES: Record<string, string> = {
 const ENV_READERS_WITHOUT_SCHEMA: Record<string, string> = {
   'lib/auth/cookie-options.ts':
     "NODE_ENV — the framework's own build flag, not a value anyone sets per deployment.",
-  'lib/ai/provider.ts':
-    'the credential `lib/ai/config.ts` already declares and this file only reads back.',
 }
 
 /** Runtime trees whose modules must not read `process.env` unnoticed. */
@@ -894,21 +873,13 @@ const CAPABILITY_NOTES: Record<string, string> = {
     'without a project there is nothing to talk to, so this differs in kind ' +
     'from everything below it.',
   'Firebase Admin credential':
-    'The service-account certificate. Always on, but genuinely not needed on ' +
-    'every target — demanding a production key to boot against a local emulator ' +
-    'would be config theatre, so the requirement follows the target rather than ' +
-    'a toggle you set.',
-  'S3 storage':
-    'Uploads and downloads through an S3-compatible backend. Ships on and has ' +
-    'no toggle: while the capability is present its credentials are boot-required.',
-  AI:
-    'Inference. The one capability that ships turned OFF, so a fresh clone runs ' +
-    'with no account at the provider. Turning it on is what makes the credential ' +
-    'boot-required.',
-  impersonation:
-    'A sanctioned auth bypass that lets an admin act as another user. Ships on ' +
-    'and has no toggle, so its signing secret is boot-required while the feature ' +
-    'is present. The highest-risk surface here.',
+    'The project id plus, optionally, a service-account key pair; with no key ' +
+    'the Admin SDK uses Application Default Credentials. Not checked against an ' +
+    'emulator target, which authenticates with nothing.',
+  'aisa-api':
+    'The Python service every dashboard write goes through (responses, ' +
+    'corrections, rules, STOP/LANJUT, uploads). Required: without it the ' +
+    'dashboard would render but every action would fail.',
 }
 
 const CLIENT_CAPABILITY_NOTES: Record<string, string> = {
@@ -916,8 +887,8 @@ const CLIENT_CAPABILITY_NOTES: Record<string, string> = {
     'The public Firebase web config. Not removable — it is how the browser ' +
     'reaches the project at all.',
   getClientEmulatorConfig:
-    'Browser-side emulator targets. Both values unset in a normal run, which is ' +
-    'what makes a build point at real Firebase.',
+    'The browser-side Auth emulator target. Unset in a normal run, which is ' +
+    'what makes a build sign in against real Firebase.',
   getObservabilityConfig:
     'Error monitoring. Off unless a DSN is set: with none, the SDK is never ' +
     'initialized and every capture is a no-op.',
@@ -1055,61 +1026,58 @@ const LAYOUT_NOTES: Record<string, string> = {
   features:
     'Vertical slices, one directory per entity, each owning its schema, repo, actions and UI.',
   hooks: 'Shared React hooks that no single feature owns.',
+  integrations:
+    'Code that runs outside this app and feeds AISA (the Google Apps Script form hook).',
   lib: 'Shared non-visual code: the seams every feature builds on.',
   public: 'Static assets served as-is.',
   rules: 'Repo-specific structural lint rules.',
   'rule-tests':
     'Fixtures proving the structural lint rules fire and do not over-fire.',
   scripts: 'Executable tooling. Runs under plain Node, no build step.',
+  services:
+    'The Python AISA services (aisa-api). Owned outside this app; the dashboard only calls them.',
   test: 'Test infrastructure shared across suites.',
 
   // Second level.
   '.agents/skills': 'The procedures themselves, one directory each.',
+  'integrations/apps-script':
+    'The Apps Script bound to the intake Google Form; posts each response to `aisa-api`.',
   '.claude/skills': 'Symlinks to the shared procedures.',
   '.github/workflows': 'The pipeline definition.',
-  'app/(app)':
-    'The authenticated shell: dashboard, admin, and the example routes.',
+  'app/(app)': 'The authenticated shell: the AISA pages.',
   'app/403': 'The refusal page a denied capability lands on.',
-  'app/api': 'HTTP route handlers — session, export, health, storage.',
-  'app/login': 'Sign-in and password reset.',
-  'app/password': 'Password change for a signed-in user.',
-  'components/pdf': 'Presentation shared by generated documents.',
-  'components/shell':
-    'The application shell: sidebar, navigation, impersonation banner.',
+  'app/api': 'HTTP route handlers — session and health.',
+  'app/login': 'Sign-in: Firebase email/password, then a session cookie.',
+  'components/shell': 'The application shell: sidebar, navigation, topbar.',
   'components/ui':
     'The primitive component set the rest of the UI is built from.',
+  'features/aisa':
+    'The AISA read model: zod mirrors of the Firestore contract, repos, labels, and the server actions that call `aisa-api`.',
   'features/_template':
     'The copy-me entity template. Excluded from the normal typecheck, checked separately.',
-  'features/asset':
-    'The worked example entity, wired through every seam at once.',
-  'lib/actions':
-    'Server actions that belong to no single feature: account, password, impersonation.',
-  'lib/ai': 'The inference seam: provider, model choice, config.',
+  'lib/aisa-api':
+    'The server-only client for the Python `aisa-api`: config, fetch, and outcome shape.',
   'lib/api':
     'The HTTP contract: response envelope, error taxonomy, correlation id, typed client fetcher.',
-  'lib/audit': 'The account audit trail.',
-  'lib/auth': 'Sessions, claims, roles, guards, revocation, impersonation.',
+  'lib/auth': 'The session DAL, roles and capabilities, guards.',
   'lib/data':
     'The data path shared by every entity: the action contract, converters, pagination, counters, timestamps, batching.',
   'lib/env': 'Environment configuration and the boot-time capability manifest.',
-  'lib/export':
-    'Handing a human a file: CSV, spreadsheet, PDF, and the download seam.',
   'lib/firebase':
     'SDK bootstrap for both runtimes, plus the typed collection accessors.',
   'lib/format': 'Display formatting: currency, dates, numbers, locale.',
-  'lib/http': 'Rate limiting, origin checks, and content-disposition handling.',
-  'lib/list-toolbar':
-    'The shared search, filter and scope toolbar for list views.',
+  'lib/http': 'Rate limiting and origin checks.',
   'lib/log': 'The structured logger and its levels.',
   'lib/observability':
     'Error monitoring: config and the field allow-list that decides what may leave.',
   'lib/repos': 'Repositories no single feature owns.',
   'lib/schemas': 'Schemas no single feature owns.',
-  'lib/storage': 'The object-storage seam: keys, limits, the upload contract.',
   'scripts/docs': 'The documentation gate and this generator.',
   'scripts/migration': 'The migration runner and its template.',
   'scripts/snapshot': 'Database export and restore.',
   'scripts/structure': 'The architecture gate.',
+  'services/api':
+    'aisa-api: the FastAPI service every dashboard write goes through, and the Pydantic models the Firestore contract mirrors.',
   'test/builders': 'Fixture builders shared by suites.',
   'test/integration': 'Emulator-backed tests.',
   'test/stubs': 'Module stubs the unit runner substitutes.',

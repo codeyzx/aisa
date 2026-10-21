@@ -8,10 +8,6 @@
 #   - It does NOT build. A server runs an artifact somebody reviewed and pushed,
 #     not whatever is in the working tree. Adding a `build:` key here quietly
 #     reintroduces "it worked on the box I deployed from".
-#   - It does NOT run a storage backend. The local stack bundles SeaweedFS with a
-#     credential committed to this repo in plaintext; that is a fixture, not a
-#     product. Production points `S3_*` at a real bucket — R2, MinIO you operate,
-#     any S3 — and `lib/storage/s3.ts` never learns which.
 #   - It does NOT put `.env` into the CONTAINER. Container environment comes from
 #     `.env.production` and nothing else (`env_file:` below); `.env` is a
 #     developer's file, gitignored precisely because it is nobody else's.

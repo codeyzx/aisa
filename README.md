@@ -1,43 +1,36 @@
 # AISA
 
-> Titik-mulai untuk aplikasi web **internal** Aixel: fondasi yang sudah dibuktikan —
-> sign-in, role, jalur data typed, sampai container deploy — supaya hari pertama kamu
-> sudah menulis kode domain, bukan mengulang dua minggu pertama yang sama.
+> Dashboard manajer **AISA**: membaca data proposal dari Firestore di sisi server,
+> mengirim setiap perubahan ke `aisa-api` (Python), dan dimasuki manajer lewat akun
+> Firebase Auth (email + kata sandi). Dibangun di atas starter Next.js + Firestore Aixel.
 
 <!-- readme:product -->
 
 ## Product
 
-- **Masalah** — setiap aplikasi internal butuh jawaban yang sama di awal: sign-in yang
-  otoritasnya di server, model role, jalur data yang typed, upload file, export, dan
-  deploy. Menjawabnya ulang tiap project menghasilkan aplikasi yang beda-beda tipis
-  persis di tempat yang mahal kalau beda.
-- **Untuk** — developer Aixel yang memulai aplikasi internal baru, developer yang
-  melanjutkan aplikasi hasil fork-nya, dan coding agent yang bekerja di keduanya.
-- **Outcome** — kamu **menyalin** repo ini dan dia jadi milikmu. Bukan dependency,
-  jadi tidak ada upstream yang bisa merusakmu dan tidak ada batas seberapa jauh kamu
-  boleh menyimpang. Yang diwariskan dan tidak dipunya project kosong adalah **bukti**:
-  jalur yang biasanya baru gagal di production sudah dijaga di sini.
-- **Workflow utama** — semuanya jalur yang didokumentasikan, bukan janji: jalan lokal
-  sampai sesi terautentikasi ([tutorial](docs/tutorials/local-development.md)),
-  mengganti identitas dan membuang yang tidak dipakai
-  ([adapt](docs/how-to/adapt-starter.md)), menambah entitas domain lewat kontrak
-  `schema → repo → action` ([add feature](docs/how-to/add-feature.md)), memverifikasi
-  perubahan ([verify](docs/how-to/verify-change.md)), lalu membangun dan menjalankan
-  artefak container ([deploy](docs/how-to/deploy.md)).
-- **Termasuk** — Firebase Auth dengan session cookie httpOnly dan RBAC berbasis
-  capability, jalur data typed di atas Firestore, dan kapabilitas **opsional** yang
-  tiap satunya punya contoh jalan dan bisa dihapus utuh: storage, AI, export,
-  realtime. Yang punya env sendiri terdaftar di
-  [capability reference](docs/reference/capabilities.md); yang tidak (export, realtime)
-  hidup-matinya ditentukan capability RBAC dan keberadaan kodenya, dan tiap satunya
-  punya kontrak sendiri di [docs/reference/contracts/](docs/reference/contracts/).
-- **Tidak termasuk** — ini **bukan aplikasi jadi**: surface demo di
-  `app/(app)/(examples)/` ada untuk membuktikan kapabilitasnya bekerja dan memang
-  dirancang untuk dihapus sekali potong, dan entitas `assets` adalah contoh referensi,
-  bukan domain bisnis kamu. Bukan multi-tenant, bukan untuk trafik publik anonim,
-  bukan framework atau design system yang membungkus Next.js, dan bukan spec yang
-  harus dipatuhi — menyesuaikannya memang yang diharapkan.
+- **Masalah** — manajer butuh satu tempat untuk melihat proposal yang dinilai AI,
+  menanggapinya, dan mengatur aturan penilaian, tanpa menyentuh Firestore atau layanan
+  Python secara langsung.
+- **Untuk** — manajer program (akun Firebase dengan klaim `role`), developer yang
+  merawat dashboard ini, dan coding agent yang bekerja di dalamnya.
+- **Outcome** — halaman Hari ini, Proposal, Tren, Aktivitas, Riwayat, dan Pengaturan
+  yang membaca Firestore di server; setiap tombol yang mengubah data memanggil
+  `aisa-api` lewat server action dengan header `X-AISA-Key`, jadi Next tidak pernah
+  menulis data AISA ke Firestore.
+- **Workflow utama** — jalan lokal sampai masuk ke dashboard
+  ([tutorial](docs/tutorials/local-development.md)), memverifikasi perubahan
+  ([verify](docs/how-to/verify-change.md)), lalu membangun dan menjalankan artefak
+  container ([deploy](docs/how-to/deploy.md)).
+- **Termasuk** — sign-in Firebase email/password yang ditukar menjadi session cookie
+  Firebase httpOnly (diverifikasi dengan cek pencabutan di setiap request), RBAC
+  berbasis capability dari klaim `role` (`aisa:read`, `aisa:respond`,
+  `aisa:configure`), pembacaan Firestore yang typed, dan error monitoring opsional.
+  Yang punya env sendiri terdaftar di
+  [capability reference](docs/reference/capabilities.md).
+- **Tidak termasuk** — pendaftaran akun, manajemen pengguna, serta reset atau ganti
+  kata sandi dari UI (akun dan klaim `role` dibuat di luar aplikasi — lihat
+  [deploy](docs/how-to/deploy.md)). Bukan multi-tenant dan bukan untuk trafik publik
+  anonim.
 
 Alasan lengkap di balik bentuknya ada di
 [product context](docs/explanation/product-context.md).
@@ -51,10 +44,14 @@ Alasan lengkap di balik bentuknya ada di
 - **Node 24.18.0, persis** — `.node-version` adalah sumber yang dibaca version manager
   (fnm, nvm, asdf, nodenv, mise).
 - **pnpm** — jangan `npm`; lockfile-nya punya pnpm.
-- **Docker atau Podman, opsional** — hanya untuk backend S3 lokal (SeaweedFS). Tanpa
-  itu app tetap boot; yang mati cuma upload/download file.
-- **Tidak ada database yang perlu dipasang** — Firestore dan Auth itu hosted service,
+- **Docker atau Podman, opsional** — hanya untuk pemeriksaan container
+  (`pnpm smoke:image`, `pnpm test:e2e:ci`) dan stack compose.
+- **Tidak ada database yang perlu dipasang** — Firestore itu hosted service,
   penggantinya di lokal adalah Firebase emulator suite yang jalan langsung di host.
+- **`aisa-api` untuk menulis** — server menolak boot tanpa `AISA_API_URL` dan
+  `AISA_API_KEY`. Isi `AISA_API_KEY` di `.env` dengan kunci yang dipakai `aisa-api`
+  lokalmu (`services/api/`); halaman tetap bisa dibaca tanpa layanan itu, tombol yang
+  mengubah data tidak.
 - **Linux** adalah platform yang repo ini punya buktinya (itu yang dijalankan CI dan
   itu bentuk container-nya). macOS diperkirakan jalan tapi tidak diuji; di Windows
   pakai WSL2.
@@ -73,10 +70,10 @@ Mau emulator tetap hidup di terminal terpisah — supaya server bisa restart tan
 mematikan emulator? Jalankan `pnpm emulators` di satu terminal, lalu `pnpm dev:next`
 (cuma `next dev`) di terminal lain.
 
-**Berhasil kalau**: <http://localhost:3000> membawa kamu ke `/login`, kamu masuk pakai
-akun test yang **dicetak sendiri oleh `pnpm setup:local`** di akhir jalannya, dan kamu
-sampai di aplikasi yang sudah terautentikasi. Akun itu hanya ada di emulator dan tidak
-ditulis ulang di dokumen lain.
+**Berhasil kalau**: <http://localhost:3000> membawa kamu ke `/login`, kamu masuk sebagai
+`manager@aisa.test` dengan kata sandi `password123` (akun emulator yang dibuat
+`pnpm seed` dan dicetak oleh `pnpm setup:local`), dan kamu sampai di `/hari-ini`.
+Akun ini hanya ada di Auth emulator.
 
 `pnpm setup:local` tidak menghapus apa pun, jadi aman diulang kapan saja. Rincian apa
 yang dia kerjakan, cara mengosongkan ulang database lokal, dan apa yang harus dilakukan
@@ -92,7 +89,7 @@ pnpm verify
 ```
 
 Itu gerbang statis + unit + integration + build. Yang **tidak** dia cakup dan tetap
-harus kamu jalankan sendiri: sign-in di browser lewat emulator, env fail-fast, smoke
+harus kamu jalankan sendiri: sign-in di browser lewat emulator, env fail-fast saat boot, smoke
 artefak container produksi, dan suite E2E (`pnpm test:e2e:ci`). Hijau perlu, tapi tidak
 pernah cukup — prosedur lengkapnya di
 [verify a change](docs/how-to/verify-change.md).
@@ -127,6 +124,6 @@ ada di [maintain a project README](docs/how-to/maintain-project-readme.md).
 
 ## Deployment
 
-Target deploy-nya **container self-hosted** (`Containerfile` + `compose.prod.yaml`),
-bukan platform serverless. Runbook-nya di [deploy](docs/how-to/deploy.md), alasannya di
+Artefaknya satu **image container** (`Containerfile`) yang dijalankan di Cloud Run;
+`compose.prod.yaml` adalah contoh menjalankannya di host sendiri. Runbook-nya di [deploy](docs/how-to/deploy.md), alasannya di
 [deployment model](docs/explanation/deployment-model.md).

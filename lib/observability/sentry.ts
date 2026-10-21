@@ -22,8 +22,7 @@ import { getObservabilityConfig } from './config'
  *     header on the scope, and `requestDataIntegration` copies them onto
  *     `event.request.headers` VERBATIM. The deny-list filtering in
  *     `@sentry/core` runs on the SPAN path only, not the event path — so with
- *     tracing off, the `cookie` header (this app's `__session` Firebase session
- *     token) would ship intact. That single fact is why `beforeSend` below is
+ *     tracing off, the `cookie` header (this app's signed `session` cookie) would ship intact. That single fact is why `beforeSend` below is
  *     not defensive garnish.
  *   - `event.request.url` / `request_path` carry the QUERY STRING, which in this
  *     app can hold a search term, an id, or a future one-time token.
@@ -68,7 +67,7 @@ function redactEmails(text: string): string {
  * future integration adds, or one someone attaches in a hurry — is dropped.
  *
  * Each is non-personal by construction: a correlation UUID, a capability string
- * like `asset:write`, a closed error code. Deliberately NO uid and no email —
+ * like `admin:users:manage`, a closed error code. Deliberately NO uid and no email —
  * "which user" is answerable from the server log via the cid, and stays there.
  */
 const ALLOWED_TAG_KEYS = new Set(['cid', 'capability', 'code'])

@@ -15,12 +15,15 @@ this tutorial can touch a real project.
   are actually running is a different one — a local "it worked for me" on the wrong
   runtime is not evidence about the shipped image.
 - **pnpm.** Never `npm` — the lockfile is pnpm's.
-- **Docker or Podman, optional.** Only the local S3 backend (SeaweedFS) needs it.
-  Without a container engine the app still boots; file upload and download are the
-  only things that stop working.
-- **No database to install.** Firestore and Auth are hosted services; their local
-  substitute is the Firebase emulator suite, which runs directly on the host and is
-  deliberately absent from every compose file.
+- **Docker or Podman, optional.** Only the container checks (`pnpm smoke:image`,
+  `pnpm test:e2e:ci`) and the compose stack need one.
+- **No database to install.** Firestore is a hosted service; its local substitute is
+  the Firebase emulator suite, which runs directly on the host and is deliberately
+  absent from every compose file.
+- **A reachable `aisa-api` for writes.** Every button that changes data calls the
+  Python service in `services/api/` (its own README says how to run it). The server
+  will not boot without `AISA_API_URL` and `AISA_API_KEY`; reads work without the
+  service running, writes do not.
 
 ### Platform
 
@@ -49,16 +52,19 @@ This also installs the repo's git hooks (`scripts/install-hooks.ts` runs from
 pnpm dev
 ```
 
-Open **http://localhost:3000** and sign in at `/login`.
+Open **http://localhost:3000** and sign in at `/login` as `manager@aisa.test` with
+password `password123` (a seeded emulator account).
 
 `pnpm dev` does three things in one process:
 
 1. Starts the Firebase emulators under `demo-aisa`. Ports come from `firebase.json`:
-   **Auth on 9099**, **Firestore on 8080**, and the **emulator UI on 4000**. The data
+   **Auth on 9099**, **Firestore on 8080**, and the **emulator UI on 4000**. The app
+   does not use the Auth emulator; it runs because the data scripts' safety fence
+   checks both emulator hosts. The data
    is kept in `.emulator-data/` (git-ignored) via `--import`/`--export-on-exit`, so
    anything you make through the UI survives a restart.
-2. Runs `pnpm setup:local` — creates `.env`, starts the object-storage container, and
-   seeds only when the database is empty (see the next section).
+2. Runs `pnpm setup:local` — creates `.env` if there is none and seeds only when the
+   database is empty (see the next section).
 3. Starts `next dev` with hot reload.
 
 Ctrl+C exports the emulator data and tears the emulators down.
@@ -80,42 +86,31 @@ can run the two terminals in either order.
 ### What `setup:local` did
 
 It is **non-destructive by contract** — it deletes nothing: not your `.env`, not
-emulator data, not a bucket. That is what makes it safe to re-run any time you want
-to check your setup. Concretely:
+emulator data. That is what makes it safe to re-run any time you want to check your
+setup. Concretely:
 
 - **Creates `.env` from `.env.example`**, and only from there — never over an
-  existing `.env`. This is _not_ the same as `cp .env.example .env`. `.env.example`
-  ships `IMPERSONATION_SECRET` **empty** on purpose, and `setup:local` fills that one
-  line with 32 random bytes generated on your machine. Copy the file by hand instead
-  and the app refuses to boot, naming the variable.
-- **Starts SeaweedFS** through compose. Without a container engine it carries on
-  regardless.
-- **Seeds the emulator**, choosing between three states so that nothing you made
-  through the UI is ever destroyed:
-  - `assets` collection empty → run the full `pnpm seed` (its collection clear then
-    has nothing to clear).
-  - assets present but **zero Auth accounts** → upsert the accounts only; no document
-    is written.
-  - both present → report the counts and touch nothing.
-- **Prints the test accounts**, read back out of the emulator.
+  existing `.env`. The example is a working local-emulator config, including dummy
+  public Firebase values and the browser's Auth emulator host.
+- **Leaves `AISA_API_KEY` empty.** Set it to the key your local `aisa-api` expects;
+  until it is set the app refuses to boot.
+- **Seeds the emulator only when it is fresh** — when there is no `settings/rules`
+  document, it runs `pnpm seed` (accounts and data); otherwise it reports that AISA
+  data is present and only restores the accounts if the Auth emulator has none.
 
-### The test accounts
+### Signing in
 
-- `admin@aixel.test` — role `admin`
-- `user@aixel.test` — role `user`
-- password `password123` for both
-
-They exist **only in the emulator**, and the password is published in this repo on
-purpose. A fresh seed also writes 30 example assets — enough that the list pages past
-its first page.
+The seed creates two Auth emulator accounts, both with password `password123`:
+`manager@aisa.test` (role `admin`) and `viewer@aisa.test` (role `user`, read-only).
+They exist only in the emulator. The browser signs in against the Auth emulator
+because `.env` sets `NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST`; real accounts are
+covered in [deploy](../how-to/deploy.md).
 
 ## Looking around
 
-The signed-in app is at `/` and the demos live under the `Contoh` navigation section:
-the `assets` list and form (the one entity wired through every seam at once), plus one
-example per optional capability — state, storage, AI, export, and realtime. Delete
-that whole route group when you start a real project; see
-[the adapt-starter how-to](../how-to/adapt-starter.md).
+The signed-in app lands on `/hari-ini`. The seed writes fake AISA data — proposals in
+every category, jobs with steps, history, fourteen days of stats, a digest and the
+scoring rules — so every page has something to show.
 
 ## Starting over
 
@@ -135,18 +130,17 @@ emulators.
 
 ## If you call `pnpm seed` yourself
 
-Two things to know. It is **destructive** — it clears the entire `assets` collection
-before rewriting its fixtures — and it does **not** load `.env` (plain `node` does not
-read `.env`, unlike `setup:local` and `db:reset`, which load `.env.local` and `.env`
-themselves). So pass the emulator hosts inline:
+It writes every seed document with `set` on a fixed id, so it overwrites those
+documents (and any edits you made to them) and leaves everything else alone. It does
+**not** load `.env` (plain `node` does not read `.env`, unlike `setup:local` and
+`db:reset`, which load `.env.local` and `.env` themselves). So pass the emulator hosts
+inline:
 
 ```bash
 FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
   FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 \
   pnpm seed
 ```
-
-`pnpm setup:local` exists so you do not have to take that risk.
 
 ## When something is off
 
@@ -156,8 +150,9 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 \
 - **The app refuses to boot and names an environment variable** — that is the boot
   fail-fast doing its job. It reports every misconfigured group at once. See
   [the configuration reference](../reference/configuration.md).
-- **Uploads fail** — SeaweedFS is not up. Re-run `pnpm setup:local`, or bring the
-  local stack up yourself with `docker compose up --build`.
+- **A button fails while pages render** — the write went to `aisa-api` and did not
+  succeed. Check the service is running at `AISA_API_URL` and that `AISA_API_KEY`
+  matches what it expects.
 
 ## Next
 

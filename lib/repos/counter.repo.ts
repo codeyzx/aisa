@@ -21,10 +21,6 @@ import { CounterSchema, type Counter } from '@/lib/schemas/counter.schema'
  * the read-modify-write. The FORMAT half is deliberately not here — it is pure,
  * and this file sits behind `server-only` and the credential boundary. See
  * lib/data/counters.ts.
- *
- * There is deliberately NO example surface. The only demo entity is `assets` and
- * `AssetSchema` has no `code` field, so exampling this would mean reshaping the
- * assets vertical — which belongs to the reference feature, not here.
  */
 
 /**

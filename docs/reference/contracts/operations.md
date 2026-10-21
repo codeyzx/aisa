@@ -2,7 +2,7 @@
 
 - Type: normative contract (reference)
 - Owns: the operational contract of the shipped artifact — process signals and drain, health semantics, what a reverse proxy MUST and MUST NOT do, request and body limits, log format, and build identity
-- Source of truth: `Containerfile`, `compose.prod.yaml`, `app/api/health/route.ts`, `lib/http/origin.ts`, `lib/api/response.ts`, `lib/log/index.ts`, `lib/storage/limits.ts`, `lib/env/server.ts`, `instrumentation.ts` / `instrumentation-node.ts`
+- Source of truth: `Containerfile`, `compose.prod.yaml`, `app/api/health/route.ts`, `lib/http/origin.ts`, `lib/api/response.ts`, `lib/log/index.ts`, `features/aisa/aisa.limits.ts`, `next.config.ts`, `lib/env/server.ts`, `instrumentation.ts` / `instrumentation-node.ts`
 - Verified by: `pnpm smoke:image` (non-root, static assets, build identity, headers, health, `no-store`, SIGTERM shutdown) and `pnpm test:e2e:ci` (the browser suite against the production container)
 - Read when: standing up a proxy, writing an orchestrator manifest, wiring alerting or log shipping, or diagnosing a deploy that looks healthy but signs nobody in
 - Does not define: how to build, run or roll out the image — that procedure is [deploy](../../how-to/deploy.md); why the deployment is shaped this way is [the deployment model](../../explanation/deployment-model.md); which env var each capability requires is [configuration](../configuration.md)
@@ -44,7 +44,7 @@ the file that owns it is named.
   answer a question node already answers would grow the artifact's attack surface. Compose
   inherits it; nothing restates it.
 - The healthcheck's start period exists because boot legitimately is not-yet-listening:
-  `instrumentation.ts` validates configuration first and **exits 1** rather than serving
+  `instrumentation-node.ts` validates configuration first and **exits 1** rather than serving
   misconfigured. A container that keeps restarting at boot is telling you a variable is missing —
   read the `[boot]` line, which names every failure at once.
 
@@ -56,10 +56,10 @@ the file that owns it is named.
   looks perfectly healthy on every other page and on the health probe. The CSRF check that reads
   it, and everything about how it reads it, is owned by [http-api](http-api.md).
 - **No other forwarded header is trusted.** `x-forwarded-for` and friends are client-controlled
-  here — the rate limiter is keyed on a resolved uid, never an IP, for exactly this reason — so a
+  here — the rate limiter is keyed on a fixed server-side name, never an IP, for exactly this reason — so a
   proxy cannot establish identity on the app's behalf, and a missing proxy cannot be forged
   around.
-- The container serves **plain HTTP on `:3000`**. TLS is terminated by whatever sits in front;
+- The container serves **plain HTTP on `$PORT`** (default `3000`; Cloud Run injects its own). TLS is terminated by whatever sits in front;
   there is no certificate in the image and no HTTPS listener to configure.
 - **You do not need to set `X-Forwarded-Proto`.** The origin check does not compare scheme (see
   [http-api](http-api.md)), and nothing in the app builds an absolute URL today. A fork that adds
@@ -73,14 +73,15 @@ the file that owns it is named.
 
 ## Request and body limits
 
-- **Uploaded bytes never transit the app.** The browser presigns and then `PUT`s straight to
-  object storage; the form submits only the resulting key. So the attachment ceiling in
-  `lib/storage/limits.ts` is **not** a body-size question for the app server or the proxy — do
-  not raise a proxy body limit to accommodate it. See [storage](storage.md).
-- Server Actions cap the request body at **1 MB** by default (Next's own limit, to bound parsing
-  work). Nothing in this app posts near it, precisely because of the point above. A fork that
-  adds a field which does has one knob: `experimental.serverActions.bodySizeLimit` — and the
-  limit counts multipart framing overhead as well as the payload.
+- **Pitch-deck PDFs transit the app as a Server Action body.** "Unggah pitch deck" posts the
+  file to `uploadDeckAction`, which forwards it to `aisa-api`. Decks are capped at 20 MB
+  (`MAX_DECK_BYTES`, `features/aisa/aisa.limits.ts`), and `next.config.ts` raises both
+  `experimental.serverActions.bodySizeLimit` and `experimental.proxyClientMaxBodySize` to
+  `21mb` to cover that plus multipart overhead. Without them a deck over 1 MB is refused by the
+  action, and one over 10 MB is truncated by the proxy's body buffer and reaches `aisa-api` as a
+  corrupt PDF.
+- **A reverse proxy in front must allow the same body size**, or it refuses the upload before
+  the app sees it. Raise the deck cap, and you raise all three together.
 - **There is no application-level request timeout.** Bound it where it belongs: at the proxy, and
   at the orchestrator's grace period above.
 
@@ -100,9 +101,7 @@ the file that owns it is named.
   `env`.
 - The audit stream (`lib/data/audit.ts`) is an application **event stream, not durable
   tamper-evident storage** — nothing here retains, signs, or can prove the completeness of those
-  lines. Shipping and retaining them is the deployer's responsibility. The account-administration
-  trail is a different thing and lives in Firestore (`lib/audit/account-audit.repo.ts`), so "who
-  disabled this account" is answerable from the product rather than from log retention.
+  lines. Shipping and retaining them is the deployer's responsibility.
 
 ## Build identity
 

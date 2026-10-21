@@ -19,7 +19,7 @@
  *   nothing.
  *
  * Generic on purpose: the ALGORITHM lives here; WHICH fields feed it is the
- * feature's call (`features/asset/*` derives from `code` + `name`). Pure and
+ * feature's call (e.g. a `code` + `name` pair). Pure and
  * isomorphic — the repo derives the field server-side, the URL layer normalises
  * the query with the same rules, neither drags in server-only code.
  */

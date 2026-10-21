@@ -74,7 +74,7 @@ Each collection is one file, `<dir>/<collectionId>.json`:
   "format": 1,
   "generatedAt": "2026-07-18T09:30:00.000Z",
   "project": "demo-aisa",
-  "collection": "assets",
+  "collection": "proposals",
   "count": 25,
   "docs": [{ "id": "<docId>", "data": { "…encoded fields…" } }]
 }
@@ -93,7 +93,7 @@ document id.
   "format": 1,
   "generatedAt": "2026-07-18T09:30:00.000Z",
   "project": "demo-aisa",
-  "collections": [{ "id": "assets", "count": 25 }]
+  "collections": [{ "id": "proposals", "count": 25 }]
 }
 ```
 
@@ -101,6 +101,6 @@ document id.
 
 Export enumerates via `db.listCollections()`, which returns **root** collections.
 Sub-collections nested under a document are **out of scope** — not walked on export,
-not restored. The boilerplate's data model is flat (`assets`, `counters`,
-`_migrations`, …), so this matches the data it ships with; a nested model would need
-a recursive walk this deliberately does not do.
+not restored. AISA's `jobs/{id}/steps` is such a sub-collection, so a snapshot
+carries job cards without their steps; a full copy would need a recursive walk this
+deliberately does not do.

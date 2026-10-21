@@ -52,7 +52,7 @@ on it.
 Three commands and one observable result. Everything longer moves to the owning
 tutorial or how-to and gets a link. Specifically:
 
-- Setup detail and test accounts → [local development](../tutorials/local-development.md).
+- Setup detail and the local sign-in password → [local development](../tutorials/local-development.md).
 - The verification chain and what it does not cover → [verify a change](verify-change.md).
 - Deployment → [deploy](deploy.md).
 - Renaming and deleting → [adapt the starter](adapt-starter.md).

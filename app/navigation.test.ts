@@ -29,38 +29,18 @@ describe('application navigation', () => {
     }
   })
 
-  it('has no Admin sidebar item — impersonation moved to the user dropdown', () => {
-    // The product decision: the Admin nav entry is gone, but `/admin` stays a
-    // guarded route (its own direct/no-JS fallback) — just not a sidebar link.
+  it('has no Admin sidebar item', () => {
+    // `/admin` stays a guarded route reachable directly — just not a sidebar link.
     expect(hrefs(APP_NAV_SECTIONS)).not.toContain('/admin')
   })
 
-  it('shows an admin every capability-gated destination', () => {
-    const visible = hrefs(filterNavByRole(APP_NAV_SECTIONS, 'admin'))
-    expect(visible).toEqual(
-      expect.arrayContaining([
-        '/dashboard',
-        '/assets',
-        '/ai',
-        '/export',
-        '/storage',
-        '/realtime',
-        '/state',
-      ]),
-    )
-  })
-
-  it('hides admin-only demos from a plain user, keeps the read-only ones', () => {
-    // `user` holds asset:read + storage:read only, so the derivation must let
-    // through exactly the read halves and refuse the write/export ones.
-    const visible = hrefs(filterNavByRole(APP_NAV_SECTIONS, 'user'))
-    expect(visible).toContain('/dashboard') // null capability — any session
-    expect(visible).toContain('/assets') // asset:read
-    expect(visible).toContain('/realtime') // asset:read
-    expect(visible).toContain('/state') // asset:read
-    expect(visible).not.toContain('/ai') // asset:write
-    expect(visible).not.toContain('/export') // export:read (admin-only)
-    expect(visible).not.toContain('/storage') // storage:write (admin-only)
+  it('shows every role the Hari ini landing page', () => {
+    // Both roles hold `aisa:read`, the landing page's guard.
+    for (const role of ROLES) {
+      expect(hrefs(filterNavByRole(APP_NAV_SECTIONS, role))).toContain(
+        '/hari-ini',
+      )
+    }
   })
 
   it('never renders a section left empty by filtering', () => {

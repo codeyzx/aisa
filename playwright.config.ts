@@ -2,7 +2,7 @@
  * Playwright config for the E2E suite in `e2e/`.
  *
  * SCOPE, deliberately small: health, sign-in, the anonymous redirect, the admin
- * guard, the asset list/create/edit round trip, and ONE no-JavaScript flow. These
+ * guard, and ONE no-JavaScript flow. These
  * are the paths where a beginner forking this starter would not notice a break
  * until a user did. Everything else is covered cheaper by the unit and emulator
  * suites, and a big browser suite that nobody runs is worse than a small one that
@@ -13,9 +13,10 @@
  *
  * WHAT IT NEEDS RUNNING (all three, or every test fails at sign-in):
  *   1. `pnpm emulators` — the browser signs in against the Auth emulator DIRECTLY
- *      (lib/firebase/client-auth.ts), and the server verifies the session against
- *      it too.
- *   2. `pnpm seed` — the accounts the tests sign in as (scripts/_seed-users.ts).
+ *      (lib/firebase/client-auth.ts), and the server verifies the session and
+ *      reads Firestore against the emulators too.
+ *   2. `pnpm seed` — the accounts the tests sign in as (scripts/_seed-users.ts)
+ *      and the fake AISA data the pages render (scripts/_seed-aisa.ts).
  *   3. an app on `E2E_BASE_URL`. This config starts NOTHING — see `e2e/target.ts`
  *      for why, and use `pnpm test:e2e:ci` to get all three at once.
  *
@@ -30,11 +31,13 @@ import { BASE_URL } from './e2e/target.ts'
 
 export default defineConfig({
   testDir: './e2e',
-  // ONE worker, and this is not timidity: the specs create and edit assets in a
-  // SHARED Firestore emulator, so parallel workers would race over the same
+  // ONE worker, and this is not timidity: the specs write to a SHARED emulator
+  // (the no-JS flow creates an account), so parallel workers would race over the same
   // collection and the failure would look like a product bug rather than a test
   // one. Parallelism is worth buying back only with per-worker data isolation,
-  // which is a bigger machine than this suite justifies.
+  // which is a bigger machine than this suite justifies. `pnpm test:e2e:ci`
+  // buys it back across PROCESSES instead: each shard of `scripts/e2e-fast.ts`
+  // is its own Playwright run against its own Firestore emulator.
   workers: 1,
   fullyParallel: false,
   // `.only` left in a spec passes locally and silently narrows CI to one test.
@@ -70,6 +73,7 @@ export default defineConfig({
   //   - even on the intended path it served whatever stale `.next` happened to be
   //     on disk, with nothing tying the run to the working tree.
   //
-  // `pnpm test:e2e:ci` (scripts/e2e-container.ts) owns the lifecycle instead: it
-  // builds the image, runs THAT, and points this config at it.
+  // `pnpm test:e2e:ci` (scripts/e2e-fast.ts, running scripts/e2e-container.ts
+  // once per shard) owns the lifecycle instead: it builds the image, runs THAT,
+  // and points this config at it.
 })

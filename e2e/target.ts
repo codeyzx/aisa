@@ -1,17 +1,15 @@
 /**
  * WHERE the E2E suite points, and the fence that keeps it pointed somewhere safe.
  *
- * One module, two consumers — `playwright.config.ts` (for `use.baseURL`) and the
- * specs that build a browser context by hand (`unhydrated.spec.ts` and
- * `admin-create-no-js.spec.ts`, which cannot inherit `use.baseURL`). A second
- * copy of the origin would be a literal to keep in sync, and the copy that
- * drifted would be the one pointing the suite at nothing.
+ * One module, read by `playwright.config.ts` (for `use.baseURL`) and by any spec
+ * that builds a browser context by hand. A second copy of the origin would be a
+ * literal to keep in sync, and the copy that drifted would be the one pointing
+ * the suite at nothing.
  *
- * THIS SUITE IS A WRITE PATH, and that is the whole reason for the fence below.
- * It signs in as a seeded account with a password this repo publishes
- * (`scripts/_seed-users.ts`) and it CREATES AND EDITS assets. Pointed at a real
- * environment it would authenticate — the seed script is the documented way forks
- * make accounts — and write real documents, permanently, with no cleanup.
+ * THIS SUITE CAN BE A WRITE PATH, and that is the whole reason for the fence
+ * below. It signs in with the dashboard password, and a spec that clicks a
+ * response button changes real data. Pointed at a real environment it would
+ * write real documents, permanently, with no cleanup.
  *
  * The repo already models this: `scripts/_safety.ts` is the safety manifest, and
  * `requireEmulatorTarget` is the gate that makes a destructive script provably
@@ -25,8 +23,9 @@
  * HOW TO RUN IT:
  *
  *   pnpm test:e2e:ci
- *     The full local equivalent of CI: starts the emulators, seeds them, builds
- *     the production IMAGE, runs the suite against the container, tears down.
+ *     The full local equivalent of CI: builds the production IMAGE, starts and
+ *     seeds the emulators, runs the suite split over shards — one container
+ *     and one Firestore emulator each (`scripts/e2e-fast.ts`) — and tears down.
  *
  *   E2E_BASE_URL=http://localhost:3000 pnpm test:e2e
  *     Drive an app you started yourself (`pnpm dev`, or a container). Playwright
@@ -41,7 +40,10 @@
  * name your target.
  */
 
-/** Host port `pnpm test:e2e:ci` publishes the container on. */
+/**
+ * Host port `pnpm test:e2e:container` runs the container on. `pnpm test:e2e:ci`
+ * sets it per shard (3201 upward).
+ */
 export const E2E_PORT = process.env.E2E_PORT ?? '3100'
 
 /**
@@ -73,8 +75,8 @@ function resolveBaseUrl(): string {
   if (!LOOPBACK_HOSTS.has(host)) {
     throw new Error(
       `Refusing to run: E2E_BASE_URL points at ${host}, which is not loopback.\n\n` +
-        'This suite signs in with a published seed password and CREATES AND EDITS\n' +
-        'assets. Against a real environment that is a permanent write with no\n' +
+        'This suite signs in with the dashboard password and can change data.\n' +
+        'Against a real environment that is a permanent write with no\n' +
         'cleanup, performed by a test run nobody was watching.\n\n' +
         'If you genuinely mean to drive a remote deployment, do it with a suite\n' +
         'that owns its own throwaway data — not this one.',

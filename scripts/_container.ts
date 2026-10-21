@@ -1,7 +1,8 @@
 /**
- * Shared plumbing for the two scripts that run the PRODUCTION IMAGE:
- * `smoke-image.ts` (does the artifact hold together?) and `e2e-container.ts`
- * (does a browser get a working app out of it?).
+ * Shared plumbing for the scripts that run the PRODUCTION IMAGE:
+ * `smoke-image.ts` (does the artifact hold together?), and `e2e-container.ts`
+ * with its sharded driver `e2e-fast.ts` (does a browser get a working app out
+ * of it?).
  *
  * Extracted rather than copied because the copy that drifted would be the one
  * that stopped building the artifact under test — a smoke of one image and an
@@ -15,8 +16,14 @@ import { randomBytes } from 'node:crypto'
 
 import { PUBLIC_ENV_FIXTURE } from './public-env-fixture.ts'
 
-/** Tag used for an image these scripts build themselves. */
+/** Tag `smoke-image.ts` builds when it is not handed an image. */
 export const LOCAL_TAG = 'aisa:smoke'
+
+/**
+ * Tag the E2E runners build. Separate from `LOCAL_TAG` because an E2E image is
+ * a different artifact: it carries `E2E_PUBLIC_EXTRAS` in its client bundle.
+ */
+export const E2E_TAG = 'aisa:e2e'
 
 export interface DockerResult {
   status: number
@@ -63,25 +70,43 @@ export function requireDocker(what: string): void {
 }
 
 /**
- * Build the production image from the working tree.
+ * The `NEXT_PUBLIC_*` build arg that makes an image an E2E test artifact: the
+ * browser signs in by talking to the Auth emulator ITSELF
+ * (lib/firebase/client-auth.ts), and it only does that when this host is
+ * inlined into the client bundle. Without it the browser tries real Firebase
+ * with the fixture's dummy API key and every test dies on the login page.
  *
- * The six `NEXT_PUBLIC_*` build args come from the shared fixture unless the
- * caller exported real ones. They are INLINED into the client bundle, so an image
- * built this way is a test artifact and not a deployable one — but the six must be
- * PRESENT, because `next.config.ts` fails the build without them, and proving that
- * path still works is part of what these scripts cover.
+ * `127.0.0.1:9099` is the BROWSER's view: Playwright runs on the host, where the
+ * Auth emulator is bound. Because it is baked in at build time, every run of an
+ * E2E image needs an Auth emulator on exactly this port.
  */
-export function buildProductionImage(options: {
+export const E2E_PUBLIC_EXTRAS = {
+  NEXT_PUBLIC_FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+} as const
+
+export interface BuildOptions {
   tag: string
   sha: string
   builtAt: string
   /**
-   * Extra `NEXT_PUBLIC_*` build args. Only `e2e-container.ts` passes any, and
-   * only to point the BROWSER at the local emulators — see the warning on those
-   * ARGs in the Containerfile. An image built with them is a test artifact.
+   * Extra `NEXT_PUBLIC_*` build args. Only the E2E runners pass any
+   * (`E2E_PUBLIC_EXTRAS`) — see the warning on that ARG in the Containerfile.
+   * An image built with it is a test artifact.
    */
   publicExtras?: Record<string, string>
-}): void {
+}
+
+/**
+ * The full `docker` argv that builds the production image from the working
+ * tree — returned rather than run, so a caller that has other work to do while
+ * the image builds (`e2e-fast.ts`) can spawn it asynchronously.
+ *
+ * The six `NEXT_PUBLIC_FIREBASE_*` build args come from the shared fixture unless
+ * the caller exported real ones. They are INLINED into the client bundle, so an
+ * image built this way is a test artifact and not a deployable one — but the six
+ * must be PRESENT, because `next.config.ts` fails the build without them.
+ */
+export function productionBuildArgs(options: BuildOptions): string[] {
   const buildArgs = [
     ...Object.entries(PUBLIC_ENV_FIXTURE),
     ...Object.entries(options.publicExtras ?? {}),
@@ -113,8 +138,8 @@ export function buildProductionImage(options: {
   const ciLayerCache =
     process.env.GITHUB_ACTIONS === 'true' && process.env.ACT !== 'true'
 
-  const build = ciLayerCache
-    ? docker([
+  return ciLayerCache
+    ? [
         'buildx',
         'build',
         '--load',
@@ -123,22 +148,31 @@ export function buildProductionImage(options: {
         '--cache-to',
         'type=local,dest=/tmp/.buildx-cache-new,mode=max',
         ...commonArgs,
-      ])
-    : docker(['build', ...commonArgs])
-  if (build.status !== 0) {
+      ]
+    : ['build', ...commonArgs]
+}
+
+/** Build the production image (see `productionBuildArgs`); exit 1 on failure. */
+export function buildProductionImage(options: BuildOptions): void {
+  if (docker(productionBuildArgs(options)).status !== 0) {
     console.error('\n`docker build` failed — see the output above.')
     process.exit(1)
   }
+}
+
+/** The short commit the build stamp reports, or `e2e` outside a git checkout. */
+export function shortSha(): string {
+  return (
+    spawnSync('git', ['rev-parse', '--short', 'HEAD'], {
+      encoding: 'utf8',
+    }).stdout?.trim() || 'e2e'
+  )
 }
 
 /**
  * The MINIMUM runtime env `lib/env/registry.ts` accepts, and no more — a run that
  * only works with a fully-populated production `.env` would not tell a deployer
  * which variables the container actually needs.
- *
- * `IMPERSONATION_SECRET` is generated fresh per call (>= 32 chars, as the schema
- * demands). A literal would be a committed signing key for an auth bypass that
- * boots cleanly, which is the one thing `.env.example` refuses to ship.
  *
  * The emulator hosts are the caller's to choose, and the choice is load-bearing:
  * setting them makes `isEmulatorTarget()` read true, which is what lets the
@@ -152,11 +186,10 @@ export function minimalRuntimeEnv(
     FIREBASE_PROJECT_ID: 'demo-aisa',
     FIRESTORE_EMULATOR_HOST: `${emulatorHost}:8080`,
     FIREBASE_AUTH_EMULATOR_HOST: `${emulatorHost}:9099`,
-    S3_ENDPOINT: `http://${emulatorHost}:8333`,
-    S3_BUCKET: 'smoke',
-    S3_ACCESS_KEY_ID: 'smoke',
-    S3_SECRET_ACCESS_KEY: 'smoke',
-    IMPERSONATION_SECRET: randomBytes(32).toString('base64'),
+    // Required at boot. Dummy, test-only values: the container they reach is a
+    // local test artifact talking to emulators.
+    AISA_API_URL: process.env.AISA_API_URL ?? 'http://127.0.0.1:8787',
+    AISA_API_KEY: process.env.AISA_API_KEY ?? 'local-test-key',
   }
 }
 

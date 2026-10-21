@@ -4,7 +4,8 @@
 - Owns: the `schema -> collection -> repo -> action` path every Firestore entity
   follows, and the query cost rules that ride on it (composite indexes, cursors,
   search prefixes, counts)
-- Source of truth: `features/<entity>/*` (reference: `features/asset/*`),
+- Source of truth: `features/<entity>/*` (copy-me: `features/_template/*`; in use:
+  `features/aisa/*`),
   `lib/data/*`, `lib/firebase/collections.ts`, and `firestore.indexes.json`
 - Verified by: `pnpm test && pnpm indexes:check` inside ONE emulator session
   (`pnpm test:emulator`), plus `pnpm templates:check` and `pnpm lint:rules`
@@ -18,10 +19,18 @@
 The contract for how data flows through this starter, for both humans and
 agents. Every entity follows the same four-layer path.
 
+**The AISA feature is the exception on the write side.** `features/aisa/` uses the
+schema, collection and repo layers for READS only. Its actions
+(`features/aisa/aisa.action.ts`) never write Firestore: each one is gated by
+`runAction` and then calls the Python `aisa-api` (`lib/aisa-api/client.ts`, header
+`X-AISA-Key`), which owns every AISA write. The write rules below apply to an
+entity whose documents Next itself writes, such as one copied from
+`features/_template/`.
+
 ## The layers
 
-Every entity's files live together in `features/<entity>/` (reference:
-`features/asset/`) — schema, repo, action, form-opts, and the collection
+Every entity's files live together in `features/<entity>/` (copy-me:
+`features/_template/`) — schema, repo, action, form-opts, and the collection
 binding. `lib/` holds only the shared, domain-agnostic plumbing.
 
 ```
@@ -70,15 +79,14 @@ touching shared plumbing.
   the typed accessor, e.g. in an RSC:
 
   ```ts
-  const snap = await assetsCollection()
-    .where('status', '==', 'retired')
-    .orderBy('createdAt', 'desc')
+  const snap = await proposalsCollection()
+    .where('responded', '==', false)
     .limit(10)
     .get()
   const items = snap.docs.map((d) => d.data()) // already typed + hydrated
   ```
 
-- **MUST NOT** add a pass-through wrapper like `getRetiredAssets()` that only
+- **MUST NOT** add a pass-through wrapper like `getUnansweredProposals()` that only
   hides a single `.where()`. It caps what callers can express and forks a path
   that should stay uniform. The converter already travels with the accessor, so
   the call site loses no type safety by querying directly.
@@ -92,7 +100,7 @@ touching shared plumbing.
 Both live in `lib/firebase/collections.ts`, and both hand back the full Firestore
 query API with the Zod converter bolted on. They differ only in **what they scan**:
 
-- **`typedCollection(path, Schema)`** — one collection at one path (`assets`). The
+- **`typedCollection(path, Schema)`** — one collection at one path (`proposals`). The
   default, and what every feature's `<entities>Collection()` accessor binds. Reach
   for it unless a query genuinely has to cross parents.
 - **`typedCollectionGroup(name, Schema)`** — every sub-collection named `name`
@@ -110,8 +118,10 @@ convenience:
   indexes are all `"COLLECTION"`; a group query is invisible to them).
 - **Keep it top-level** when the entity stands on its own and is usually queried
   globally. A flat collection with a `parentId` field is simpler than a group query
-  and indexes more cheaply. `assets` is top-level for exactly that reason; nothing
-  in the boilerplate nests yet.
+  and indexes more cheaply. `proposals` and `history` are top-level for exactly that
+  reason. The one nested collection, `jobs/{jobId}/steps`, is read per parent through
+  `jobStepsCollection(jobId)` — a `typedCollection` on the nested path — so no group
+  query exists yet.
 
 ## Adding a new entity
 
@@ -128,8 +138,8 @@ What this contract requires of the result, whatever produced it:
 - **The feature owns its collection path.** The dependency-free path constant lives
   in `features/<entity>/<entity>.path.ts` and is bound to the entity schema in
   `features/<entity>/<entity>.collection.ts`, which exports the
-  `<entities>Collection()` accessor (reference: `assetsCollection()` in
-  `features/asset/asset.collection.ts`). Call sites import that accessor from the
+  `<entities>Collection()` accessor (for example `proposalsCollection()` in
+  `features/aisa/aisa.collection.ts`). Call sites import that accessor from the
   feature — never a method off a shared `collections` object, and never a second
   spelling of the path string.
 - **A filtered + ordered list needs its composite index** declared in
@@ -153,9 +163,8 @@ value: z.union([z.number(), z.string().trim().min(1, 'Value is required')])
   .pipe(z.number().int().min(0))
 ```
 
-Worked example: the `value` field in `features/asset/asset.schema.ts`. The base
-`_template` has no numeric field, so this pattern lives here, not in a template
-you copy.
+The base `_template` has no numeric field, so this pattern lives here, not in a
+template you copy.
 
 ## When to gate
 
@@ -173,11 +182,11 @@ you copy.
     `features/<entity>/<entity>.form-opts.ts` (a plain module so both the client
     form and the action import it). An edit form reuses the SAME form component,
     passing the loaded values as `defaultValues` and binding the id
-    (`updateAssetFormAction.bind(null, id)`). Canonical: `createAssetFormAction` +
-    `updateAssetFormAction` + `asset-form.tsx` (create at `assets/new`, edit at
-    `assets/[id]/edit`). Keep the stored-entity-to-form projection in the feature
-    (for example, `assetFormValues`) so optional fields normalize identically
-    wherever the form is rendered.
+    (`update__Entity__FormAction.bind(null, id)`). Canonical:
+    `create__Entity__FormAction` + `update__Entity__FormAction` +
+    `_template.form.tsx` in `features/_template/`. Keep the stored-entity-to-form
+    projection in the feature (`__entity__FormValues` in `_template.form-opts.ts`)
+    so optional fields normalize identically wherever the form is rendered.
     Classify Zod issues with `classifyFormValidationIssues` from `lib/data/` so
     field errors, first-issue precedence, and pathless form errors do not drift
     between features.
@@ -190,7 +199,8 @@ you copy.
     wraps `runAction`.** A typed call returning a discriminated `ActionResult` —
     never throws across the RSC boundary, never redirects, so the caller can
     toast / update optimistically and stay on the page. Canonical:
-    `deleteAssetAction` + its consumer `_components/asset-row-actions.tsx`.
+    `delete__Entity__Action` in the template, and every action in
+    `features/aisa/aisa.action.ts`.
   - Both wrappers are called INSIDE the exported async action (never
     `export const x = runFormAction(...)`): Next only detects a `'use server'`
     export that is syntactically an async function.
@@ -203,19 +213,20 @@ you copy.
 - **Every protected page/RSC calls `requireCapability(capability)` first**, at
   the top, before reading data. Guards own redirects: no session ->
   `/login`, wrong role -> `/403`.
-- Gate reads and writes with matching capabilities (e.g. `asset:read` for the
-  list page, `asset:write` for the create action). The action re-checks authz
+- Gate reads and writes with matching capabilities (e.g. `aisa:read` for the
+  proposal pages, `aisa:respond` for the respond action). The action re-checks authz
   even when the page already did — the action is a public POST endpoint, so it
   is the real security boundary; client-side checks are UX only.
 
 ## Bulk writes (the batch ceiling, and one gate for many rows)
 
 A bulk mutation (multi-delete, multi-archive) is not just "the single op in a
-loop" — it has three rules the single op does not, all shown by
-`deleteAssets` / `deleteAssetsAction`:
+loop" — it has three rules the single op does not. No entity in this tree does a
+bulk Firestore write today (the AISA bulk respond is one `aisa-api` call), so these
+are the rules a new one must follow:
 
 - **Two independent limits, enforced at two layers.** A **product cap**
-  (`ASSET_BULK_DELETE_MAX`, owned by the schema + the selection UI) and
+  (owned by the schema + the selection UI) and
   Firestore's **500-writes-per-batch** infrastructure floor
   (`FIRESTORE_BATCH_LIMIT`, `lib/data/batch.ts`) are different facts. Keep the
   product cap `<=` the floor so a full UI selection always commits in ONE atomic
@@ -274,16 +285,12 @@ indexes:check` requires its index the same way. That is deliberate: it is how
 that can be active alongside it` composite indexes.** Sortability is a bill,
 > not a feature flag — which is why it is opt-in and argued per column.
 
-`/assets` is the worked example. TWO sortable fields (`createdAt` and `value`), two
-directions each, one filter (`status`) — and its bill is **four** indexes:
-
-- `(status ASC, createdAt DESC)` / `(status ASC, createdAt ASC)` — the filtered
-  list, newest and oldest first.
-- `(status ASC, value DESC)` / `(status ASC, value ASC)` — the filtered list by
-  amount, highest and lowest first.
-- Unfiltered, any field, either direction — **free**. The automatic single-field
-  index serves it, because `paginate()` takes both `orderBy` directions from the same
-  `direction` argument, so the `__name__` tiebreaker always matches the sort.
+For one filter and one sortable field in two directions that is two composite
+indexes (`(filter ASC, field DESC)` and `(filter ASC, field ASC)`); a second sortable
+field doubles it, and a second filter doubles the whole table again. Unfiltered,
+any field, either direction, is **free**: the automatic single-field index serves
+it, because `paginate()` takes both `orderBy` directions from the same `direction`
+argument, so the `__name__` tiebreaker always matches the sort.
 
 ### ⚠️ Paging BACKWARD is a second index, even on one sort direction
 
@@ -299,29 +306,22 @@ Firestore serves `limitToLast` by running the query REVERSED, so
 covers it.
 
 So the real bill for a filtered, bidirectionally paged list is **`filter
-combinations × 2`**. `/admin/audit` is the worked example: three optional
-equality filters → seven non-empty combinations → **fourteen** composite indexes
-(`firestore.indexes.json`), and the unfiltered pages stay free in both directions
-because the automatic single-field index serves them.
+combinations × 2`** — three optional equality filters give seven non-empty
+combinations and **fourteen** composite indexes — while the unfiltered pages stay
+free in both directions because the automatic single-field index serves them.
 
 Drive Previous, not only Next. A suite that walks forward only declares half the
 bill, `pnpm indexes:check` reports nothing missing, and the first "Sebelumnya"
 click in production is a `FAILED_PRECONDITION` — the same trap as an undriven
 filter, one step further in.
 
-**ASC and DESC do NOT share an index.** Driving each filtered query shape against the
-emulator's `indexUsage` reports it as its own required entry —
-`(status ASC, createdAt DESC, __name__ DESC)`, `(status ASC, createdAt ASC, __name__ ASC)`,
-and the matching pair on `value` — even though `status` is pinned by equality and a
-reverse index scan looks like it should cover both directions. The same run reports
-**nothing** for the unfiltered pages or for either `count()`.
-
-Adding `value` as a second sortable field is exactly this cost realised: it did not
-add one index, it added two (`firestore.indexes.json`). A second FILTER would double
-the whole table again. "Make every column sortable" is not a safe default on
-Firestore; it is a combinatorial index explosion — which is why the sortable set
-stays two fields and each is argued. Server-owned **search** (below) carries its own,
-separate index family on `searchPrefixes`.
+**ASC and DESC do NOT share an index.** Driving a filtered query shape against the
+emulator's `indexUsage` reports each direction as its own required entry —
+`(status ASC, createdAt DESC, __name__ DESC)` and
+`(status ASC, createdAt ASC, __name__ ASC)` — even though `status` is pinned by
+equality and a reverse index scan looks like it should cover both directions.
+"Make every column sortable" is not a safe default on Firestore; it is a
+combinatorial index explosion, so each sortable field is argued.
 
 - **Nothing in the toolchain catches a missing index by itself.** Not `typecheck`,
   not `lint`, not `build` — and **not the emulator**, which by design "does not
@@ -401,18 +401,18 @@ Two layers keep it right, and both are needed:
   because `?cursor` is reader-supplied view state — the same policy `?status` and
   `?sort` have. A token carrying no `scope` must read as "matches nothing", never
   "matches anything" — a hand-typed URL is the case that rule is for.
-- **The page cannot OFFER a bad link** (`app/(app)/(examples)/assets/search-params.ts`).
-  Every /assets href comes from one module: `assetsPageHref` (next page — keeps the
-  filter and sort) and `assetsViewHref` (new filter/sort — takes
-  `Partial<Omit<AssetsQuery, 'cursor'>>`, so "page 3 of a different sort" is not
-  spellable). Do not hand-build a link to a paginated list beside these.
+- **The page cannot OFFER a bad link** (`features/_template/_template.search-params.ts`).
+  Every list href comes from one module: `__entities__PageHref` (another page —
+  keeps the filter) and `__entities__QueryHref` (a new filter — takes
+  `Partial<Omit<__Entity__ListQuery, 'cursor'>>`, so "page 3 of a different filter"
+  is not spellable). Do not hand-build a link to a paginated list beside these.
 
 ## Server-owned search (prefix `array-contains`)
 
 Search is server-owned like sort and paging: the repo narrows the query, the URL
 carries the term, nothing filters client-side. The scheme is a normalised
 word-prefix `array-contains`, generic in `lib/data/search-prefix.ts`; WHICH fields
-feed it is the feature's call (`features/asset/*` derives from `code` + `name`).
+feed it is the feature's call. No feature in this tree uses it yet.
 
 - **On write**, `toSearchPrefixes(values)` derives a `searchPrefixes` array — every
   prefix of length 2..15 of each normalised word (lowercased, punctuation-split),
@@ -435,26 +435,21 @@ Its limits ARE its contract — name them so nobody expects full-text:
 
 ### Adding a derived field after deployment
 
-`searchPrefixes` is required and every create, update, and seed writes it, so
-`assets` needs no backfill — do not add one, or a runtime readiness gate, for
-data that was never without the field.
-
 When a **deployed** collection gains a derived query field, make the field
 optional temporarily, dual-write it, run an idempotent migration, and only then
 make the query/UI depend on it. `scripts/migration/` ships the dry-run-first
 runner and the copy-me template for that.
 
 Search carries its own composite-index family (`searchPrefixes` CONTAINS combined
-with `status` / `createdAt` / `value` — see `firestore.indexes.json`), separate from
-the sortable-column bill above. And the search term is part of both the cursor
-`scope` and the selection `scope` (`assetScope` = status AND search): a page or a
-bulk selection from one search can never resume or act under another.
+with each filter and sort field), separate from the sortable-column bill above. And
+the search term must be part of the cursor `scope`, so a page from one search can
+never resume under another.
 
 ## Counting rows (the list total)
 
 A cursor page knows how many rows it holds, never how many exist. The total comes
 from a server-side `count()` aggregation — only the number crosses the wire.
-Canonical: `countAssets` in `features/asset/asset.repo.ts`.
+Canonical: `countProposalsSince` in `features/aisa/aisa.repo.ts`.
 
 > **A `count()` has no order. Never give it an `orderBy`.**
 
@@ -468,9 +463,9 @@ cannot affect. With the `orderBy` the emulator's `indexUsage` reports
 - **`count()` is billed** (one read per 1000 documents counted), so spend it where
   a reader sees the number. **Never run two counts to learn one fact:** with no
   filter active `total` IS `filtered`, so an unfiltered list page costs ONE
-  aggregation and a filtered one costs TWO. `/assets` is the worked example.
-- **The count shares the list's filter.** `listAssets` and `countAssets` both build
-  on one `assetsQuery(status)`. This is the case where a repo function earns its
+  aggregation and a filtered one costs TWO.
+- **The count shares the list's filter.** Build the list and its count on one
+  shared query function. This is the case where a repo function earns its
   slot despite the anti-sprawl rule: it is not hiding a `.where()`, it is holding
   the invariant that the denominator and the rows describe the same set. Let them
   drift and the table reports a number for a query it never ran.
@@ -494,103 +489,31 @@ converter. This is deliberate:
 
 ## Removal checklist (deleting an entity)
 
-Deleting the example loses no KNOWLEDGE — the reusable rules it demonstrated live
-in the surviving docs, not in the example: the `schema → repo → action` path and
-its gotchas (required numeric fields, bulk writes, search, composite indexes) are
-in this contract, the attachment lifecycle is generic in
-`lib/storage/attachment-lifecycle.ts` + [storage contract](storage.md), and the
-wiring cookbook is in [add a feature](../../how-to/add-feature.md). The example
-only WIRES what those own.
+An entity has tentacles beyond its feature folder, and a `trash` that stops at the
+folder leaves files that still typecheck against a schema that is gone. Remove:
 
-But it is **not a one-shot delete**, and it is a mistake to describe it as one:
-the `asset` vertical has tentacles in SEVEN layers, and a `trash` that stops at the
-route group leaves files that still typecheck against a schema that is gone. The
-feature folder is deletable without touching shared plumbing (the import rule buys
-that); it is NOT the only thing that has to go.
+- **The feature** — `trash features/<entity>/`. The generic accessor in
+  `lib/firebase/collections.ts` has no registration to remove.
+- **Its route(s)** under `app/(app)/`, and any route handlers that serve it.
+- **The test layer** — `test/builders/<entity>.ts` and
+  `test/integration/<entity>-repo.test.ts`, if it has them.
+- **The e2e specs** that visit it. A path string is invisible to typecheck, so this
+  is found by reading.
+- **The wiring** — its seed data, its nav item in `app/navigation.ts` (and the
+  expectations in `app/navigation.test.ts`), its capabilities in `lib/auth/rbac.ts`
+  AND in `EXPECTED_GRANTS` (`lib/auth/rbac.test.ts`), and every block for its
+  collection in `firestore.indexes.json` — a stale index is a lie about what the
+  app queries.
+- **Every other file that spells a removed capability.** Dropping it from
+  `CAPABILITIES` closes the union, so each one becomes a type error naming the file.
+- **Any Firestore rules carve-out** for its collection, and the rules test asserting
+  it. Nothing but the emulator rules suite reads `firestore.rules`.
 
-Driven, on this tree: the deletion is **55 files removed and 14 edited**, and the
-four `trash` targets below cover 53 of the 55 — it is the EDITS that are easy to
-miss. Nine of the fourteen were found by a failing gate rather than by this list,
-which is why each entry now says what speaks when you skip it. Remove all seven:
-
-- **The feature** — `trash features/asset/`: schema, repo, action, form-opts,
-  feature-owned path, collection binding, and its five colocated unit tests
-  (`asset.*.test.ts`). The generic accessor in `lib/firebase/collections.ts` has
-  no registration to remove.
-- **The UI** — `trash "app/(app)/(examples)"`: the whole route group at once. It
-  MUST go as a unit because `state`, `realtime`, `export`, and `ai` all demo
-  against `asset` and stop building the moment it is gone (`storage` does not — it
-  is asset-independent, but it lives in the same group).
-- **The export routes** — `trash "app/api/export/assets"` (csv, xlsx, pdf). These
-  are NOT under the route group above and a group-only delete misses them.
-- **The test layer** — `trash test/builders/asset.ts` and
-  `trash test/integration/asset-repo.test.ts`; repoint
-  `test/data-layer-reachable.test.ts` at a surviving repo (it imports `asset.repo`
-  only as a concrete data-layer sample, to prove the public-env fixture unlocks
-  the import).
-- **The e2e specs** — `trash e2e/assets.spec.ts` and `e2e/unhydrated.spec.ts`;
-  repoint the `/assets` reference in `e2e/auth.spec.ts` at a surviving protected
-  route. `e2e/target.ts` needs no edit — it names assets only in prose. **Nothing
-  speaks here**: a `/assets` string is invisible to typecheck, and the e2e suite
-  needs Docker, so this one is found by reading or not at all.
-- **The wiring** — remove `seedAssets`/`buildAssets` from
-  `scripts/seed-emulator.ts` (trim, don't trash — it also seeds users); the
-  `ASSETS_COLLECTION` import in `scripts/setup-local.ts` and the asset count its
-  seed decision branches on; the `/assets` expectations in `app/navigation.test.ts`;
-  the `Aset` item (and the emptied `Contoh` section) from `app/navigation.ts`; the
-  `asset:*` capabilities from `lib/auth/rbac.ts` (`CAPABILITIES` +
-  `ROLE_CAPABILITIES`) AND from `EXPECTED_GRANTS` in `lib/auth/rbac.test.ts`, the
-  grant matrix restated by hand so the test cannot agree with the implementation by
-  construction, once nothing references them; and **all thirteen** `assets` blocks
-  from `firestore.indexes.json` — the reference feature is sortable and searchable,
-  so it owns a family, not one entry, and a stale index is a lie about what the app
-  queries. Neither script nor test fails quietly — `scripts/setup-local.ts` stops
-  typechecking the moment `features/asset/` is gone (and its whole "is this emulator
-  already seeded" decision is built on the asset count, so it needs rewriting, not a
-  line deleted), and `app/navigation.test.ts` fails in `pnpm test:unit` once the nav
-  item goes.
-- **Every other file that SPELLS a capability you removed.** Dropping `asset:*` from
-  `CAPABILITIES` closes the union, so each one becomes a type error naming the file:
-  `components/shell/nav-config.test.ts`, `lib/auth/session.test.ts`,
-  `lib/data/action-result.test.ts`. Loud, but only AFTER the rbac edit — they cannot
-  be found by grepping for `asset` before you start.
-- **The Firestore rules.** `firestore.rules` carries a named carve-out for the
-  `assets` collection (the realtime listener reads it directly), and
-  `firestore.rules.test.ts` asserts that carve-out across a whole `describe`. Neither
-  is reachable from typecheck, lint, `structure:check` or `docs:check` — a rules file
-  granting access to a collection that no longer exists survives a fully green
-  `pnpm verify`, and only the emulator rules suite would notice.
-
-Then **grep for stragglers**: search `asset` and the collection key `assets`
-across the repo to catch remaining imports, `revalidatePath` targets, and links.
-
-**What stays behind with every gate green**, measured rather than guessed — none of
-it is reported by anything, so it is a reading job:
-
-- **Capabilities the deletion orphans without naming.** Removing the export routes
-  leaves `export:read` declared and enforced nowhere. `structure:check`'s
-  `capability-completeness` DOES catch this one — run it, and run it from outside a
-  disposable worktree.
-- **Dependencies that now serve nothing.** `@react-pdf/renderer` and `exceljs` are
-  reachable only from `lib/export/**` and `components/pdf/**`, and `zustand` only
-  from `lib/list-toolbar/**` — all three of those directories lose their last
-  consumer with the examples. They keep building, and they keep shipping.
-- **Comments pointing at deleted paths.** The templates cite `features/asset/**` as
-  the fuller worked version, and a dozen `lib/` and `components/` files cite the
-  example route group. Prose, not imports — nothing resolves them, so nothing
-  complains.
-- **The generated project layout** needs regenerating — `pnpm docs:generate`, then
-  drop the `features/asset` entry from `LAYOUT_NOTES` when the generator tells you
-  it describes a directory that is no longer there. It does now notice an unstaged
-  delete; it did not before, because `git ls-files --cached` reads the index and
-  still lists a file removed from disk.
-
-To remove YOUR OWN entity later, the same layers apply — feature folder,
-route(s), export routes if any, `test/builders/<entity>.ts` +
-`test/integration/<entity>-repo.test.ts`, e2e specs, seed, and the nav +
-capability + index wiring. A feature built with the **scaffold-feature** skill has
-these tentacles by construction, so it deletes by the same list rather than a
-shorter one.
+Then **grep for stragglers** — the entity name and its collection key — to catch
+remaining imports, `revalidatePath` targets, links and comments, and run
+`structure:check` (its `capability-completeness` check reports a capability left
+declared and enforced nowhere). A feature built with the **scaffold-feature** skill
+has these tentacles by construction, so it deletes by the same list.
 
 Use `trash` (recoverable), never `rm`. The shared data-layer deps
 (`lib/data/*`, `lib/firebase/*`, `lib/auth/*`) stay — they are not

@@ -3,11 +3,10 @@
 // TEMPLATE — copy-me starter for a new entity's create/edit form. See
 // `_template.schema.ts` for the token legend. Copy to
 // `features/<entity>/<entity>.form.tsx` — only if the entity has a form; it
-// needs the `<entity>.form-opts.ts` sibling. (`features/asset/` keeps its form
-// in the route folder instead, at
-// `app/(app)/(examples)/assets/_components/asset-form.tsx`. If you put yours
-// there too, repoint the two `./__entity__.*` imports at `@/features/<entity>/…`
-// — they are relative here so the copy compiles beside its generated siblings.)
+// needs the `<entity>.form-opts.ts` sibling. (If you keep yours in the route
+// folder instead, repoint the two `./__entity__.*` imports at
+// `@/features/<entity>/…` — they are relative here so the copy compiles beside
+// its generated siblings.)
 //
 // ONE form serves BOTH create and edit. The page passes the FORM action
 // (`create__Entity__FormAction`, or `update__Entity__FormAction.bind(null, id)`)

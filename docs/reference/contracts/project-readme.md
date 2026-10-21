@@ -53,7 +53,7 @@ Developer:
 - What exact prerequisites are supported?
 - What is the shortest clean-checkout setup path?
 - What observable result proves setup succeeded?
-- How does a developer obtain local-only test-account information safely?
+- How does a developer obtain the local-only sign-in credential safely?
 - What is the one canonical command for verifying a change?
 - Where do architecture, contracts, adaptation, operations and deeper procedures
   live?
@@ -107,8 +107,8 @@ the README is a competing owner, not a template.
 - Distinguish required foundation behaviour, optional capabilities, examples, and
   the domain choices a derived project owns.
 - Describe current shipped behaviour, not roadmap intent.
-- Keep local test accounts to a single source — the setup script's own output.
-  Passwords are not repeated across documents.
+- Keep the local sign-in credential to a single source — the `.env` the setup
+  script generates. Passwords are not repeated across documents.
 - Stay free of real secrets, production data and credentials.
 
 ## MUST NOT
@@ -121,7 +121,7 @@ the README is a competing owner, not a template.
   repository does not exercise.
 - Ask a local developer for a fake production provider key.
 - Present a destructive reset or seed as the default setup path.
-- Present the reference `assets` entity as a derived application's business
+- Present the `features/_template/` scaffold as a derived application's business
   domain.
 - Carry a project-status vocabulary, readiness label, or a badge that
   communicates no actionable trust signal.

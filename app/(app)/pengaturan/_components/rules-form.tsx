@@ -12,31 +12,21 @@ import { MAX_REASON_LENGTH } from '@/features/aisa/aisa.limits'
 import {
   CRITERIA,
   type Criterion,
-  type RulesInput,
+  type EditableRules,
 } from '@/features/aisa/aisa.schema'
 
 import { useApiAction } from '../../_components/use-api-action'
 
-const MODEL_KEYS = [
-  'penilai',
-  'ringkasan',
-  'insight',
-  'asisten',
-  'orchestrator',
-] as const
-const MODEL_LABEL: Record<(typeof MODEL_KEYS)[number], string> = {
-  penilai: 'Penilai',
-  ringkasan: 'Pembuat ringkasan',
-  insight: 'Insight',
-  asisten: 'Asisten',
-  orchestrator: 'Orchestrator',
-}
-const THRESHOLD_LABEL: Record<keyof RulesInput['thresholds'], string> = {
-  sangatCocok: 'Sangat cocok ≥',
-  cocok: 'Cocok ≥',
-  kurangCocok: 'Kurang cocok ≥',
-  qualityOutsideFocus: 'Berkualitas, di luar fokus ≥',
-}
+import {
+  ASISTEN_MODEL_NOTE,
+  EDITABLE_MODEL_LABEL,
+  RETENTION_EXPLANATION,
+  THRESHOLD_LABEL,
+} from './rules-labels'
+
+const MODEL_KEYS = Object.keys(
+  EDITABLE_MODEL_LABEL,
+) as (keyof EditableRules['models'])[]
 
 const list = (text: string) =>
   text
@@ -76,7 +66,14 @@ function Num({
  * every save needs a reason, and `aisa-api` writes the new version and its
  * history row. Nothing is written until the API accepts it.
  */
-export function RulesForm({ initial }: { initial: RulesInput }) {
+export function RulesForm({
+  initial,
+  asistenModel,
+}: {
+  initial: EditableRules
+  /** Shown read-only: only a redeploy of the Asisten changes it. */
+  asistenModel: string
+}) {
   const [percent, setPercent] = useState<Record<Criterion, number>>(
     () =>
       Object.fromEntries(
@@ -91,6 +88,7 @@ export function RulesForm({ initial }: { initial: RulesInput }) {
   const [thresholds, setThresholds] = useState(initial.thresholds)
   const [models, setModels] = useState(initial.models)
   const [minChars, setMinChars] = useState(initial.minCharsPerPage)
+  const [retentionDays, setRetentionDays] = useState(initial.retentionDays)
   const [reason, setReason] = useState('')
   const [localError, setLocalError] = useState<string | null>(null)
   const { pending, error, run } = useApiAction()
@@ -109,11 +107,15 @@ export function RulesForm({ initial }: { initial: RulesInput }) {
       setLocalError('Alasan perubahan wajib diisi.')
       return
     }
+    if (!Number.isInteger(retentionDays) || retentionDays < 1) {
+      setLocalError('Retensi minimal 1 hari (bilangan bulat).')
+      return
+    }
     setLocalError(null)
-    const rules: RulesInput = {
+    const rules: EditableRules = {
       weights: Object.fromEntries(
         CRITERIA.map((c) => [c, Math.round(percent[c] * 100) / 10000]),
-      ) as RulesInput['weights'],
+      ) as EditableRules['weights'],
       anchors,
       fit: {
         sectors: list(sectors),
@@ -124,6 +126,7 @@ export function RulesForm({ initial }: { initial: RulesInput }) {
       thresholds,
       models,
       minCharsPerPage: minChars,
+      retentionDays,
     }
     run(() => updateRulesAction(rules, reason), {
       success: 'Aturan penilaian tersimpan sebagai versi baru.',
@@ -218,7 +221,9 @@ export function RulesForm({ initial }: { initial: RulesInput }) {
         <legend className="font-medium">Batas kategori (skor)</legend>
         <div className="grid gap-3 sm:grid-cols-4">
           {(
-            Object.keys(THRESHOLD_LABEL) as (keyof RulesInput['thresholds'])[]
+            Object.keys(
+              THRESHOLD_LABEL,
+            ) as (keyof EditableRules['thresholds'])[]
           ).map((key) => (
             <Num
               key={key}
@@ -239,10 +244,10 @@ export function RulesForm({ initial }: { initial: RulesInput }) {
 
       <fieldset className="space-y-2">
         <legend className="font-medium">Model</legend>
-        <div className="grid gap-3 sm:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-4">
           {MODEL_KEYS.map((key) => (
             <label key={key} className="grid gap-1 text-xs">
-              {MODEL_LABEL[key]}
+              {EDITABLE_MODEL_LABEL[key]}
               <Input
                 value={models[key]}
                 onChange={(e) =>
@@ -251,7 +256,26 @@ export function RulesForm({ initial }: { initial: RulesInput }) {
               />
             </label>
           ))}
+          <label className="grid gap-1 text-xs">
+            Asisten
+            <Input value={asistenModel} readOnly disabled />
+            <span className="text-muted-foreground">{ASISTEN_MODEL_NOTE}</span>
+          </label>
         </div>
+      </fieldset>
+
+      <fieldset className="space-y-2">
+        <legend className="font-medium">Retensi</legend>
+        <div className="grid gap-3 sm:grid-cols-4">
+          <Num
+            label="Retensi (hari)"
+            value={retentionDays}
+            onChange={setRetentionDays}
+          />
+        </div>
+        <p className="text-sm text-muted-foreground">
+          {RETENTION_EXPLANATION(retentionDays)}
+        </p>
       </fieldset>
 
       <label htmlFor="rules-reason" className="grid gap-1 text-sm font-medium">

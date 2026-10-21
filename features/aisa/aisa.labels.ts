@@ -1,6 +1,7 @@
 // Indonesian display words for the AISA enums. `Record<Enum, string>` makes a
-// new enum member a compile error until it has a word, so a raw snake_case value
-// never reaches the screen.
+// new enum member a compile error until it has a word. The open enums (job kind,
+// history action) may also carry a value the API added after this build; those
+// render through `labelOf` as their raw value rather than breaking the page.
 
 import type {
   Category,
@@ -54,6 +55,7 @@ export const JOB_KIND_LABEL: Record<JobKind, string> = {
   ringkasan: 'Ringkasan',
   asisten: 'Asisten',
   perintah: 'Perintah',
+  retensi: 'Retensi',
 }
 
 export const JOB_STATUS_LABEL: Record<JobStatus, string> = {
@@ -78,6 +80,15 @@ export const HISTORY_ACTION_LABEL: Record<HistoryAction, string> = {
   lanjut: 'LANJUT',
   ringkasan_terkirim: 'Ringkasan terkirim',
   proposal_masuk: 'Proposal masuk',
+  proposal_dihapus: 'Proposal dihapus',
+}
+
+/** The word for an open-enum value; a value newer than this build shows as-is. */
+export function labelOf<K extends string>(
+  labels: Record<K, string>,
+  value: string,
+): string {
+  return Object.hasOwn(labels, value) ? labels[value as K] : value
 }
 
 export const QUALITY_OUTSIDE_FOCUS_LABEL = 'Berkualitas, di luar fokus'

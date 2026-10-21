@@ -38,6 +38,18 @@ export const RESPONSE_KINDS = ['undang', 'pantau', 'arsipkan'] as const
 export const ResponseKindSchema = z.enum(RESPONSE_KINDS)
 export type ResponseKind = z.infer<typeof ResponseKindSchema>
 
+/**
+ * An enum the Python side may extend before the dashboard is redeployed: a known
+ * value parses as itself, and an unknown one is kept as its raw string instead of
+ * failing the whole page read. Display goes through `labelOf`, which falls back
+ * to the raw value.
+ */
+function openEnum<const T extends readonly [string, ...string[]]>(values: T) {
+  return z.union([z.enum(values), z.string()]) as unknown as z.ZodType<
+    T[number] | (string & {})
+  >
+}
+
 export const ViaSchema = z.enum(['wa', 'dashboard', 'sistem'])
 export type Via = z.infer<typeof ViaSchema>
 
@@ -46,9 +58,10 @@ export const JOB_KINDS = [
   'ringkasan',
   'asisten',
   'perintah',
+  'retensi',
 ] as const
-export const JobKindSchema = z.enum(JOB_KINDS)
-export type JobKind = z.infer<typeof JobKindSchema>
+export type JobKind = (typeof JOB_KINDS)[number]
+export const JobKindSchema = openEnum(JOB_KINDS)
 
 export const JobStatusSchema = z.enum([
   'berjalan',
@@ -85,6 +98,8 @@ export const CriterionAssessmentSchema = z.object({
   reason: z.string(),
   notMentioned: z.boolean(),
   citations: z.array(CitationSchema).default([]),
+  /** The value was capped at 2 because no quote could be verified on its page. */
+  citationsUnverified: z.boolean().default(false),
 })
 export type CriterionAssessment = z.infer<typeof CriterionAssessmentSchema>
 
@@ -198,16 +213,30 @@ export const RulesSchema = z.object({
     penilai: z.string(),
     ringkasan: z.string(),
     insight: z.string(),
+    /**
+     * The model the deployed Asisten engine runs. Informational: changing it
+     * takes a redeploy of the Asisten, so the dashboard never edits it. A stored
+     * `orchestrator` key from older documents is stripped by the parse.
+     */
     asisten: z.string(),
-    orchestrator: z.string(),
   }),
   minCharsPerPage: z.number().int().default(200),
+  /** Archived proposals are deleted this many days after archiving. */
+  retentionDays: z.number().int().min(1).default(90),
   changedAt: TimestampSchema,
   reason: z.string(),
 })
 export type Rules = z.infer<typeof RulesSchema>
 /** The editable body of `Rules` — what `PUT /api/rules` accepts. */
 export type RulesInput = Omit<Rules, 'id' | 'version' | 'changedAt' | 'reason'>
+/**
+ * What the Pengaturan form edits: the PUT body minus the Asisten model, which
+ * only a redeploy of the Asisten changes. The action fills it from the stored
+ * rules, so the API always receives it unchanged.
+ */
+export type EditableRules = Omit<RulesInput, 'models'> & {
+  models: Omit<RulesInput['models'], 'asisten'>
+}
 
 export const RuntimeSchema = z.object({
   id: z.string(),
@@ -262,9 +291,16 @@ export const HISTORY_ACTIONS = [
   'lanjut',
   'ringkasan_terkirim',
   'proposal_masuk',
+  'proposal_dihapus',
 ] as const
-export const HistoryActionSchema = z.enum(HISTORY_ACTIONS)
-export type HistoryAction = z.infer<typeof HistoryActionSchema>
+export type HistoryAction = (typeof HISTORY_ACTIONS)[number]
+export const HistoryActionSchema = openEnum(HISTORY_ACTIONS)
+
+/**
+ * The `proposalName` `aisa-api` writes into a history row once its proposal is
+ * deleted; the row stays as audit, but there is no proposal left to link to.
+ */
+export const DELETED_PROPOSAL_NAME = '(dihapus)'
 
 export const HistorySchema = z.object({
   id: z.string(),
@@ -298,6 +334,8 @@ export const DigestSchema = z.object({
   }),
   proposalIds: z.array(z.string()),
   usedTemplate: z.boolean(),
+  /** The "Yang menarik" sentence the ringkasan carried, if one was written. */
+  insight: z.string().nullish(),
   jobId: z.string().nullish(),
   gowaMessageIds: z.array(z.string()).default([]),
 })

@@ -4,9 +4,13 @@ import { Page } from '@/components/shell/page-container'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AISA_READ } from '@/features/aisa/aisa.capability'
 import { CATEGORY_LABEL } from '@/features/aisa/aisa.labels'
-import { listDailyStats } from '@/features/aisa/aisa.repo'
+import {
+  getLatestInsightDigest,
+  listDailyStats,
+} from '@/features/aisa/aisa.repo'
 import { CATEGORIES } from '@/features/aisa/aisa.schema'
 import { requireCapability } from '@/lib/auth/guards'
+import { formatDate } from '@/lib/format/date'
 
 import { BarList, ColumnChart, shortDate } from '../_components/charts'
 import { dailyWindow } from '../_components/daily-window'
@@ -17,7 +21,11 @@ const DAYS = 14
 
 export default async function TrenPage() {
   await requireCapability(AISA_READ)
-  const days = dailyWindow(await listDailyStats(DAYS), DAYS)
+  const [stats, insightDigest] = await Promise.all([
+    listDailyStats(DAYS),
+    getLatestInsightDigest(),
+  ])
+  const days = dailyWindow(stats, DAYS)
 
   const perDay = days.map((d) => ({
     label: shortDate(d.date),
@@ -49,6 +57,20 @@ export default async function TrenPage() {
   return (
     <Page.Root>
       <Page.Header title="Tren" description={`${DAYS} hari terakhir (WIB).`} />
+      {insightDigest?.insight ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Insight terbaru</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Dari ringkasan {insightDigest.slot} ·{' '}
+              {formatDate(insightDigest.sentAt)}
+            </p>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm">Yang menarik: {insightDigest.insight}</p>
+          </CardContent>
+        </Card>
+      ) : null}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>

@@ -21,6 +21,7 @@ import { formatRupiah } from '@/lib/format/currency'
 import { formatDate, formatTime } from '@/lib/format/date'
 
 import { RulesForm } from './_components/rules-form'
+import { RulesSummary } from './_components/rules-summary'
 import { RuntimeToggle } from './_components/runtime-toggle'
 
 export const metadata: Metadata = { title: 'Pengaturan' }
@@ -145,11 +146,19 @@ export default async function PengaturanPage() {
                     anchors: rules.anchors,
                     fit: rules.fit,
                     thresholds: rules.thresholds,
-                    models: rules.models,
+                    models: {
+                      penilai: rules.models.penilai,
+                      ringkasan: rules.models.ringkasan,
+                      insight: rules.models.insight,
+                    },
                     minCharsPerPage: rules.minCharsPerPage,
+                    retentionDays: rules.retentionDays,
                   }}
+                  asistenModel={rules.models.asisten}
                 />
-              ) : null}
+              ) : (
+                <RulesSummary rules={rules} />
+              )}
             </>
           )}
         </CardContent>

@@ -6,6 +6,7 @@ import { seedAisa } from '@/scripts/_seed-aisa'
 
 import {
   getLatestDigest,
+  getLatestInsightDigest,
   getProposal,
   getRules,
   getRuntime,
@@ -44,6 +45,9 @@ describe.skipIf(!reachable)('aisa repo', () => {
     const manual = byName.get('Bengkel Online')
     expect(manual?.status).toBe('perlu_dicek_manual')
     expect(manual?.assessment ?? null).toBeNull()
+    const fashion = byName.get('Fashionista')
+    expect(fashion?.assessment?.criteria.produk?.citationsUnverified).toBe(true)
+    expect(fashion?.assessment?.criteria.tim?.citationsUnverified).toBe(false)
   })
 
   it('keeps the AI category when a correction changes the effective one', async () => {
@@ -64,7 +68,11 @@ describe.skipIf(!reachable)('aisa repo', () => {
   })
 
   it('reads rules, runtime, digest, stats, jobs and history', async () => {
-    expect((await getRules())?.version).toBeGreaterThanOrEqual(1)
+    const rules = await getRules()
+    expect(rules?.version).toBeGreaterThanOrEqual(1)
+    expect(rules?.retentionDays).toBe(90)
+    expect(rules?.models).not.toHaveProperty('orchestrator')
+    expect((await getLatestInsightDigest())?.insight).toBeTruthy()
     expect((await getRuntime())?.paused).toBe(false)
     expect((await getLatestDigest())?.slot).toBe('09.00')
     const stats = await listDailyStats(14)
@@ -78,7 +86,11 @@ describe.skipIf(!reachable)('aisa repo', () => {
         .filter((s) => s.actor === 'kode')
         .every((s) => s.tokensIn === 0),
     ).toBe(true)
-    expect((await listHistory(200)).length).toBeGreaterThan(0)
+    const retensi = jobs.find((job) => job.kind === 'retensi')
+    expect(retensi?.model ?? null).toBeNull()
+    expect(retensi?.steps).toHaveLength(1)
+    const history = await listHistory(200)
+    expect(history.some((row) => row.action === 'proposal_dihapus')).toBe(true)
   })
 
   it('reads one proposal’s history newest first', async () => {

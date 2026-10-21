@@ -10,12 +10,13 @@ import { runAction, type ActionResult } from '@/lib/data/action-result'
 
 import { AISA_CONFIGURE, AISA_READ, AISA_RESPOND } from './aisa.capability'
 import { MAX_DECK_BYTES, MAX_REASON_LENGTH } from './aisa.limits'
+import { getRules } from './aisa.repo'
 import {
   CategorySchema,
   ResponseKindSchema,
   type Category,
+  type EditableRules,
   type ResponseKind,
-  type RulesInput,
 } from './aisa.schema'
 
 // Every write in the dashboard lands here and goes to `aisa-api` — Next never
@@ -174,23 +175,24 @@ const RulesInputSchema = z
         (t) => t.sangatCocok > t.cocok && t.cocok > t.kurangCocok,
         'Batas kategori harus menurun: sangat cocok > cocok > kurang cocok',
       ),
-    models: z.object({
-      penilai: modelName,
-      ringkasan: modelName,
-      insight: modelName,
-      asisten: modelName,
-      orchestrator: modelName,
-    }),
+    models: z
+      .object({
+        penilai: modelName,
+        ringkasan: modelName,
+        insight: modelName,
+      })
+      .strict(),
     minCharsPerPage: z.number().int().min(0),
+    retentionDays: z.number().int().min(1, 'Retensi minimal 1 hari'),
   })
-  .strict() satisfies z.ZodType<RulesInput>
+  .strict() satisfies z.ZodType<EditableRules>
 
 /**
  * Validation failures are returned as an API-style refusal so the form can show
  * WHICH rule failed; `runAction` would reduce a ZodError to "Validasi gagal".
  */
 export async function updateRulesAction(
-  rules: RulesInput,
+  rules: EditableRules,
   reason: string,
 ): ApiAction<unknown> {
   return runAction(AISA_CONFIGURE, async () => {
@@ -207,12 +209,61 @@ export async function updateRulesAction(
         error: issues.map((issue) => issue.message).join('; '),
       }
     }
+    // The Asisten model is not the dashboard's to change (it takes a redeploy of
+    // the Asisten), so the stored value goes back exactly as it was read.
+    const stored = await getRules()
+    if (!stored) {
+      return {
+        ok: false as const,
+        status: null,
+        error: 'Aturan penilaian belum ada di Firestore (settings/rules).',
+      }
+    }
     return afterWrite(
       await callAisaApi('PUT', '/api/rules', {
-        rules: parsedRules.data,
+        rules: {
+          ...parsedRules.data,
+          models: {
+            ...parsedRules.data.models,
+            asisten: stored.models.asisten,
+          },
+        },
         reason: parsedReason.data,
       }),
     )
+  })
+}
+
+/**
+ * "Hapus data": permanently delete one proposal — its document, text, deck and
+ * job. `aisa-api` keeps the history rows (scrubbed of the name) and adds a
+ * `proposal_dihapus` row carrying the reason.
+ *
+ * Only the list is revalidated, not the whole layout: revalidating the detail
+ * page the manager is still on would re-render it into a 404 before the client
+ * navigates away to /proposal.
+ */
+export async function deleteProposalAction(
+  proposalId: string,
+  reason: string,
+): ApiAction<{ deleted: boolean }> {
+  return runAction(AISA_CONFIGURE, async () => {
+    const id = ProposalIdSchema.parse(proposalId)
+    const parsedReason = ReasonSchema.safeParse(reason)
+    if (!parsedReason.success) {
+      return {
+        ok: false as const,
+        status: null,
+        error: parsedReason.error.issues.map((i) => i.message).join('; '),
+      }
+    }
+    const outcome = await callAisaApi<{ deleted: boolean }>(
+      'DELETE',
+      `/api/proposals/${encodeURIComponent(id)}`,
+      { reason: parsedReason.data },
+    )
+    if (outcome.ok) revalidatePath('/proposal')
+    return outcome
   })
 }
 

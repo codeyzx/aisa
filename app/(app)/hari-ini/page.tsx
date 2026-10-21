@@ -121,7 +121,7 @@ export default async function HariIniPage() {
             label="Perlu dicek manual"
             value={manual}
             href="/proposal?status=perlu_dicek_manual&tanggapan=belum"
-            hint="Teks tidak terbaca — tanpa skor"
+            hint="Tidak bisa dinilai otomatis (teks tidak terbaca atau penilaian gagal)"
           />
           <Tile
             label="Baru sejak ringkasan terakhir"

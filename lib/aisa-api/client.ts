@@ -34,7 +34,7 @@ function detailText(body: unknown): string | null {
  * sent as multipart (fetch sets the boundary); anything else is JSON.
  */
 export async function callAisaApi<T>(
-  method: 'GET' | 'POST' | 'PUT',
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   path: string,
   body?: unknown,
 ): Promise<AisaApiOutcome<T>> {

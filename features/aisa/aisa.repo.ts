@@ -71,6 +71,26 @@ export const getLatestDigest = cache(async (): Promise<Digest | null> => {
   return snap.docs[0]?.data() ?? null
 })
 
+/**
+ * How many recent digests the Tren page searches for an insight. A template
+ * fallback or a quiet slot sends a digest without one, so the newest digest
+ * alone would often show nothing.
+ */
+const INSIGHT_LOOKBACK = 10
+
+/** The newest digest that carried an insight, within `INSIGHT_LOOKBACK`. */
+export const getLatestInsightDigest = cache(
+  async (): Promise<Digest | null> => {
+    const snap = await digestsCollection()
+      .orderBy('sentAt', 'desc')
+      .limit(INSIGHT_LOOKBACK)
+      .get()
+    return (
+      snap.docs.map((doc) => doc.data()).find((d) => d.insight?.trim()) ?? null
+    )
+  },
+)
+
 export const getRules = cache(async (): Promise<Rules | null> => {
   const snap = await rulesSettingsCollection().doc(RULES_DOC_ID).get()
   return snap.data() ?? null

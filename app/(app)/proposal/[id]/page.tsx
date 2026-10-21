@@ -14,11 +14,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { AISA_READ, AISA_RESPOND } from '@/features/aisa/aisa.capability'
+import {
+  AISA_CONFIGURE,
+  AISA_READ,
+  AISA_RESPOND,
+} from '@/features/aisa/aisa.capability'
 import {
   CATEGORY_LABEL,
   CRITERION_LABEL,
   HISTORY_ACTION_LABEL,
+  labelOf,
   QUALITY_OUTSIDE_FOCUS_LABEL,
   RESPONSE_LABEL,
   STATUS_LABEL,
@@ -36,6 +41,7 @@ import { cn } from '@/lib/utils'
 import { CategoryCell } from '../../_components/badges'
 import { CorrectionForm } from '../_components/correction-form'
 import { DeckButton } from '../_components/deck-button'
+import { DeleteProposalButton } from '../_components/delete-proposal-button'
 import { RespondPanel } from '../_components/respond-panel'
 
 export const metadata: Metadata = { title: 'Detail proposal' }
@@ -71,6 +77,7 @@ export default async function ProposalDetailPage({
   ])
   if (!proposal) notFound()
   const canRespond = can(session, AISA_RESPOND)
+  const canDelete = can(session, AISA_CONFIGURE)
   const { assessment, fit, profile } = proposal
 
   return (
@@ -90,6 +97,12 @@ export default async function ProposalDetailPage({
           >
             Lihat log penilaian
           </Link>
+        ) : null}
+        {canDelete ? (
+          <DeleteProposalButton
+            proposalId={proposal.id}
+            proposalName={proposal.name}
+          />
         ) : null}
       </Page.Header>
 
@@ -222,8 +235,20 @@ export default async function ProposalDetailPage({
                         {item.value}/5
                       </TableCell>
                       <TableCell className="space-y-1 whitespace-normal">
-                        {item.notMentioned ? (
-                          <Badge variant="destructive">tidak disebut</Badge>
+                        {item.notMentioned || item.citationsUnverified ? (
+                          <div className="flex flex-wrap gap-1">
+                            {item.notMentioned ? (
+                              <Badge variant="destructive">tidak disebut</Badge>
+                            ) : null}
+                            {item.citationsUnverified ? (
+                              <Badge
+                                variant="outline"
+                                title="Tidak ada kutipan yang ditemukan di halamannya, jadi nilai dibatasi 2"
+                              >
+                                kutipan tidak terverifikasi
+                              </Badge>
+                            ) : null}
+                          </div>
                         ) : null}
                         <p>{item.reason}</p>
                         {item.citations.length ? (
@@ -351,7 +376,7 @@ export default async function ProposalDetailPage({
                     {when(row.at)}
                   </span>
                   <Badge variant="outline">
-                    {HISTORY_ACTION_LABEL[row.action]}
+                    {labelOf(HISTORY_ACTION_LABEL, row.action)}
                   </Badge>
                   <span>{row.detail}</span>
                   {row.reason ? (

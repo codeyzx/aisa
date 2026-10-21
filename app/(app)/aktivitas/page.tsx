@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AISA_READ } from '@/features/aisa/aisa.capability'
 import {
   JOB_KIND_LABEL,
+  labelOf,
   JOB_STATUS_LABEL,
   STEP_STATUS_LABEL,
 } from '@/features/aisa/aisa.labels'
@@ -79,7 +80,13 @@ export default async function AktivitasPage({
   const totalTokens = sum(
     (d) => (d.stats?.tokensIn ?? 0) + (d.stats?.tokensOut ?? 0),
   )
-  const proposalsIn = sum((d) => d.stats?.proposalsIn ?? 0)
+  // The penilaian tokens are spent on proposals the model scored; a deck that
+  // never reached the model (too little text) costs none, so dividing by every
+  // proposal that came in would understate the cost of one assessment. A scored
+  // proposal is one that got a kategori, which `byCategory` counts per day.
+  const modelAssessed = sum((d) =>
+    Object.values(d.stats?.byCategory ?? {}).reduce((a, b) => a + b, 0),
+  )
   const kindTokens = (kind: string) =>
     sum((d) => {
       const t = d.stats?.tokensByKind[kind]
@@ -104,8 +111,8 @@ export default async function AktivitasPage({
         />
         <Stat
           label="Rata-rata per proposal"
-          value={avg(kindTokens('penilaian'), proposalsIn)}
-          hint={`token penilaian / ${formatNumber(proposalsIn)} proposal masuk`}
+          value={avg(kindTokens('penilaian'), modelAssessed)}
+          hint={`token penilaian / ${formatNumber(modelAssessed)} proposal yang dinilai model`}
         />
         <Stat
           label="Rata-rata per ringkasan"
@@ -147,9 +154,9 @@ export default async function AktivitasPage({
             <summary className="flex cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm">
               <span className="font-medium">{job.title}</span>
               <Badge variant="outline">
-                {job.agent} · {JOB_KIND_LABEL[job.kind]}
+                {job.agent} · {labelOf(JOB_KIND_LABEL, job.kind)}
               </Badge>
-              <code className="text-xs">{job.model ?? '(kode)'}</code>
+              <code className="text-xs">{job.model || '(kode)'}</code>
               <span className="text-muted-foreground tabular-nums">
                 {formatDate(job.startedAt)} {formatTime(job.startedAt)}
               </span>

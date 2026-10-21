@@ -13,8 +13,13 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { AISA_READ } from '@/features/aisa/aisa.capability'
-import { HISTORY_ACTION_LABEL, VIA_LABEL } from '@/features/aisa/aisa.labels'
+import {
+  HISTORY_ACTION_LABEL,
+  labelOf,
+  VIA_LABEL,
+} from '@/features/aisa/aisa.labels'
 import { listHistory } from '@/features/aisa/aisa.repo'
+import { DELETED_PROPOSAL_NAME } from '@/features/aisa/aisa.schema'
 import { requireCapability } from '@/lib/auth/guards'
 import { formatDate, formatTime } from '@/lib/format/date'
 
@@ -64,11 +69,15 @@ export default async function RiwayatPage() {
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline">
-                    {HISTORY_ACTION_LABEL[row.action]}
+                    {labelOf(HISTORY_ACTION_LABEL, row.action)}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {row.proposalId ? (
+                  {row.proposalName === DELETED_PROPOSAL_NAME ? (
+                    <span className="text-muted-foreground">
+                      {DELETED_PROPOSAL_NAME}
+                    </span>
+                  ) : row.proposalId ? (
                     <Link
                       href={`/proposal/${encodeURIComponent(row.proposalId)}`}
                       className="underline-offset-4 hover:underline"

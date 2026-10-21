@@ -88,6 +88,8 @@ interface Seed {
   queued?: boolean
   response?: { kind: 'undang' | 'pantau' | 'arsipkan'; note?: string }
   correction?: { category: Category; reason: string }
+  /** Criteria whose value the API capped at 2 because no quote verified. */
+  unverified?: Criterion[]
 }
 
 const SEEDS: Seed[] = [
@@ -204,6 +206,7 @@ const SEEDS: Seed[] = [
     funding: 25_000_000_000,
     oneLiner: 'Merek busana muslim daring.',
     values: { tim: 2, pasar: 3, produk: 2, traksi: 3, bisnis: 2 },
+    unverified: ['produk'],
     hoursAgo: 40,
     source: 'form',
   },
@@ -402,9 +405,9 @@ export async function seedAisa(
       ringkasan: MODEL,
       insight: MODEL,
       asisten: MODEL,
-      orchestrator: MODEL,
     },
     minCharsPerPage: 200,
+    retentionDays: 90,
     changedAt: rulesChangedAt,
     reason:
       'Aturan awal dari baseline (rata-rata Scorecard Method dan Hustle Fund)',
@@ -471,8 +474,9 @@ export async function seedAisa(
               value: values[c],
               reason: REASONS[c][values[c]],
               notMentioned: values[c] === 1,
+              citationsUnverified: seed.unverified?.includes(c) ?? false,
               citations:
-                values[c] === 1
+                values[c] === 1 || seed.unverified?.includes(c)
                   ? []
                   : [
                       {
@@ -702,6 +706,7 @@ export async function seedAisa(
       : new Date(sentAt.getTime() - DAY)
   const digestId = `seed-${wibDate.format(digestAt)}-0900`
   const digestJobId = `job-ringkasan-${digestId}`
+  const digestInsight = 'proposal agritech naik dibanding minggu lalu.'
   const digestText = [
     'Selamat pagi, Bu Rina. Sejak kemarin pukul 17.00 masuk 6 proposal baru. Ada 11 proposal yang belum Ibu tanggapi.',
     '',
@@ -713,7 +718,7 @@ export async function seedAisa(
     '*Berkualitas, di luar fokus (1):* Kopi Rakyat (83) · F&B di luar sektor fokus',
     '*Perlu dicek manual (2):* Bengkel Online, Rumah Belajar',
     '',
-    'Yang menarik: proposal agritech naik dibanding minggu lalu.',
+    `Yang menarik: ${digestInsight}`,
   ].join('\n')
   batch.set(db.collection(DIGESTS_COLLECTION).doc(digestId), {
     slot: '09.00',
@@ -732,6 +737,7 @@ export async function seedAisa(
     },
     proposalIds: [],
     usedTemplate: false,
+    insight: digestInsight,
     jobId: digestJobId,
     gowaMessageIds: ['seed-gowa-1'],
   })
@@ -842,6 +848,60 @@ export async function seedAisa(
     via: 'sistem',
     action: 'ringkasan_terkirim',
     detail: 'Ringkasan 09.00 terkirim (11 belum ditanggapi)',
+  })
+
+  // --- a nightly retensi run that deleted one long-archived proposal ---
+  // Code-only (no model, no tokens); its history row keeps the proposal id but
+  // carries the scrubbed name, as `aisa-api` writes it after a deletion.
+  const retensiAt = new Date(`${today}T02:00:00+07:00`)
+  const retensiStart =
+    retensiAt.getTime() <= now.getTime()
+      ? retensiAt
+      : new Date(retensiAt.getTime() - DAY)
+  const retensiJobId = `job-retensi-${wibDate.format(retensiStart)}`
+  batch.set(
+    db
+      .collection(JOBS_COLLECTION)
+      .doc(retensiJobId)
+      .collection(JOB_STEPS_SUBCOLLECTION)
+      .doc('001'),
+    {
+      seq: 1,
+      at: retensiStart,
+      action: 'Hapus proposal diarsipkan lebih dari 90 hari',
+      tool: 'firestore.delete',
+      actor: 'kode',
+      model: null,
+      read: 'proposals (diarsipkan)',
+      wrote: '1 proposal dihapus',
+      tokensIn: 0,
+      tokensOut: 0,
+      durationMs: 310,
+      status: 'ok',
+    },
+  )
+  batch.set(db.collection(JOBS_COLLECTION).doc(retensiJobId), {
+    kind: 'retensi',
+    agent: 'Retensi',
+    title: 'Retensi harian',
+    model: null,
+    status: 'selesai',
+    startedAt: retensiStart,
+    endedAt: new Date(retensiStart.getTime() + 310),
+    durationMs: 310,
+    stepCount: 1,
+    tokensIn: 0,
+    tokensOut: 0,
+  })
+  jobCount += 1
+  history('seed-retensi-dihapus', {
+    at: new Date(retensiStart.getTime() + 310),
+    via: 'sistem',
+    action: 'proposal_dihapus',
+    proposalId: 'form-seedlamaarsip',
+    proposalName: '(dihapus)',
+    reason: 'retensi',
+    detail: 'Data proposal dihapus (diarsipkan lebih dari 90 hari)',
   })
 
   // --- 14 days of dailyStats (deterministic, WIB dates) ---

@@ -9,5 +9,8 @@ export const AISA_READ: Capability = 'aisa:read'
  */
 export const AISA_RESPOND: Capability = 'aisa:respond'
 
-/** Change the scoring rules and STOP/LANJUT the AI runtime. */
+/**
+ * Change the scoring rules, STOP/LANJUT the AI runtime, and permanently delete a
+ * proposal's data ("Hapus data").
+ */
 export const AISA_CONFIGURE: Capability = 'aisa:configure'

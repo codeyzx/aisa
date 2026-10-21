@@ -115,6 +115,10 @@ const SEEDS: Seed[] = [
     hoursAgo: 30,
     source: 'form',
     response: { kind: 'undang', note: 'Jadwalkan pitching minggu depan' },
+    correction: {
+      category: 'cocok',
+      reason: 'Restoran yang dilayani baru di satu kota',
+    },
   },
   {
     key: 'sawahku',

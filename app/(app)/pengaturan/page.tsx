@@ -13,7 +13,12 @@ import {
 } from '@/components/ui/table'
 import { AISA_CONFIGURE, AISA_READ } from '@/features/aisa/aisa.capability'
 import { CRITERION_LABEL, VIA_LABEL } from '@/features/aisa/aisa.labels'
-import { getRules, getRuntime } from '@/features/aisa/aisa.repo'
+import { calibrate } from '@/features/aisa/aisa.calibration'
+import {
+  getRules,
+  getRuntime,
+  listReviewedProposals,
+} from '@/features/aisa/aisa.repo'
 import { CRITERIA, type Criterion } from '@/features/aisa/aisa.schema'
 import { requireCapability } from '@/lib/auth/guards'
 import { can } from '@/lib/auth/rbac'
@@ -21,6 +26,7 @@ import { formatRupiah } from '@/lib/format/currency'
 import { formatDate, formatTime } from '@/lib/format/date'
 import { formatPercent } from '@/lib/format/number'
 
+import { Kalibrasi } from './_components/kalibrasi'
 import { RulesForm } from './_components/rules-form'
 import { RulesSummary } from './_components/rules-summary'
 import { RuntimeToggle } from './_components/runtime-toggle'
@@ -58,7 +64,11 @@ const BASELINE: Record<
 export default async function PengaturanPage() {
   const session = await requireCapability(AISA_READ)
   const canConfigure = can(session, AISA_CONFIGURE)
-  const [rules, runtime] = await Promise.all([getRules(), getRuntime()])
+  const [rules, runtime, reviewed] = await Promise.all([
+    getRules(),
+    getRuntime(),
+    listReviewedProposals(),
+  ])
   const paused = runtime?.paused ?? false
 
   return (
@@ -204,18 +214,7 @@ export default async function PengaturanPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Kalibrasi</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Data kalibrasi belum ada. Rencananya 10–20 deck lama dinilai 2–3
-            analis dengan matriks yang sama, lalu tingkat kesepakatan AI dengan
-            analis ditampilkan di sini.
-          </p>
-        </CardContent>
-      </Card>
+      <Kalibrasi calibration={calibrate(reviewed)} />
     </Page.Root>
   )
 }

@@ -54,6 +54,23 @@ export const listUnrespondedProposals = cache(async (): Promise<Proposal[]> => {
   return snap.docs.map((doc) => doc.data())
 })
 
+/**
+ * Every proposal the manager reviewed (a tanggapan or a koreksi), for
+ * Kalibrasi. Two single-field queries merged by id, so no composite index; not
+ * windowed like the list, because an agreement rate over a truncated set would
+ * read as the whole history.
+ */
+export const listReviewedProposals = cache(async (): Promise<Proposal[]> => {
+  const [responded, corrected] = await Promise.all([
+    proposalsCollection().where('responded', '==', true).get(),
+    proposalsCollection().where('correction', '!=', null).get(),
+  ])
+  const byId = new Map<string, Proposal>()
+  for (const doc of [...responded.docs, ...corrected.docs])
+    byId.set(doc.id, doc.data())
+  return [...byId.values()]
+})
+
 /** Proposals created strictly after `since`. A single-field range, no index. */
 export async function countProposalsSince(since: Date): Promise<number> {
   const snap = await proposalsCollection()

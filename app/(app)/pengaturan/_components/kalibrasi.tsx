@@ -1,0 +1,151 @@
+import Link from 'next/link'
+
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import type { Calibration } from '@/features/aisa/aisa.calibration'
+import { CATEGORY_LABEL } from '@/features/aisa/aisa.labels'
+import { formatDate } from '@/lib/format/date'
+import { formatNumber, formatPercent, formatScore } from '@/lib/format/number'
+
+/** One decimal is enough for a rate over a handful of proposals: `33,3%`. */
+function rate(percent: number): string {
+  return formatPercent(Math.round(percent * 10) / 10)
+}
+
+export function Kalibrasi({ calibration }: { calibration: Calibration }) {
+  const { reviewed, agreed, agreementPercent, corrections, naik, turun } =
+    calibration
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Kalibrasi</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6 text-sm">
+        <section aria-labelledby="kalibrasi-manajer" className="space-y-3">
+          <h3 id="kalibrasi-manajer" className="font-medium">
+            Koreksi manajer
+          </h3>
+          <p className="text-muted-foreground">
+            Proposal dihitung <strong>ditinjau manajer</strong> bila sudah
+            diberi tanggapan atau kategorinya dikoreksi.{' '}
+            <strong>AI sepakat</strong> bila proposal yang ditinjau tidak
+            dikoreksi ke kategori lain. Koreksi tidak mengubah kategori dan skor
+            dari AI; angka ini bahan untuk menyesuaikan bobot dan patokan di
+            atas.
+          </p>
+          {agreementPercent === null ? (
+            <p className="text-muted-foreground">
+              Belum ada proposal yang ditinjau manajer. Angka kesepakatan muncul
+              setelah manajer memberi tanggapan atau mengoreksi kategori.
+            </p>
+          ) : (
+            <>
+              <dl className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    Ditinjau manajer
+                  </dt>
+                  <dd className="text-lg font-medium">
+                    {formatNumber(reviewed)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">Dikoreksi</dt>
+                  <dd className="text-lg font-medium">
+                    {formatNumber(corrections.length)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-muted-foreground">
+                    Arah koreksi
+                  </dt>
+                  <dd>
+                    Naik kategori {formatNumber(naik)} · Turun kategori{' '}
+                    {formatNumber(turun)}
+                  </dd>
+                </div>
+              </dl>
+              <p>
+                AI sepakat dengan manajer pada {formatNumber(agreed)} dari{' '}
+                {formatNumber(reviewed)} proposal yang ditinjau (
+                {rate(agreementPercent)}).
+              </p>
+              {corrections.length === 0 ? (
+                <p className="text-muted-foreground">Belum ada koreksi.</p>
+              ) : (
+                <Table aria-label="Koreksi kategori oleh manajer">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Proposal</TableHead>
+                      <TableHead>Kategori AI</TableHead>
+                      <TableHead>Koreksi manajer</TableHead>
+                      <TableHead>Alasan</TableHead>
+                      <TableHead>Tanggal</TableHead>
+                      <TableHead className="text-right">
+                        Skor kualitas
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {corrections.map(({ proposal, correction, direction }) => (
+                      <TableRow key={proposal.id}>
+                        <TableCell className="font-medium">
+                          <Link
+                            href={`/proposal/${encodeURIComponent(proposal.id)}`}
+                            className="underline-offset-4 hover:underline"
+                          >
+                            {proposal.name}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {proposal.category
+                            ? CATEGORY_LABEL[proposal.category]
+                            : '—'}
+                        </TableCell>
+                        <TableCell>
+                          {CATEGORY_LABEL[correction.category]}
+                          {direction ? ` (${direction})` : ''}
+                        </TableCell>
+                        <TableCell className="whitespace-normal">
+                          {correction.reason}
+                        </TableCell>
+                        <TableCell>{formatDate(correction.at)}</TableCell>
+                        <TableCell className="text-right">
+                          {proposal.assessment
+                            ? formatScore(proposal.assessment.score)
+                            : '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </>
+          )}
+        </section>
+
+        <section aria-labelledby="kalibrasi-analis" className="space-y-2">
+          <h3
+            id="kalibrasi-analis"
+            className="flex items-center gap-2 font-medium"
+          >
+            Kalibrasi analis <Badge variant="outline">belum ada data</Badge>
+          </h3>
+          <p className="text-muted-foreground">
+            Data kalibrasi belum ada. Rencananya 10–20 deck lama dinilai 2–3
+            analis dengan matriks yang sama, lalu tingkat kesepakatan AI dengan
+            analis ditampilkan di sini.
+          </p>
+        </section>
+      </CardContent>
+    </Card>
+  )
+}

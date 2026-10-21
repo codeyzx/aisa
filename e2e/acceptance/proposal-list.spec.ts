@@ -53,13 +53,14 @@ test('DSB-11 kategori filters the kategori efektif, so a correction moves the ro
   page,
 }) => {
   await page.goto('/proposal?kategori=sangat_cocok')
-  await expectRows(page, only('Tani Maju', 'Panen Kita'))
+  await expectRows(page, only('Tani Maju'))
 
-  // Pasar Ikan scored Kurang cocok and was corrected to Cocok.
+  // Pasar Ikan scored Kurang cocok and was corrected up to Cocok; Panen Kita
+  // scored Sangat cocok and was corrected down to Cocok.
   await page.goto('/proposal?kategori=cocok')
   await expectRows(
     page,
-    only('SawahKu', 'Klinik Desa', 'Dana UMKM', 'Pasar Ikan'),
+    only('SawahKu', 'Klinik Desa', 'Dana UMKM', 'Panen Kita', 'Pasar Ikan'),
   )
   const pasarIkan = page.getByRole('row').filter({ hasText: 'Pasar Ikan' })
   await expect(pasarIkan.getByText('Cocok', { exact: true })).toBeVisible()

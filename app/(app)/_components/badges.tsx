@@ -1,4 +1,5 @@
 import { Badge } from '@/components/ui/badge'
+import { isCorrected } from '@/features/aisa/aisa.calibration'
 import {
   CATEGORY_LABEL,
   QUALITY_OUTSIDE_FOCUS_LABEL,
@@ -13,8 +14,7 @@ import {
 /** Effective category, or the status when there is no category to show. */
 export function CategoryCell({ proposal }: { proposal: Proposal }) {
   if (proposal.effectiveCategory) {
-    const corrected =
-      proposal.correction && proposal.correction.category !== proposal.category
+    const corrected = isCorrected(proposal)
     return (
       <span className="inline-flex flex-wrap items-center gap-1">
         <Badge

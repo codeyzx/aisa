@@ -197,9 +197,9 @@ test('DSB-50 Riwayat lists every audit row, newest first, and leaves a deleted p
   await page.goto('/riwayat')
   const body = page.getByRole('table').locator('tbody')
 
-  // Seed: 3 rule/STOP/LANJUT rows, 14 proposal_masuk, 1 koreksi, 2 tanggapan,
+  // Seed: 3 rule/STOP/LANJUT rows, 14 proposal_masuk, 2 koreksi, 2 tanggapan,
   // 1 ringkasan, 1 retention deletion.
-  await expect(body.getByRole('row')).toHaveCount(22)
+  await expect(body.getByRole('row')).toHaveCount(23)
 
   const deleted = body.getByRole('row').filter({ hasText: '(dihapus)' })
   await expect(deleted).toHaveCount(1)

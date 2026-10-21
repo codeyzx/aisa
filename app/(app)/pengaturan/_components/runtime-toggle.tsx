@@ -1,9 +1,22 @@
 'use client'
 
 import { PauseIcon, PlayIcon } from 'lucide-react'
+import { useState } from 'react'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Spinner } from '@/components/ui/spinner'
 import { setRuntimePausedAction } from '@/features/aisa/aisa.action'
 import { cn } from '@/lib/utils'
 
@@ -11,7 +24,11 @@ import { useApiAction } from '../../_components/use-api-action'
 
 import { SettingsPanel } from './settings-panel'
 
-/** STOP / LANJUT — the same switch as the WhatsApp command. */
+/**
+ * STOP / LANJUT — the same switch as the WhatsApp command. STOP pauses the AI
+ * in production, so it asks first; LANJUT only resumes and runs in one click.
+ * The confirmation stays open on a refusal so the API's message can be read.
+ */
 export function RuntimePanel({
   paused,
   detail,
@@ -23,6 +40,14 @@ export function RuntimePanel({
   canConfigure: boolean
 }) {
   const { pending, error, run } = useApiAction()
+  const [confirming, setConfirming] = useState(false)
+
+  function stop() {
+    run(() => setRuntimePausedAction(true), {
+      success: 'AI dijeda (STOP).',
+      onSuccess: () => setConfirming(false),
+    })
+  }
   return (
     <SettingsPanel
       title="Status AI"
@@ -50,25 +75,72 @@ export function RuntimePanel({
         <p className="text-[13px] leading-relaxed text-muted-foreground">
           {detail}
         </p>
-        {canConfigure ? (
+        {canConfigure && paused ? (
           <Button
             className="shrink-0 self-start sm:self-auto"
-            variant={paused ? 'default' : 'destructive'}
             disabled={pending}
             onClick={() =>
-              run(() => setRuntimePausedAction(!paused), {
-                success: paused
-                  ? 'AI dilanjutkan (LANJUT).'
-                  : 'AI dijeda (STOP).',
+              run(() => setRuntimePausedAction(false), {
+                success: 'AI dilanjutkan (LANJUT).',
               })
             }
           >
-            {paused ? <PlayIcon /> : <PauseIcon />}
-            {paused ? 'LANJUT' : 'STOP'}
+            <PlayIcon />
+            LANJUT
           </Button>
         ) : null}
+        {canConfigure && !paused ? (
+          <AlertDialog
+            open={confirming}
+            onOpenChange={(next) => {
+              if (!pending) setConfirming(next)
+            }}
+          >
+            <AlertDialogTrigger
+              render={
+                <Button
+                  className="shrink-0 self-start sm:self-auto"
+                  variant="destructive"
+                  disabled={pending}
+                />
+              }
+            >
+              <PauseIcon />
+              STOP
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Jeda semua pekerjaan AI?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Selama dijeda, proposal baru menunggu sebagai Antre, Asisten
+                  menjawab “AISA sedang dijeda”, dan pekerjaan yang sedang
+                  berjalan dihentikan di antara langkah. Tekan LANJUT untuk
+                  menjalankannya lagi.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={pending}>Batal</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  focusableWhenDisabled
+                  className="aria-disabled:pointer-events-none aria-disabled:opacity-50"
+                  disabled={pending}
+                  onClick={stop}
+                >
+                  {pending ? <Spinner /> : null}
+                  Ya, jeda AI
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        ) : null}
       </div>
-      {error ? (
+      {error && !confirming ? (
         <div className="px-5 pb-4">
           <Alert variant="destructive">
             <AlertDescription>{error}</AlertDescription>

@@ -235,16 +235,40 @@ test('DSB-95 a rules save aisa-api refuses shows its message verbatim', async ({
   expect(aisaApi.calls).toHaveLength(1)
 })
 
-test('DSB-96 STOP sends the stop route with no body', async ({
+/** STOP's confirmation, opened from the Status AI panel. */
+async function openStopConfirm(page: Page, status: Locator): Promise<Locator> {
+  await status.getByRole('button', { name: 'STOP' }).click()
+  const confirm = page.getByRole('alertdialog', {
+    name: 'Jeda semua pekerjaan AI?',
+  })
+  await expect(confirm).toBeVisible()
+  return confirm
+}
+
+test('DSB-96 STOP asks first, Batal sends nothing, and the confirm sends the stop route with no body', async ({
   page,
   aisaApi,
 }) => {
   await page.goto('/pengaturan?tab=integrasi')
   const status = panel(page, 'Status AI')
   await expect(status.getByText('Berjalan', { exact: true })).toBeVisible()
-  await status.getByRole('button', { name: 'STOP' }).click()
+
+  const cancelled = await openStopConfirm(page, status)
+  await expect(
+    cancelled.getByText(
+      'Selama dijeda, proposal baru menunggu sebagai Antre, Asisten menjawab “AISA sedang dijeda”, dan pekerjaan yang sedang berjalan dihentikan di antara langkah.',
+    ),
+  ).toBeVisible()
+  await cancelled.getByRole('button', { name: 'Batal' }).click()
+  await expect(cancelled).toHaveCount(0)
+  expect(writes(aisaApi.calls)).toEqual([])
+  await expect(status.getByText('Berjalan', { exact: true })).toBeVisible()
+
+  const confirm = await openStopConfirm(page, status)
+  await confirm.getByRole('button', { name: 'Ya, jeda AI' }).click()
 
   await expect(toast(page, 'AI dijeda (STOP).')).toBeVisible()
+  await expect(confirm).toHaveCount(0)
   expect(writes(aisaApi.calls)).toEqual([
     {
       method: 'POST',
@@ -275,7 +299,9 @@ test('DSB-97 while paused, Pengaturan says so and LANJUT sends the resume route'
       ).toBeVisible()
       await status.getByRole('button', { name: 'LANJUT' }).click()
 
+      // Resuming needs no confirmation.
       await expect(toast(page, 'AI dilanjutkan (LANJUT).')).toBeVisible()
+      await expect(page.getByRole('alertdialog')).toHaveCount(0)
       expect(
         writes(aisaApi.calls).map((call) => [call.method, call.path]),
       ).toEqual([['POST', '/api/runtime/resume']])
@@ -292,9 +318,11 @@ test('DSB-98 a STOP aisa-api refuses shows its message verbatim', async ({
   await expect(status.getByText('Berjalan', { exact: true })).toBeVisible()
   // Armed only once the tab has rendered: its own `GET /health` would
   // otherwise take the refusal meant for STOP.
+  const confirm = await openStopConfirm(page, status)
   aisaApi.refuseNext({ status: 503, detail: 'INTERNAL_API_KEY belum diatur' })
-  await status.getByRole('button', { name: 'STOP' }).click()
+  await confirm.getByRole('button', { name: 'Ya, jeda AI' }).click()
 
-  await expect(alertIn(status, 'INTERNAL_API_KEY belum diatur')).toBeVisible()
+  // The confirmation stays open so the refusal can be read where it was asked.
+  await expect(alertIn(confirm, 'INTERNAL_API_KEY belum diatur')).toBeVisible()
   await expect(toast(page, 'AI dijeda (STOP).')).toHaveCount(0)
 })

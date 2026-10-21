@@ -21,7 +21,9 @@ it.
 The pieces, if you want to run them one at a time:
 
 - `pnpm check:static` — `node:check`, `typecheck`, `templates:check`, `lint`,
-  `lint:rules`, `format:check`, `docs:check`, `structure:check`.
+  `lint:rules`, `format:check`, `docs:check`, `structure:check`. `lint` runs oxlint
+  with `--deny-warnings`, as does the pre-commit hook, so a warning fails the gate
+  exactly as an error does.
 - `pnpm test:unit` — the unit suite, integration and rules tests excluded.
 - `pnpm test:integration` — the emulator suite plus `pnpm indexes:check`, wrapped in
   `firebase emulators:exec`.
@@ -35,6 +37,25 @@ instance on the ports in `firebase.json`, and `pnpm test:e2e:ci` starts its own 
 emulator on 9099 plus one Firestore emulator per shard (8181 upward), so quit anything
 already holding them — a `pnpm dev` or a standalone `pnpm emulators` in another
 terminal — before you run them. The E2E runner refuses rather than adopt one.
+
+### When lint warns
+
+Fix the code when the warning is right. When a pattern is deliberate, disable the
+rule on that one line and say why on the same line:
+`// oxlint-disable-next-line no-await-in-loop -- readiness poll: one probe, then a pause`.
+
+Path-wide exemptions live in the `overrides` of `.oxlintrc.json`. JSON carries no
+comments, so each one's reason is recorded here:
+
+- `components/ui/**` — vendored shadcn code; see `docs/reference/contracts/ui.md`.
+- `features/_template/**` and `scripts/migration/_template.ts` turn off
+  `no-underscore-dangle`: `__entity__`-style names are the placeholders the template
+  generator substitutes, so the dangling underscores are the point.
+- `e2e/**` turns off `no-await-in-loop`: a spec drives one browser page, and its clicks,
+  navigations and assertions must run in order; the mock aisa-api's listen retry is a
+  backoff, which is sequential by definition.
+- `lib/http/index.test.ts` turns off `no-await-in-loop`: the rate limiter counts hits,
+  so the hits must land one after another.
 
 ### The whole CI, locally — `pnpm ci:local`
 

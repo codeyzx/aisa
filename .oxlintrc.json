@@ -151,6 +151,18 @@
         "jsx-a11y/click-events-have-key-events": "off",
         "jsx-a11y/no-noninteractive-element-interactions": "off"
       }
+    },
+    {
+      "files": ["features/_template/**", "scripts/migration/_template.ts"],
+      "rules": {
+        "no-underscore-dangle": "off"
+      }
+    },
+    {
+      "files": ["e2e/**", "lib/http/index.test.ts"],
+      "rules": {
+        "no-await-in-loop": "off"
+      }
     }
   ]
 }

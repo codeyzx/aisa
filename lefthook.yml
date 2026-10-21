@@ -39,7 +39,7 @@ pre-commit:
   jobs:
     - name: lint
       glob: '*.{ts,tsx,js,jsx,mjs,cjs}'
-      run: pnpm exec oxlint {staged_files}
+      run: pnpm exec oxlint --deny-warnings {staged_files}
 
     # --check, not a rewrite. See the header.
     #

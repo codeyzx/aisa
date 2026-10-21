@@ -114,10 +114,10 @@ Typecheck with no emit. Necessary before shipping, never sufficient.
 ### `pnpm lint`
 
 ```
-oxlint
+oxlint --deny-warnings
 ```
 
-Lint the tree.
+Lint the tree. A warning fails it, same as an error.
 
 ### `pnpm lint:fix`
 

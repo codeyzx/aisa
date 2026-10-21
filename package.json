@@ -20,7 +20,7 @@
     "snapshot:restore": "node scripts/snapshot/restore.ts",
     "node:check": "node scripts/check-node-version.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint",
+    "lint": "oxlint --deny-warnings",
     "lint:fix": "oxlint --fix",
     "lint:rules": "ast-grep scan && ast-grep test --skip-snapshot-tests",
     "format": "oxfmt",

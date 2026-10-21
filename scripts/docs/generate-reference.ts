@@ -432,7 +432,10 @@ const COMMAND_NOTES: Record<string, CommandNote> = {
       'exactly what lets them rot onto whoever forks next; this substitutes real ' +
       'names outside the worktree and typechecks the result.',
   },
-  lint: { group: 'Checks', note: 'Lint the tree.' },
+  lint: {
+    group: 'Checks',
+    note: 'Lint the tree. A warning fails it, same as an error.',
+  },
   'lint:fix': {
     group: 'Checks',
     note: 'Lint and apply the fixes the linter can make itself.',

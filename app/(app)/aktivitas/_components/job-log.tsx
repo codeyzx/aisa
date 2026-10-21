@@ -11,21 +11,10 @@ import type { JobStatus, StepStatus } from '@/features/aisa/aisa.schema'
 import { formatNumber } from '@/lib/format/number'
 import { cn } from '@/lib/utils'
 
+import { AGENT_ORDER, agentColor } from '../../_components/badges'
 import { compact, formatClock, formatDayTime, seconds } from './format'
 
 const PAGE_SIZE = 12
-
-/** Agent colours from the `--agent-*` tokens, in the order the filter chips list them. */
-const AGENT_COLOR: Record<string, string> = {
-  Penilai: 'var(--agent-1)',
-  'Pembuat ringkasan': 'var(--agent-2)',
-  Asisten: 'var(--agent-4)',
-  Orchestrator: 'var(--agent-5)',
-  Retensi: 'var(--agent-3)',
-}
-const AGENT_ORDER = Object.keys(AGENT_COLOR)
-const agentColor = (agent: string) =>
-  AGENT_COLOR[agent] ?? 'var(--muted-foreground)'
 
 const STATUS_CLASS: Record<JobStatus | StepStatus, string> = {
   selesai: 'a-ok',

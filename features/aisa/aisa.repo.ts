@@ -138,6 +138,15 @@ async function withSteps(job: Job): Promise<JobWithSteps> {
   return { ...job, steps: snap.docs.map((doc) => doc.data()) }
 }
 
+/** The newest jobs, without their steps. */
+export const listRecentJobs = cache(async (limit: number): Promise<Job[]> => {
+  const snap = await jobsCollection()
+    .orderBy('startedAt', 'desc')
+    .limit(limit)
+    .get()
+  return snap.docs.map((doc) => doc.data())
+})
+
 /**
  * The newest jobs with their steps. `focusJobId` (the "Lihat log penilaian"
  * link) is always included, even when it has scrolled out of the window.
@@ -146,11 +155,7 @@ export async function listJobsWithSteps(
   limit: number,
   focusJobId?: string,
 ): Promise<JobWithSteps[]> {
-  const snap = await jobsCollection()
-    .orderBy('startedAt', 'desc')
-    .limit(limit)
-    .get()
-  const jobs = snap.docs.map((doc) => doc.data())
+  const jobs = [...(await listRecentJobs(limit))]
   if (focusJobId && !jobs.some((job) => job.id === focusJobId)) {
     const focus = (await jobsCollection().doc(focusJobId).get()).data()
     if (focus) jobs.unshift(focus)

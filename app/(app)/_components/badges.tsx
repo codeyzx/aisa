@@ -15,6 +15,22 @@ import {
 } from '@/features/aisa/aisa.schema'
 import { cn } from '@/lib/utils'
 
+/**
+ * Agent colours from the `--agent-*` tokens, keyed by the job's `agent` name, in
+ * the order Aktivitas AI lists its filter chips. Biaya AI paints the same agent
+ * with the same colour, so a reader moving between the two pages keeps it.
+ */
+const AGENT_COLOR: Record<string, string> = {
+  Penilai: 'var(--agent-1)',
+  'Pembuat ringkasan': 'var(--agent-2)',
+  Asisten: 'var(--agent-4)',
+  Orchestrator: 'var(--agent-5)',
+  Retensi: 'var(--agent-3)',
+}
+export const AGENT_ORDER = Object.keys(AGENT_COLOR)
+export const agentColor = (agent: string) =>
+  AGENT_COLOR[agent] ?? 'var(--muted-foreground)'
+
 // Category colours read the `--category-*` tokens (text contrast ≥ 4.5:1); the
 // text label always travels with the colour, so colour is never the only cue.
 const CATEGORY_STYLE: Record<Category, string> = {

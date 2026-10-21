@@ -84,7 +84,7 @@ test('DSB-83 a refused Hapus data keeps the dialog open with the API message', a
 })
 
 async function openUpload(page: Page) {
-  await page.goto('/hari-ini')
+  await page.goto('/dashboard')
   await page.getByRole('button', { name: 'Unggah pitch deck' }).click()
   const dialog = page.getByRole('dialog')
   await expect(
@@ -191,6 +191,6 @@ test('DSB-88 a deck aisa-api refuses shows its message and stays on the dialog',
   await dialog.getByRole('button', { name: 'Unggah', exact: true }).click()
 
   await expect(alertIn(dialog, 'berkas bukan PDF')).toBeVisible()
-  await expect(page).toHaveURL(/\/hari-ini$/u)
+  await expect(page).toHaveURL(/\/dashboard$/u)
   expect(aisaApi.calls).toHaveLength(1)
 })

@@ -6,45 +6,60 @@
  * `aisa:configure`); these tests drive what the page actually renders.
  */
 import { expect, signInAs, test } from './fixtures.ts'
-import { fact } from './locators.ts'
+import { card, fact } from './locators.ts'
 
 test.beforeEach(async ({ page }) => {
   await signInAs(page, 'user')
 })
 
-test('DSB-60 Pengaturan shows a viewer every active rule, read-only, and no STOP', async ({
+test('DSB-60 Aturan penilaian and Pengaturan show a viewer every active rule, read-only, and no STOP', async ({
   page,
 }) => {
-  await page.goto('/pengaturan')
+  await page.goto('/aturan')
+  const main = page.getByRole('main')
 
-  await expect(page.getByText('Berjalan', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'STOP' })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'LANJUT' })).toHaveCount(0)
-  await expect(page.getByRole('textbox')).toHaveCount(0)
-  await expect(page.getByRole('spinbutton')).toHaveCount(0)
+  await expect(main.getByRole('button', { name: /^Ubah/u })).toHaveCount(0)
+  await expect(main.getByRole('textbox')).toHaveCount(0)
+  await expect(main.getByRole('spinbutton')).toHaveCount(0)
 
-  await expect(page.getByText('versi 1', { exact: true })).toBeVisible()
-  await expect(
-    page.getByText(
-      'Tim 27,5% · Pasar & masalah 30% · Produk & keunggulan 20% · Traksi 12,5% · Model bisnis & keuangan 10%',
-    ),
-  ).toBeVisible()
-  await expect(
-    page.getByText('agritech, fintech, edtech, healthtech, climate', {
-      exact: true,
-    }),
-  ).toBeVisible()
-  await expect(
-    page.getByText('pre-seed, seed, seri-a', { exact: true }),
-  ).toBeVisible()
-  for (const [label, value] of [
-    ['Sangat cocok ≥', '80'],
-    ['Cocok ≥', '65'],
-    ['Kurang cocok ≥', '45'],
-    ['Berkualitas, di luar fokus ≥', '65'],
+  await expect(main.getByText('Aturan versi 1', { exact: true })).toBeVisible()
+  const weights = card(page, 'Bobot kriteria')
+  for (const [label, percent] of [
+    ['Tim', '27,5%'],
+    ['Pasar & masalah', '30%'],
+    ['Produk & keunggulan', '20%'],
+    ['Traksi', '12,5%'],
+    ['Model bisnis & keuangan', '10%'],
   ] as const) {
-    await expect(fact(page, label)).toHaveText(value)
+    await expect(
+      weights
+        .getByRole('listitem')
+        .filter({ has: page.getByText(label, { exact: true }) }),
+      label,
+    ).toContainText(percent)
   }
+  const focus = card(page, 'Fokus investasi')
+  await expect(focus.getByText('5 sektor fokus', { exact: true })).toBeVisible()
+  await expect(focus.getByText('3 tahap fokus', { exact: true })).toBeVisible()
+  for (const value of [
+    'agritech',
+    'fintech',
+    'edtech',
+    'healthtech',
+    'climate',
+    'pre-seed',
+    'seed',
+    'seri-a',
+  ]) {
+    await expect(focus.getByText(value, { exact: true })).toBeVisible()
+  }
+  const thresholds = card(page, 'Batas kategori')
+  for (const range of ['≥ 80', '≥ 65', '≥ 45', '< 45']) {
+    await expect(thresholds.getByText(range, { exact: true })).toBeVisible()
+  }
+  await expect(
+    thresholds.getByText(/Skor 65 ke atas yang gagal salah satu cek fokus/u),
+  ).toBeVisible()
   for (const model of ['Penilai', 'Pembuat ringkasan', 'Insight', 'Asisten']) {
     await expect(fact(page, model)).toContainText('gemini-3.8-flash')
   }
@@ -52,11 +67,21 @@ test('DSB-60 Pengaturan shows a viewer every active rule, read-only, and no STOP
     page.getByText('berlaku setelah Asisten di-deploy ulang'),
   ).toBeVisible()
   await expect(page.getByText('Orchestrator')).toHaveCount(0)
+
+  await page.goto('/pengaturan?tab=integrasi')
+  await expect(page.getByText('Berjalan', { exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'STOP' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'LANJUT' })).toHaveCount(0)
+
+  await page.goto('/pengaturan?tab=privasi')
+  await expect(main.getByText('90 hari', { exact: true }).first()).toBeVisible()
   await expect(
-    page.getByText(
-      '90 hari — Proposal yang diarsipkan dihapus otomatis setelah 90 hari (setiap hari 02.00 WIB).',
+    main.getByText(
+      /^Proposal yang diarsipkan dihapus otomatis setelah 90 hari \(setiap hari 02\.00 WIB\)\./u,
     ),
   ).toBeVisible()
+  await expect(main.getByRole('combobox')).toHaveCount(0)
+  await expect(main.getByRole('textbox')).toHaveCount(0)
 })
 
 test('DSB-61 a viewer gets no response, correction or delete control on a proposal', async ({
@@ -64,23 +89,19 @@ test('DSB-61 a viewer gets no response, correction or delete control on a propos
 }) => {
   await page.goto('/proposal/form-seedtanimaju')
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Tani Maju' }),
+    page.getByRole('heading', { level: 2, name: 'Tani Maju' }),
   ).toBeVisible()
-  for (const name of [
-    'Undang',
-    'Pantau',
-    'Arsipkan',
-    'Simpan koreksi',
-    'Hapus data',
-  ]) {
+  for (const name of [/^Undang/u, /^Pantau/u, /^Arsipkan/u]) {
     await expect(page.getByRole('button', { name })).toHaveCount(0)
   }
-  await expect(page.getByText('Koreksi kategori', { exact: true })).toHaveCount(
-    0,
-  )
+  for (const name of ['Simpan koreksi', 'Hapus data']) {
+    await expect(page.getByRole('button', { name })).toHaveCount(0)
+  }
+  await expect(page.getByLabel('Catatan (opsional)')).toHaveCount(0)
+  await expect(page.getByText('Kategori kurang pas?')).toHaveCount(0)
   // Reading the log is not a write.
   await expect(
-    page.getByRole('link', { name: 'Lihat log penilaian' }),
+    page.getByRole('button', { name: 'Lihat log penilaian' }),
   ).toBeVisible()
 })
 
@@ -91,16 +112,23 @@ test('DSB-62 a viewer gets no bulk response on a filtered list', async ({
   // whose every button is refused by the server action.
   await page.goto('/proposal?kategori=cocok')
   await expect(
-    page.getByText('Menampilkan 4 dari 14 proposal.', { exact: true }),
+    page.getByText('Menampilkan 1–5 dari 5 proposal', { exact: true }),
   ).toBeVisible()
   await expect(page.getByText(/^Tanggapi semua/u)).toHaveCount(0)
   await expect(page.getByRole('button', { name: /semua$/u })).toHaveCount(0)
+  // Ticking rows still allows an export, but offers no response.
+  await page.getByRole('checkbox', { name: 'Pilih SawahKu' }).click()
+  const bar = page.getByRole('region', { name: 'Tanggapan massal' })
+  await expect(bar.getByText('1 dipilih')).toBeVisible()
+  for (const name of ['Undang', 'Pantau', 'Arsipkan']) {
+    await expect(bar.getByRole('button', { name })).toHaveCount(0)
+  }
 })
 
 test('DSB-63 a viewer gets no Unggah pitch deck button', async ({ page }) => {
   // Uploading needs `aisa:respond`; a viewer must not learn that only after
   // picking a PDF and pressing Unggah.
-  for (const path of ['/hari-ini', '/proposal']) {
+  for (const path of ['/dashboard', '/proposal']) {
     await page.goto(path)
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(

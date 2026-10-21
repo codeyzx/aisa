@@ -9,9 +9,16 @@
  * end state in Firestore is `aisa-api`'s to prove, not this suite's: the mock
  * writes nothing.
  */
+import type { Locator, Page } from '@playwright/test'
+
 import { expect, signInAs, test } from './fixtures.ts'
 import { alertIn, card, toast } from './locators.ts'
 import { EXPECTED_KEY } from './mock-aisa-api.ts'
+
+async function pickCategory(page: Page, scope: Locator, label: string) {
+  await scope.getByRole('combobox', { name: 'Kategori baru' }).click()
+  await page.getByRole('option', { name: label, exact: true }).click()
+}
 
 const UNREACHABLE = 'aisa-api tidak dapat dihubungi. Coba lagi sebentar lagi.'
 
@@ -24,9 +31,9 @@ test('DSB-70 Undang with a note sends kind and note, and says it was saved', asy
   aisaApi,
 }) => {
   await page.goto('/proposal/form-seedtanimaju')
-  const panel = card(page, 'Tanggapan')
+  const panel = card(page, 'Keputusan Anda')
   await panel.getByLabel('Catatan (opsional)').fill('  Ajak pitching Kamis  ')
-  await panel.getByRole('button', { name: 'Undang' }).click()
+  await panel.getByRole('button', { name: /^Undang/u }).click()
 
   await expect(toast(page, 'Tanggapan tersimpan: Undang.')).toBeVisible()
   expect(aisaApi.calls).toEqual([
@@ -46,10 +53,10 @@ test('DSB-71 Pantau without a note sends no note at all', async ({
   aisaApi,
 }) => {
   await page.goto('/proposal/form-seedsawahku')
-  const panel = card(page, 'Tanggapan')
+  const panel = card(page, 'Keputusan Anda')
   // Spaces only are no note.
   await panel.getByLabel('Catatan (opsional)').fill('   ')
-  await panel.getByRole('button', { name: 'Pantau' }).click()
+  await panel.getByRole('button', { name: /^Pantau/u }).click()
 
   await expect(toast(page, 'Tanggapan tersimpan: Pantau.')).toBeVisible()
   expect(aisaApi.calls.map((call) => [call.path, call.body])).toEqual([
@@ -63,8 +70,13 @@ test('DSB-72 an API refusal of a response is shown verbatim and nothing claims s
 }) => {
   await page.goto('/proposal/form-seedbelajaryuk')
   aisaApi.refuseNext({ status: 404, detail: 'proposal tidak ditemukan' })
-  const panel = card(page, 'Tanggapan')
-  await panel.getByRole('button', { name: 'Arsipkan' }).click()
+  const panel = card(page, 'Keputusan Anda')
+  await panel.getByRole('button', { name: /^Arsipkan/u }).click()
+  // Arsipkan asks once more; nothing is sent before the confirmation.
+  const confirm = page.getByRole('alertdialog')
+  await expect(confirm.getByText('Arsipkan BelajarYuk?')).toBeVisible()
+  expect(aisaApi.calls).toEqual([])
+  await confirm.getByRole('button', { name: 'Arsipkan', exact: true }).click()
 
   await expect(alertIn(panel, 'proposal tidak ditemukan')).toBeVisible()
   await expect(toast(page, 'proposal tidak ditemukan')).toBeVisible()
@@ -79,8 +91,8 @@ test('DSB-73 an unreachable aisa-api says so instead of failing silently', async
 }) => {
   await page.goto('/proposal/form-seedbelajaryuk')
   aisaApi.dropNext()
-  const panel = card(page, 'Tanggapan')
-  await panel.getByRole('button', { name: 'Pantau' }).click()
+  const panel = card(page, 'Keputusan Anda')
+  await panel.getByRole('button', { name: /^Pantau/u }).click()
 
   await expect(alertIn(panel, UNREACHABLE)).toBeVisible()
   expect(aisaApi.calls).toHaveLength(1)
@@ -92,8 +104,8 @@ test('DSB-74 a double click on a response sends it once', async ({
 }) => {
   await page.goto('/proposal/upload-seedklinikdesa')
   aisaApi.delayAnswers(1500)
-  const panel = card(page, 'Tanggapan')
-  await panel.getByRole('button', { name: 'Pantau' }).dblclick()
+  const panel = card(page, 'Keputusan Anda')
+  await panel.getByRole('button', { name: /^Pantau/u }).dblclick()
 
   await expect(toast(page, 'Tanggapan tersimpan: Pantau.')).toBeVisible()
   expect(aisaApi.calls).toHaveLength(1)
@@ -104,8 +116,8 @@ test('DSB-75 Koreksi kategori without a reason sends nothing', async ({
   aisaApi,
 }) => {
   await page.goto('/proposal/form-seedtanimaju')
-  const kategori = card(page, /^Kategori$/u)
-  await kategori.getByLabel('Kategori baru').selectOption('Cocok')
+  const kategori = card(page, 'Kategori kurang pas?')
+  await pickCategory(page, kategori, 'Cocok')
 
   await kategori.getByRole('button', { name: 'Simpan koreksi' }).click()
   await expect(alertIn(kategori, 'Alasan koreksi wajib diisi.')).toBeVisible()
@@ -122,14 +134,19 @@ test('DSB-76 Koreksi kategori with a reason sends the category and the reason, n
   aisaApi,
 }) => {
   await page.goto('/proposal/form-seedtanimaju')
-  const kategori = card(page, /^Kategori$/u)
-  // The current kategori efektif cannot be chosen again.
-  await kategori.getByLabel('Kategori baru').selectOption('Sangat cocok')
+  const kategori = card(page, 'Kategori kurang pas?')
+  // Nothing to save before a kategori is picked, and the current kategori
+  // efektif cannot be chosen again.
   await expect(
     kategori.getByRole('button', { name: 'Simpan koreksi' }),
   ).toBeDisabled()
+  await kategori.getByRole('combobox', { name: 'Kategori baru' }).click()
+  await expect(
+    page.getByRole('option', { name: 'Sangat cocok', exact: true }),
+  ).toHaveAttribute('aria-disabled', 'true')
+  await page.keyboard.press('Escape')
 
-  await kategori.getByLabel('Kategori baru').selectOption('Kurang cocok')
+  await pickCategory(page, kategori, 'Kurang cocok')
   await kategori.getByLabel('Alasan koreksi').fill('Tim belum lengkap')
   await kategori.getByRole('button', { name: 'Simpan koreksi' }).click()
 
@@ -155,7 +172,8 @@ test('DSB-77 a refused Koreksi kategori shows the API message verbatim', async (
     status: 409,
     detail: 'hanya proposal yang sudah dinilai yang punya kategori',
   })
-  const kategori = card(page, /^Kategori$/u)
+  const kategori = card(page, 'Kategori kurang pas?')
+  await pickCategory(page, kategori, 'Cocok')
   await kategori.getByLabel('Alasan koreksi').fill('Uji penolakan')
   await kategori.getByRole('button', { name: 'Simpan koreksi' }).click()
 

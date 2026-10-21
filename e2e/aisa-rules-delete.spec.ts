@@ -1,5 +1,5 @@
 /**
- * The rules page and the "Hapus data" dialog against the seeded emulator, read
+ * Aturan penilaian, Pengaturan's retention, and the "Hapus data" dialog against the seeded emulator, read
  * side only: the E2E image has no `aisa-api` behind it, so nothing here saves
  * rules or confirms a deletion. What it proves is what each seat is SHOWN — the
  * retired Orchestrator model is gone, the Asisten model cannot be edited, the
@@ -14,34 +14,50 @@ test('the manager edits retention, sees Asisten read-only and no Orchestrator', 
   page,
 }) => {
   await signIn(page)
-  await page.goto('/pengaturan')
+  await page.goto('/pengaturan?tab=privasi')
 
-  await expect(page.getByLabel('Retensi (hari)')).toHaveValue('90')
+  await expect(page.getByLabel('Hapus arsip setelah')).toHaveText(/90 hari/u)
   await expect(
     page.getByText(
-      'Proposal yang diarsipkan dihapus otomatis setelah 90 hari (setiap hari 02.00 WIB).',
+      /^Proposal yang diarsipkan dihapus otomatis setelah 90 hari \(setiap hari 02\.00 WIB\)\./u,
     ),
   ).toBeVisible()
-  await expect(page.getByLabel('Asisten')).toBeDisabled()
+
+  await page.goto('/aturan')
+  await page.getByRole('button', { name: 'Ubah aturan' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Ubah aturan penilaian' })
+  await dialog.getByRole('tab', { name: 'Model' }).click()
+  await expect(dialog.getByLabel('Asisten')).toBeDisabled()
   await expect(
-    page.getByText('berlaku setelah Asisten di-deploy ulang'),
+    dialog.getByText('berlaku setelah Asisten di-deploy ulang'),
   ).toBeVisible()
   await expect(page.getByText('Orchestrator')).toHaveCount(0)
 })
 
 test('a read-only seat sees every rule but no form', async ({ page }) => {
   await signIn(page, 'user')
-  await page.goto('/pengaturan')
+  await page.goto('/aturan')
 
+  const card = (title: string) =>
+    page.locator('[data-slot="card"]').filter({
+      has: page.locator('[data-slot="card-title"]', { hasText: title }),
+    })
+  await expect(card('Patokan nilai')).toBeVisible()
   await expect(
-    page.getByRole('heading', { name: 'Patokan nilai' }),
+    card('Model dan pembacaan deck').getByText(
+      'berlaku setelah Asisten di-deploy ulang',
+    ),
   ).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Retensi' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Ubah aturan' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Ubah' })).toHaveCount(0)
+
+  await page.goto('/pengaturan?tab=privasi')
   await expect(
-    page.getByText('berlaku setelah Asisten di-deploy ulang'),
+    page.getByRole('heading', { name: 'Berapa lama arsip disimpan' }),
   ).toBeVisible()
+  await expect(page.getByLabel('Hapus arsip setelah')).toHaveCount(0)
   await expect(
-    page.getByRole('button', { name: 'Simpan sebagai versi baru' }),
+    page.getByRole('button', { name: 'Simpan', exact: true }),
   ).toHaveCount(0)
 })
 
@@ -71,7 +87,7 @@ test('a read-only seat has no Hapus data button', async ({ page }) => {
   await page.goto('/proposal/form-seedfashionista')
 
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Fashionista' }),
+    page.getByRole('heading', { level: 2, name: 'Fashionista' }),
   ).toBeVisible()
   await expect(page.getByRole('button', { name: 'Hapus data' })).toHaveCount(0)
 })

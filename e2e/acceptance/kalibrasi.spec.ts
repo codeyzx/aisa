@@ -1,5 +1,5 @@
 /**
- * Pengaturan → Kalibrasi against the shard's emulator. The expected numbers are
+ * Aturan penilaian → Kalibrasi against the shard's emulator. The expected numbers are
  * recounted here from `proposals`, with the rule the section states on screen:
  * a proposal is "ditinjau manajer" when it has a tanggapan or a koreksi, and the
  * AI agrees unless the koreksi moved it to another kategori.
@@ -80,7 +80,7 @@ test('DSB-99 Kalibrasi counts manager reviews and lists every koreksi', async ({
   expect(want.rows).toHaveLength(2)
 
   await signInAs(page)
-  await page.goto('/pengaturan')
+  await page.goto('/aturan')
   const kalibrasi = card(page, 'Kalibrasi')
 
   await expect(
@@ -143,6 +143,7 @@ test('DSB-99 Kalibrasi counts manager reviews and lists every koreksi', async ({
   await body.getByRole('link', { name: first.name }).click()
   await expect(page).toHaveURL(`/proposal/${first.id}`)
   await expect(
-    page.getByRole('heading', { level: 1, name: first.name }),
+    // The shell owns the page's h1 ("Proposal"); the proposal's name is the h2.
+    page.getByRole('heading', { level: 2, name: first.name }),
   ).toBeVisible()
 })

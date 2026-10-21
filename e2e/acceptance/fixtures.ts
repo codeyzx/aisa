@@ -33,8 +33,8 @@ export async function signInAs(
   const cookies = sessions.get(role)
   if (cookies) {
     await page.context().addCookies(cookies)
-    await page.goto('/hari-ini')
-    if (page.url().endsWith('/hari-ini')) return
+    await page.goto('/dashboard')
+    if (page.url().endsWith('/dashboard')) return
   }
   await signIn(page, role)
   sessions.set(role, await page.context().cookies())

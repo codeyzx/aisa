@@ -29,14 +29,39 @@ const ALL = [
 
 const only = (...names: string[]) => ALL.filter((name) => names.includes(name))
 
+const PAGE_SIZE = 12
+
+/**
+ * The list as the URL in hand shows it, every page: the page holds twelve
+ * rows, so a longer set is read across "Halaman berikutnya". Specs that assert
+ * an order load the list with `urut=masuk` (newest first); the default order is
+ * the score.
+ */
 async function expectRows(page: Page, names: string[]) {
-  await expect(page.getByRole('table').getByRole('link')).toHaveText(names)
-  await expect(
-    page.getByText(`Menampilkan ${names.length} dari 14 proposal.`, {
-      exact: true,
-    }),
-  ).toBeVisible()
+  const links = page.locator('tbody').getByRole('link')
+  const footer = page.getByText(
+    names.length
+      ? `Menampilkan 1–${Math.min(names.length, PAGE_SIZE)} dari ${names.length} proposal`
+      : '0 proposal',
+    { exact: true },
+  )
+  await expect(footer).toBeVisible()
+  await expect(links).toHaveText(names.slice(0, PAGE_SIZE))
+  if (names.length > PAGE_SIZE) {
+    await page.getByRole('button', { name: 'Halaman berikutnya' }).click()
+    await expect(links).toHaveText(names.slice(PAGE_SIZE))
+    await expect(
+      page.getByText(
+        `Menampilkan ${PAGE_SIZE + 1}–${names.length} dari ${names.length} proposal`,
+        { exact: true },
+      ),
+    ).toBeVisible()
+    await page.getByRole('button', { name: 'Halaman sebelumnya' }).click()
+  }
 }
+
+const row = (page: Page, name: string) =>
+  page.locator('tbody tr').filter({ hasText: name })
 
 test.beforeEach(async ({ page }) => {
   await signInAs(page)
@@ -45,55 +70,75 @@ test.beforeEach(async ({ page }) => {
 test('DSB-10 the unfiltered list shows every proposal, newest first', async ({
   page,
 }) => {
-  await page.goto('/proposal')
+  await page.goto('/proposal?urut=masuk')
   await expectRows(page, ALL)
+  // Select-all names the page it reaches, visibly, as its accessible name.
+  const scope = `Pilih semua ${PAGE_SIZE} proposal di halaman ini`
+  await expect(page.getByText(scope, { exact: true })).toBeVisible()
+  await expect(
+    page.getByRole('checkbox', { name: scope, exact: true }),
+  ).toBeVisible()
 })
 
 test('DSB-11 kategori filters the kategori efektif, so a correction moves the row', async ({
   page,
 }) => {
-  await page.goto('/proposal?kategori=sangat_cocok')
+  await page.goto('/proposal?urut=masuk&kategori=sangat_cocok')
   await expectRows(page, only('Tani Maju'))
 
   // Pasar Ikan scored Kurang cocok and was corrected up to Cocok; Panen Kita
   // scored Sangat cocok and was corrected down to Cocok.
-  await page.goto('/proposal?kategori=cocok')
+  await page.goto('/proposal?urut=masuk&kategori=cocok')
   await expectRows(
     page,
     only('SawahKu', 'Klinik Desa', 'Dana UMKM', 'Panen Kita', 'Pasar Ikan'),
   )
-  const pasarIkan = page.getByRole('row').filter({ hasText: 'Pasar Ikan' })
+  const pasarIkan = row(page, 'Pasar Ikan')
   await expect(pasarIkan.getByText('Cocok', { exact: true })).toBeVisible()
   await expect(pasarIkan.getByText('dikoreksi', { exact: true })).toBeVisible()
 
-  await page.goto('/proposal?kategori=kurang_cocok')
+  await page.goto('/proposal?urut=masuk&kategori=kurang_cocok')
   await expectRows(page, only('BelajarYuk'))
 
-  await page.goto('/proposal?kategori=tidak_cocok')
+  await page.goto('/proposal?urut=masuk&kategori=tidak_cocok')
   await expectRows(
     page,
     only('Ternak Pintar', 'Kopi Rakyat', 'Fashionista', 'AplikasiX'),
+  )
+
+  // "Sangat cocok + cocok" is both top categories at once.
+  await page.goto('/proposal?urut=masuk&kategori=atas')
+  await expectRows(
+    page,
+    only(
+      'Tani Maju',
+      'SawahKu',
+      'Klinik Desa',
+      'Dana UMKM',
+      'Panen Kita',
+      'Pasar Ikan',
+    ),
   )
 })
 
 test('DSB-12 status separates perlu dicek manual and antre from scored proposals', async ({
   page,
 }) => {
-  await page.goto('/proposal?status=perlu_dicek_manual')
+  await page.goto('/proposal?urut=masuk&status=perlu_dicek_manual')
   await expectRows(page, only('Bengkel Online', 'Rumah Belajar'))
   for (const name of ['Bengkel Online', 'Rumah Belajar']) {
-    const row = page.getByRole('row').filter({ hasText: name })
+    const tr = row(page, name)
     await expect(
-      row.getByText('Perlu dicek manual', { exact: true }),
+      tr.getByText('Perlu dicek manual', { exact: true }),
     ).toBeVisible()
     // No score and no category: the Skor cell is a dash.
-    await expect(row.getByRole('cell').nth(2)).toHaveText('—')
+    await expect(tr.getByRole('cell').last()).toHaveText('—')
   }
 
-  await page.goto('/proposal?status=antre')
+  await page.goto('/proposal?urut=masuk&status=antre')
   await expectRows(page, only('Logistik Nusantara'))
 
-  await page.goto('/proposal?status=dinilai')
+  await page.goto('/proposal?urut=masuk&status=dinilai')
   await expectRows(
     page,
     ALL.filter(
@@ -109,7 +154,7 @@ test('DSB-13 sektor lists the seeded sectors and filters on them', async ({
   page,
 }) => {
   await page.goto('/proposal')
-  const sektor = page.getByLabel('Sektor')
+  await page.getByRole('combobox', { name: 'Sektor', exact: true }).click()
   for (const sector of [
     'agritech',
     'edtech',
@@ -118,104 +163,110 @@ test('DSB-13 sektor lists the seeded sectors and filters on them', async ({
     'fintech',
     'healthtech',
   ]) {
-    await expect(sektor.locator('option', { hasText: sector })).toHaveCount(1)
+    await expect(
+      page.getByRole('option', { name: sector, exact: true }),
+    ).toHaveCount(1)
   }
+  await page.keyboard.press('Escape')
 
-  await page.goto('/proposal?sektor=agritech')
+  await page.goto('/proposal?urut=masuk&sektor=agritech')
   await expectRows(
     page,
     only('Ternak Pintar', 'Tani Maju', 'SawahKu', 'Panen Kita', 'Pasar Ikan'),
   )
-  await page.goto('/proposal?sektor=F%26B')
+  await page.goto('/proposal?urut=masuk&sektor=F%26B')
   await expectRows(page, only('Kopi Rakyat'))
 })
 
 test('DSB-14 tanggapan splits responded from not yet responded', async ({
   page,
 }) => {
-  await page.goto('/proposal?tanggapan=sudah')
+  await page.goto('/proposal?urut=masuk&tanggapan=sudah')
   await expectRows(page, only('Panen Kita', 'AplikasiX'))
   await expect(
-    page
-      .getByRole('row')
-      .filter({ hasText: 'Panen Kita' })
-      .getByText('Undang', { exact: true }),
+    row(page, 'Panen Kita').getByText('Diundang', { exact: true }),
   ).toBeVisible()
   await expect(
-    page
-      .getByRole('row')
-      .filter({ hasText: 'AplikasiX' })
-      .getByText('Arsipkan', { exact: true }),
+    row(page, 'AplikasiX').getByText('Diarsipkan', { exact: true }),
   ).toBeVisible()
 
-  await page.goto('/proposal?tanggapan=belum')
+  await page.goto('/proposal?urut=masuk&tanggapan=belum')
   await expectRows(
     page,
     ALL.filter((name) => !['Panen Kita', 'AplikasiX'].includes(name)),
   )
+
+  // One response kind at a time, as the Diundang / Diarsipkan tabs show it.
+  await page.goto('/proposal?urut=masuk&tanggapan=undang')
+  await expectRows(page, only('Panen Kita'))
+  await page.goto('/proposal?urut=masuk&tanggapan=arsipkan')
+  await expectRows(page, only('AplikasiX'))
+  await expect(
+    page.getByRole('tab', { name: /^Diarsipkan/u, selected: true }),
+  ).toBeVisible()
 })
 
 test('DSB-15 luar fokus lists only Tidak cocok proposals with a high quality score', async ({
   page,
 }) => {
-  await page.goto('/proposal?luarFokus=1')
+  await page.goto('/proposal?urut=masuk&luarFokus=1')
   await expectRows(page, only('Kopi Rakyat'))
   await expect(
-    page
-      .getByRole('row')
-      .filter({ hasText: 'Kopi Rakyat' })
-      .getByText('Berkualitas, di luar fokus', { exact: true }),
+    row(page, 'Kopi Rakyat').getByText('Berkualitas, di luar fokus', {
+      exact: true,
+    }),
   ).toBeVisible()
 })
 
-test('DSB-16 search matches part of the name, ignoring case and outer spaces', async ({
+test('DSB-16 search matches name, founder and one-liner, ignoring case and outer spaces', async ({
   page,
 }) => {
-  await page.goto('/proposal?q=tani')
-  await expectRows(page, only('Tani Maju'))
-  await page.goto('/proposal?q=TANI')
-  await expectRows(page, only('Tani Maju'))
-  await page.goto('/proposal?q=%20%20pasar%20')
-  await expectRows(page, only('Pasar Ikan'))
-  await page.goto('/proposal?q=zzz-tidak-ada')
-  await expect(
-    page.getByText('Tidak ada proposal yang cocok dengan filter ini.'),
-  ).toBeVisible()
-  await expect(
-    page.getByText('Menampilkan 0 dari 14 proposal.', { exact: true }),
-  ).toBeVisible()
+  // "tani" is Tani Maju's name and Panen Kita's "petani" one-liner.
+  await page.goto('/proposal?urut=masuk&q=tani')
+  await expectRows(page, only('Tani Maju', 'Panen Kita'))
+  await page.goto('/proposal?urut=masuk&q=TANI')
+  await expectRows(page, only('Tani Maju', 'Panen Kita'))
+  // "pasar" is Pasar Ikan's name and Panen Kita's "Pasar daring" one-liner.
+  await page.goto('/proposal?urut=masuk&q=%20%20pasar%20')
+  await expectRows(page, only('Panen Kita', 'Pasar Ikan'))
+  await page.goto('/proposal?urut=masuk&q=zzz-tidak-ada')
+  await expect(page.getByText('Tidak ada proposal yang cocok')).toBeVisible()
+  await expectRows(page, [])
 })
 
 test('DSB-17 an unknown URL value is no filter, never an error', async ({
   page,
 }) => {
   await page.goto(
-    '/proposal?kategori=hebat&status=selesai&tanggapan=mungkin&luarFokus=ya',
+    '/proposal?urut=masuk&kategori=hebat&status=selesai&tanggapan=mungkin&luarFokus=ya',
   )
   await expectRows(page, ALL)
-  await expect(page.getByLabel('Kategori efektif')).toHaveValue('')
-  await expect(page.getByLabel('Status')).toHaveValue('')
-  await expect(page.getByLabel('Tanggapan')).toHaveValue('')
-
-  await page.goto(`/proposal?q=${'x'.repeat(121)}`)
-  await expectRows(page, ALL)
+  await expect(
+    page.getByRole('combobox', { name: 'Kategori', exact: true }),
+  ).toHaveText('Semua kategori')
+  await expect(
+    page.getByRole('combobox', { name: 'Status', exact: true }),
+  ).toHaveText('Semua status')
+  await expect(
+    page.getByRole('tab', { name: /^Semua/u, selected: true }),
+  ).toBeVisible()
 
   // A repeated parameter takes its first value.
-  await page.goto('/proposal?kategori=kurang_cocok&kategori=cocok')
+  await page.goto('/proposal?urut=masuk&kategori=kurang_cocok&kategori=cocok')
   await expectRows(page, only('BelajarYuk'))
 
   // A sector nobody has is a real filter with nothing in it.
-  await page.goto('/proposal?sektor=antariksa')
+  await page.goto('/proposal?urut=masuk&sektor=antariksa')
   await expectRows(page, [])
 })
 
-test('DSB-18 the filter form combines filters into a shareable URL, and Reset clears it', async ({
+test('DSB-18 the filters combine into a shareable URL, and Reset filter clears them', async ({
   page,
 }) => {
-  await page.goto('/proposal')
-  await page.getByLabel('Kategori efektif').selectOption('Tidak cocok')
-  await page.getByLabel('Tanggapan').selectOption('Belum ditanggapi')
-  await page.getByRole('button', { name: 'Terapkan' }).click()
+  await page.goto('/proposal?urut=masuk')
+  await page.getByRole('combobox', { name: 'Kategori', exact: true }).click()
+  await page.getByRole('option', { name: 'Tidak cocok', exact: true }).click()
+  await page.getByRole('tab', { name: /^Belum ditanggapi/u }).click()
 
   await expect(page).toHaveURL(/kategori=tidak_cocok/u)
   await expect(page).toHaveURL(/tanggapan=belum/u)
@@ -224,9 +275,17 @@ test('DSB-18 the filter form combines filters into a shareable URL, and Reset cl
   // The URL alone reproduces the view.
   await page.reload()
   await expectRows(page, only('Ternak Pintar', 'Kopi Rakyat', 'Fashionista'))
-  await expect(page.getByLabel('Kategori efektif')).toHaveValue('tidak_cocok')
+  await expect(
+    page.getByRole('combobox', { name: 'Kategori', exact: true }),
+  ).toHaveText('Tidak cocok')
 
-  await page.getByRole('link', { name: 'Reset' }).click()
-  await expect(page).toHaveURL(/\/proposal$/u)
+  // Reset clears the filters; the tab is a view, not a filter, and stays.
+  await page.getByRole('button', { name: 'Reset filter' }).first().click()
+  await expect(page).not.toHaveURL(/kategori=/u)
+  await expectRows(
+    page,
+    ALL.filter((name) => !['Panen Kita', 'AplikasiX'].includes(name)),
+  )
+  await page.getByRole('tab', { name: /^Semua/u }).click()
   await expectRows(page, ALL)
 })

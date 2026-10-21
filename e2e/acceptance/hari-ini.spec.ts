@@ -1,58 +1,93 @@
 /**
- * Hari ini against the seed (`scripts/_seed-aisa.ts`). The expected numbers are
+ * The Dashboard (the AISA home that replaced Hari ini; `/hari-ini` redirects
+ * here) against the seed (`scripts/_seed-aisa.ts`). The expected numbers are
  * worked out from the seed's proposals with the overview's rules, not read off
- * the page: 14 proposals, 2 responded (Panen Kita, AplikasiX), so 12 belum
- * ditanggapi — of which 9 are scored, 2 perlu dicek manual, 1 antre. By
- * KATEGORI EFEKTIF: Sangat cocok 1 (Tani Maju), Cocok 4 (SawahKu, Klinik Desa,
- * Dana UMKM, and Pasar Ikan corrected from Kurang cocok), Kurang cocok 1
- * (BelajarYuk), Tidak cocok 3 (Kopi Rakyat, Fashionista, Ternak Pintar);
- * Berkualitas, di luar fokus 1 (Kopi Rakyat, 82,5 and outside the sectors).
+ * the page: 14 proposals, 2 responded (Panen Kita undang, AplikasiX arsipkan),
+ * so 12 belum ditanggapi — of which 9 are scored, 2 perlu dicek manual, 1
+ * antre; the 11 that can be decided on are "Menunggu keputusan". By KATEGORI EFEKTIF: Sangat cocok 1 (Tani Maju), Cocok 4 (SawahKu,
+ * Klinik Desa, Dana UMKM, and Pasar Ikan corrected from Kurang cocok), Kurang
+ * cocok 1 (BelajarYuk), Tidak cocok 3 (Kopi Rakyat, Fashionista, Ternak
+ * Pintar), and 2 perlu dicek manual without a kategori; Berkualitas, di luar fokus 1 (Kopi Rakyat,
+ * 82,5 and outside the sectors).
  */
+import type { Locator, Page } from '@playwright/test'
+
 import {
   DIGESTS_COLLECTION,
   PROPOSALS_COLLECTION,
 } from '../../features/aisa/aisa.path.ts'
 import { emulatorDb, expect, signInAs, test, withRuntime } from './fixtures.ts'
 
-const TILES = [
-  ['Sangat cocok', 1],
-  ['Cocok', 4],
-  ['Kurang cocok', 1],
-  ['Tidak cocok', 3],
-  ['Berkualitas, di luar fokus', 1],
-  ['Perlu dicek manual', 2],
+const STATS = [
+  ['Menunggu keputusan', 11, /\/proposal\?tanggapan=belum$/u],
+  ['Disarankan untuk Anda', 5, /\/proposal\?kategori=atas&tanggapan=belum$/u],
+  ['Sudah ditanggapi', 2, /\/proposal\?tanggapan=sudah$/u],
+  ['Total proposal', 14, /\/proposal$/u],
+] as const
+
+const CATEGORY_ROWS = [
+  ['Sangat cocok', 1, 'sangat_cocok'],
+  ['Cocok', 4, 'cocok'],
+  ['Kurang cocok', 1, 'kurang_cocok'],
+  ['Tidak cocok', 3, 'tidak_cocok'],
 ] as const
 
 const PAUSED_BANNER =
   'AI sedang dijeda (STOP). Proposal baru menunggu sebagai Antre sampai LANJUT di Pengaturan.'
 
-function tiles(page: import('@playwright/test').Page) {
-  return page.getByRole('region', { name: 'Belum ditanggapi per kategori' })
-}
-
-function tile(page: import('@playwright/test').Page, label: string) {
-  return tiles(page)
+function linkWith(page: Page, text: string) {
+  return page
+    .getByRole('main')
     .getByRole('link')
-    .filter({ has: page.getByText(label, { exact: true }) })
+    .filter({ has: page.getByText(text, { exact: true }) })
+    .first()
 }
 
-test('DSB-01 Hari ini counts every unresponded proposal by kategori efektif', async ({
+function categoryRows(page: Page) {
+  return page.getByRole('list', { name: 'Menunggu keputusan per kategori' })
+}
+
+test('DSB-01 the Dashboard counts every unresponded proposal by kategori efektif', async ({
   page,
 }) => {
   await signInAs(page)
+  await expect(page).toHaveURL(/\/dashboard$/u)
 
-  await expect(
-    page.getByText('12 proposal belum ditanggapi.', { exact: true }),
-  ).toBeVisible()
-  for (const [label, count] of TILES) {
+  for (const [label, count] of STATS) {
     await expect(
-      tile(page, label).getByText(String(count), { exact: true }),
+      linkWith(page, label).getByText(String(count), { exact: true }),
       label,
     ).toBeVisible()
   }
+  for (const [label, count] of CATEGORY_ROWS) {
+    await expect(
+      categoryRows(page)
+        .getByRole('link')
+        .filter({ has: page.getByText(label, { exact: true }) })
+        .getByText(String(count), { exact: true }),
+      label,
+    ).toBeVisible()
+  }
+  await expect(
+    categoryRows(page)
+      .getByRole('listitem')
+      .filter({ hasText: 'Perlu dicek manual' })
+      .getByText('2', { exact: true }),
+  ).toBeVisible()
 
-  // "Baru sejak ringkasan terakhir" is every proposal created after the newest
-  // digest — responded or not — read back from Firestore, not from the page.
+  await expect(
+    linkWith(page, 'Berkualitas, di luar fokus').getByText(
+      '1 proposal patut dilihat lagi',
+    ),
+  ).toBeVisible()
+  await expect(
+    linkWith(page, 'Perlu dicek manual').getByText(
+      '2 proposal tidak bisa dinilai otomatis',
+    ),
+  ).toBeVisible()
+
+  // "Sejak ringkasan" is every proposal created after the newest digest —
+  // responded or not — read back from Firestore, not from the page.
   const digest = (
     await emulatorDb()
       .collection(DIGESTS_COLLECTION)
@@ -69,21 +104,25 @@ test('DSB-01 Hari ini counts every unresponded proposal by kategori efektif', as
       .count()
       .get()
   ).data().count
-  const baru = tile(page, 'Baru sejak ringkasan terakhir')
-  await expect(baru.getByText(String(since), { exact: true })).toBeVisible()
-  await expect(baru.getByText(/^Sejak \d{2} \S+ \d{4} 09\.00$/u)).toBeVisible()
-
+  const baru = page
+    .getByRole('main')
+    .getByRole('link')
+    .filter({ hasText: /^Sejak ringkasan 09\.00 · \d{2} \S+ \d{4}/u })
   await expect(
-    page.getByText(/^Ringkasan 09\.00 · \d{2} \S+ \d{4}$/u),
+    baru.getByText(`${since} proposal baru masuk`, { exact: true }),
   ).toBeVisible()
+
   await expect(
     page.getByText(
       'Yang menarik: proposal agritech naik dibanding minggu lalu.',
     ),
   ).toBeVisible()
+  await expect(
+    page.getByText(/^Ringkasan 09\.00 · \d{2} \S+ \d{4}$/u),
+  ).toBeVisible()
 })
 
-test('DSB-02 Hari ini shows no STOP banner while AI runs, and the banner once paused', async ({
+test('DSB-02 the Dashboard shows no STOP banner while AI runs, and the banner once paused', async ({
   page,
 }) => {
   await signInAs(page)
@@ -98,7 +137,7 @@ test('DSB-02 Hari ini shows no STOP banner while AI runs, and the banner once pa
         .getByText(PAUSED_BANNER)
         .getByRole('link', { name: 'Pengaturan' })
         .click()
-      await expect(page).toHaveURL(/\/pengaturan$/u)
+      await expect(page).toHaveURL(/\/pengaturan\?tab=integrasi$/u)
       await expect(
         page.getByText('Dijeda (STOP)', { exact: true }),
       ).toBeVisible()
@@ -106,18 +145,42 @@ test('DSB-02 Hari ini shows no STOP banner while AI runs, and the banner once pa
   )
 })
 
-test('DSB-03 every Hari ini tile opens a list with the same count', async ({
+test('DSB-03 every Dashboard count opens the proposal list filtered the same way', async ({
   page,
 }) => {
   await signInAs(page)
-  for (const [label, count] of TILES) {
-    await tile(page, label).click()
-    await expect(page).toHaveURL(/\/proposal\?/u)
-    await expect(
-      page.getByText(`Menampilkan ${count} dari 14 proposal.`, { exact: true }),
-      label,
-    ).toBeVisible()
+  const targets: [Locator, RegExp][] = [
+    ...STATS.map(([label, , url]): [Locator, RegExp] => [
+      linkWith(page, label),
+      url,
+    ]),
+    ...CATEGORY_ROWS.map(([label, , category]): [Locator, RegExp] => [
+      categoryRows(page)
+        .getByRole('link')
+        .filter({ has: page.getByText(label, { exact: true }) }),
+      new RegExp(`/proposal\\?kategori=${category}&tanggapan=belum$`, 'u'),
+    ]),
+    [
+      linkWith(page, 'Berkualitas, di luar fokus'),
+      /\/proposal\?luarFokus=1&tanggapan=belum$/u,
+    ],
+    [
+      linkWith(page, 'Perlu dicek manual'),
+      /\/proposal\?status=perlu_dicek_manual&tanggapan=belum$/u,
+    ],
+  ]
+  for (const [link, url] of targets) {
+    await link.click()
+    await expect(page).toHaveURL(url)
     await page.goBack()
-    await expect(page).toHaveURL(/\/hari-ini$/u)
+    await expect(page).toHaveURL(/\/dashboard$/u)
   }
+})
+
+test('DSB-04 the old Hari ini address lands on the Dashboard', async ({
+  page,
+}) => {
+  await signInAs(page)
+  await page.goto('/hari-ini')
+  await expect(page).toHaveURL(/\/dashboard$/u)
 })

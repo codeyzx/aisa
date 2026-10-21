@@ -24,7 +24,7 @@ export function seededEmail(role: 'admin' | 'user'): string {
   return user.email
 }
 
-/** Sign in as the seeded account for `role` and wait for Hari ini. */
+/** Sign in as the seeded account for `role` and wait for the Dashboard. */
 export async function signIn(
   page: Page,
   role: 'admin' | 'user' = 'admin',
@@ -34,7 +34,7 @@ export async function signIn(
   await page.getByLabel('Kata sandi').fill(SEEDED_PASSWORD)
   await page.getByRole('button', { name: 'Masuk' }).click()
   // Generous on purpose: against a cold `pnpm dev` the FIRST navigation to
-  // `/hari-ini` compiles the route on demand, and a sign-in helper that failed
+  // `/dashboard` compiles the route on demand, and a sign-in helper that failed
   // on that would report "wrong password" for what is actually a compile.
-  await expect(page).toHaveURL(/\/hari-ini$/, { timeout: 60_000 })
+  await expect(page).toHaveURL(/\/dashboard$/, { timeout: 60_000 })
 }

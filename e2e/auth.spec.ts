@@ -16,21 +16,21 @@ import { seededEmail, signIn } from './sign-in.ts'
 test('an anonymous visit to a protected page lands on /login, carrying ?next', async ({
   page,
 }) => {
-  await page.goto('/hari-ini')
+  await page.goto('/dashboard')
 
   // `?next` is what makes the bounce recoverable: sign in and you arrive where
   // you were going, instead of on a generic dashboard having lost your link.
-  await expect(page).toHaveURL(/\/login\?next=%2Fhari-ini$/)
+  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/)
   await expect(page.getByRole('button', { name: 'Masuk' })).toBeVisible()
 })
 
-test('the manager can sign in, reach Hari ini, and sign out', async ({
+test('the manager can sign in, reach the Dashboard, and sign out', async ({
   page,
 }) => {
   await signIn(page)
 
   await expect(
-    page.getByRole('heading', { level: 1, name: 'Hari ini' }),
+    page.getByRole('heading', { level: 1, name: 'Dashboard' }),
   ).toBeVisible()
 
   await page.getByRole('button', { name: 'Menu pengguna' }).click()
@@ -38,8 +38,8 @@ test('the manager can sign in, reach Hari ini, and sign out', async ({
   await expect(page).toHaveURL(/\/login/)
 
   // The cookie is gone, not merely the page: a protected URL bounces again.
-  await page.goto('/hari-ini')
-  await expect(page).toHaveURL(/\/login\?next=%2Fhari-ini$/)
+  await page.goto('/dashboard')
+  await expect(page).toHaveURL(/\/login\?next=%2Fdashboard$/)
 })
 
 test('a wrong password is refused and says so', async ({ page }) => {

@@ -75,3 +75,6 @@ firebase.lane*.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# sample pitch decks — founder content, never committed
+/fixtures/decks/*.pdf

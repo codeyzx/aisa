@@ -3,15 +3,6 @@
 import type { Category, Criterion, Rules } from '@/features/aisa/aisa.schema'
 import { formatDecimal } from '@/lib/format/number'
 
-/** One brand colour at falling strengths, heaviest criterion first in the schema order. */
-export const CRITERION_TONE: Record<Criterion, string> = {
-  tim: 'bg-primary',
-  pasar: 'bg-primary/80',
-  produk: 'bg-primary/60',
-  traksi: 'bg-primary/42',
-  bisnis: 'bg-primary/25',
-}
-
 /**
  * What the Penilai counts as strong evidence per criterion — a short form of
  * `HARD_EVIDENCE` in `services/api/aisa/penilai.py`, the prompt that scores.

@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { CATEGORY_LABEL } from '@/features/aisa/aisa.labels'
 import {
   type Category,
+  type Criterion,
   type ResponseKind,
   type Rules,
 } from '@/features/aisa/aisa.schema'
@@ -30,6 +31,19 @@ const AGENT_COLOR: Record<string, string> = {
 export const AGENT_ORDER = Object.keys(AGENT_COLOR)
 export const agentColor = (agent: string) =>
   AGENT_COLOR[agent] ?? 'var(--muted-foreground)'
+
+/**
+ * Criterion swatches from the `--criterion-*` tokens: one hue per criterion,
+ * none of them a kategori hue, so a criterion never reads as a verdict. Every
+ * swatch sits beside its criterion's name — colour is never the only cue.
+ */
+export const CRITERION_COLOR: Record<Criterion, string> = {
+  tim: 'bg-criterion-tim',
+  pasar: 'bg-criterion-pasar',
+  produk: 'bg-criterion-produk',
+  traksi: 'bg-criterion-traksi',
+  bisnis: 'bg-criterion-bisnis',
+}
 
 // Category colours read the `--category-*` tokens (text contrast ≥ 4.5:1); the
 // text label always travels with the colour, so colour is never the only cue.

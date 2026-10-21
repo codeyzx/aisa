@@ -17,7 +17,9 @@ import {
 } from '@/features/aisa/aisa.schema'
 import { cn } from '@/lib/utils'
 
-import { CRITERION_EVIDENCE, CRITERION_TONE, num, toPercent } from './helpers'
+import { CRITERION_COLOR } from '../../_components/badges'
+
+import { CRITERION_EVIDENCE, num, toPercent } from './helpers'
 import { WeightBar } from './weight-bar'
 
 export function WeightsCard({
@@ -59,7 +61,7 @@ export function WeightsCard({
             >
               <span
                 aria-hidden
-                className={cn('mt-1 size-3 rounded-[4px]', CRITERION_TONE[c])}
+                className={cn('mt-1 size-3 rounded-[4px]', CRITERION_COLOR[c])}
               />
               <div className="min-w-0">
                 <p className="font-medium">{CRITERION_LABEL[c]}</p>

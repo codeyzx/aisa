@@ -2,7 +2,9 @@ import { CRITERION_LABEL } from '@/features/aisa/aisa.labels'
 import { CRITERIA, type Criterion } from '@/features/aisa/aisa.schema'
 import { cn } from '@/lib/utils'
 
-import { CRITERION_TONE, num } from './helpers'
+import { CRITERION_COLOR } from '../../_components/badges'
+
+import { num } from './helpers'
 
 /** Stacked bar: each part's width is a criterion's weight in percent. */
 export function WeightBar({
@@ -26,7 +28,9 @@ export function WeightBar({
       </span>
       <div
         aria-hidden
-        className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full bg-muted"
+        // The 2px gaps show the surface, so neighbouring criterion fills never
+        // touch; the unassigned remainder is its own muted segment.
+        className="flex h-3 w-full gap-0.5 overflow-hidden rounded-full"
       >
         {CRITERIA.map((c) => {
           const value = percent[c] || 0
@@ -35,13 +39,14 @@ export function WeightBar({
             <div
               key={c}
               className={cn(
-                'h-full transition-[width] duration-300 first:rounded-l-full',
-                CRITERION_TONE[c],
+                'h-full transition-[width] duration-300',
+                CRITERION_COLOR[c],
               )}
               style={{ width: `${(value / scale) * 100}%` }}
             />
           )
         })}
+        {total < 100 && <div className="h-full flex-1 bg-muted" />}
       </div>
       {showLabels && (
         <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
@@ -52,7 +57,7 @@ export function WeightBar({
             >
               <span
                 aria-hidden
-                className={cn('size-2.5 rounded-[3px]', CRITERION_TONE[c])}
+                className={cn('size-2.5 rounded-[3px]', CRITERION_COLOR[c])}
               />
               {CRITERION_LABEL[c]}
               <span className="font-mono font-medium text-foreground tabular-nums">

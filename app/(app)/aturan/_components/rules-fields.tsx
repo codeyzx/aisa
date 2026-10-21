@@ -39,14 +39,9 @@ import {
 import { formatRupiah } from '@/lib/format/currency'
 import { cn } from '@/lib/utils'
 
-import { CATEGORY_DOT } from '../../_components/badges'
+import { CATEGORY_DOT, CRITERION_COLOR } from '../../_components/badges'
 
-import {
-  CRITERION_EVIDENCE,
-  CRITERION_TONE,
-  categoryRule,
-  num,
-} from './helpers'
+import { CRITERION_EVIDENCE, categoryRule, num } from './helpers'
 import {
   livePercent,
   percentTotal,
@@ -127,7 +122,7 @@ export function WeightsFields({
               <FieldLabel htmlFor={`weight-${c}`} className="gap-2">
                 <span
                   aria-hidden
-                  className={cn('size-2.5 rounded-[3px]', CRITERION_TONE[c])}
+                  className={cn('size-2.5 rounded-[3px]', CRITERION_COLOR[c])}
                 />
                 {CRITERION_LABEL[c]}
               </FieldLabel>
@@ -493,7 +488,7 @@ export function AnchorsFields({ draft, setDraft, errors }: FieldsProps) {
           <FieldLegend variant="label" className="flex items-center gap-2">
             <span
               aria-hidden
-              className={cn('size-2.5 rounded-[3px]', CRITERION_TONE[c])}
+              className={cn('size-2.5 rounded-[3px]', CRITERION_COLOR[c])}
             />
             {CRITERION_LABEL[c]}
           </FieldLegend>

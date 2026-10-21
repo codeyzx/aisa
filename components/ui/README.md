@@ -3,7 +3,8 @@
 shadcn primitives — style **`base-nova`** on **Base UI** (`@base-ui/react`, not
 Radix). Config in `components.json`; add more with
 `pnpm dlx shadcn@latest add <name>`. Tokens: `app/globals.css`, which imports the
-AISA workspace styles in `app/artifact.css`.
+AISA workspace styles in `app/artifact.css`. `--criterion-*` paints the five scoring
+criteria (one hue each, read through `CRITERION_COLOR` in `app/(app)/_components/badges.tsx`).
 Vendored primitives relax a few extra-strict a11y lint rules (`.oxlintrc.json`
 override); app/shell code keeps them on. Non-shadcn shared components may live
 here too — list them under "Custom".

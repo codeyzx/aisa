@@ -13,7 +13,7 @@ import { CRITERION_LABEL } from '@/features/aisa/aisa.labels'
 import { CRITERIA, type Rules } from '@/features/aisa/aisa.schema'
 import { cn } from '@/lib/utils'
 
-import { CRITERION_TONE } from './helpers'
+import { CRITERION_COLOR } from '../../_components/badges'
 
 const LEVELS = ['1', '3', '5'] as const
 
@@ -66,7 +66,7 @@ export function AnchorsCard({
                         aria-hidden
                         className={cn(
                           'size-2.5 shrink-0 rounded-[3px]',
-                          CRITERION_TONE[c],
+                          CRITERION_COLOR[c],
                         )}
                       />
                       {CRITERION_LABEL[c]}

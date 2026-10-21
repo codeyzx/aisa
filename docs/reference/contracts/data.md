@@ -275,14 +275,14 @@ which is exactly what `paginate()` asks for — no `__name__` entry needed.
   is the entity generated from `features/_template/`, whose repo
   `test/integration/template-widget.test.ts` drives against the emulator — so its
   filtered list is an observed query shape like any other, and `pnpm
-indexes:check` requires its index the same way. That is deliberate: it is how
+  indexes:check` requires its index the same way. That is deliberate: it is how
   the copy-me template's index requirement is proven rather than asserted, and it
   gives a forker a block shaped exactly like the one they need.
 
 ### What a sortable column costs
 
 > **Every server-side sortable column is `sortable fields × directions × filters
-that can be active alongside it` composite indexes.** Sortability is a bill,
+> that can be active alongside it` composite indexes.** Sortability is a bill,
 > not a feature flag — which is why it is opt-in and argued per column.
 
 For one filter and one sortable field in two directions that is two composite

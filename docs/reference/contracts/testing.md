@@ -174,7 +174,7 @@ Two project ids on one emulator:
 - project the suite drove → an `OK — …` line naming the observed query shapes and
   confirming every index they require is declared (**exit 0**)
 - project nothing queried → `No query requiring a composite index ran against
-this emulator instance.` (**exit 1**)
+  this emulator instance.` (**exit 1**)
 
 That empty exit-1 state is why `pnpm indexes:check` must ride the SAME
 `emulators:exec` session as the suite that drove the queries. It **is** on the CI

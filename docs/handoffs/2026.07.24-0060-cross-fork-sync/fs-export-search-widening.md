@@ -55,7 +55,7 @@ driven locally can still fail in production. Drive both shapes before believing 
 In `features/asset/asset.dataset.ts`:
 
 1. Add a `singleParam(params, name)` helper returning `{present:false}` / `{present:true,
-value}` / `null`, and run **both** `status` and `q` through it, so `?q=a&q=b` is refused
+   value}` / `null`, and run **both** `status` and `q` through it, so `?q=a&q=b` is refused
    for the same reason `?status=active&status=retired` already is.
 2. Normalise `?q` with `toSearchTerm` from `@/lib/data/search-prefix`. When it normalises
    away — empty, punctuation-only, one character — return `null` so the route answers 400.

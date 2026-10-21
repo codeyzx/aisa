@@ -195,7 +195,9 @@ Acceptance criteria:
 
 ```ts
 type AssetDialogState =
-  { kind: 'closed' } | { kind: 'new' } | { kind: 'edit'; assetId: string }
+  | { kind: 'closed' }
+  | { kind: 'new' }
+  | { kind: 'edit'; assetId: string }
 ```
 
 - Invalid combinations fail predictably to the closed list state or an explicit not-found/invalid state according to the contract; they never half-open a create/edit surface.
@@ -2307,12 +2309,12 @@ historical parent retains only the source/tag contract.
 The candidate sequence is:
 
 1. Complete Phase 11 and commit one clean checkpoint with `Candidate status:
-CANDIDATE ELIGIBLE`.
+   CANDIDATE ELIGIBLE`.
 2. Run the complete candidate gate against that exact committed SHA. Create the
    immutable local tag `postgresql-fork-candidate-v1` only if every candidate check
    passes.
 3. Commit one documentation-only attestation with `Candidate status: CANDIDATE
-FORK READY`, the peeled candidate SHA, and the explicit list of Phase 12 checks
+   FORK READY`, the peeled candidate SHA, and the explicit list of Phase 12 checks
    still deferred. The top-level phase status remains `IN PROGRESS`.
 4. Allow the PostgreSQL Lead to bootstrap provisionally from that exact candidate
    tag, while the Firestore Lead continues Phase 12.

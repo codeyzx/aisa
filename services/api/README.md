@@ -121,7 +121,7 @@ reply lists candidates and nothing changes. Any other message goes to the Asiste
   permission to query that Agent Runtime engine.
 - Secrets: inject from Secret Manager as env vars (`--set-secrets`).
 - Scheduler (time zone `Asia/Jakarta`, OIDC with `--oidc-service-account-email
-$SCHEDULER_SA_EMAIL --oidc-token-audience $SCHEDULER_AUDIENCE`, no key header):
+  $SCHEDULER_SA_EMAIL --oidc-token-audience $SCHEDULER_AUDIENCE`, no key header):
   `aisa-ringkasan-pagi` → `POST /digest/run?slot=09.00` at 09:00, `aisa-ringkasan-sore` →
   `?slot=17.00` at 17:00, `aisa-retensi` → `POST /retention/run` daily at 02:00. The digest
   runs synchronously; give the job a generous attempt deadline (several model calls).

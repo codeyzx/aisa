@@ -54,8 +54,8 @@ tertulis di `GLOSSARY.md`, `tech.md`, dan kontrak Firestore, lalu ditegakkan ole
   langkah berikutnya (`dihentikan`), proposal baru menunggu sebagai `antre`, dan ringkasan
   dikirim dari template tanpa model. Hanya LANJUT yang membuka jeda dan menilai antrean.
 - **Perintah dikenali kode, bukan model.** Pola `undang|pantau|arsipkan <nama>`, `… semua
-<kategori>` (wajib konfirmasi `YA` dalam 10 menit), `pindahkan <nama> ke <kategori> karena
-<alasan>`, `STOP`, dan `LANJUT` dicocokkan dengan regex. Nama dicocokkan secara persis →
+  <kategori>` (wajib konfirmasi `YA` dalam 10 menit), `pindahkan <nama> ke <kategori> karena
+  <alasan>`, `STOP`, dan `LANJUT` dicocokkan dengan regex. Nama dicocokkan secara persis →
   awalan unik → fuzzy unik ≥ 0,85, dan bila ambigu tidak ada yang diubah.
 - **Ringkasan tanpa saran tindak lanjut.** Teks model hanya dipakai bila setiap angka dan
   nama ada di data dan tidak ada kata saran; bila tidak, template kode yang dikirim.

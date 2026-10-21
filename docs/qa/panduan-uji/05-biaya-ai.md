@@ -199,7 +199,7 @@ Dengan bawaan (Rp 14.500.000, 173 jam): biaya per menit = Rp 1.396,92. Cek manua
 **Yang seharusnya terlihat:**
 
 - Keterangan di bawah **Proposal per bulan** berbunyi `Bawaan: laju 30 hari tercatat terakhir
-(…/bulan)`. Angka bawaannya adalah proposal masuk dalam 30 hari terakhir, disetarakan ke 30 hari
+  (…/bulan)`. Angka bawaannya adalah proposal masuk dalam 30 hari terakhir, disetarakan ke 30 hari
   (kalau catatan baru ada kurang dari 30 hari, dipakai sebanyak hari yang ada).
 - Keterangan **Menit analis per deck** menyebut pembanding DocSend × HBS 2015 (3 menit 44 detik
   hanya untuk membuka-baca deck), keterangan **Gaji analis per bulan** menyebut GrabJobs 2026, dan

@@ -115,7 +115,7 @@ luar fokus" dengan tabel kebenaran yang sama dengan `showsQualityOutsideFocus` d
 - `cd services/api && uv run pytest -q tests/test_assistant_tools.py`: exit 0, 33 lolos, 0 gagal.
 - `cd services/api && uv run pytest -q`: exit 0, 265 lolos, 0 gagal. Pada jalan pertama satu tes
   gagal (`test_stop_cancel.py::test_execute_stop_and_resume`, `_execute() missing 1 required
-positional argument: 'job'`) karena perubahan `orchestrator.py` yang sedang dikerjakan paralel
+  positional argument: 'job'`) karena perubahan `orchestrator.py` yang sedang dikerjakan paralel
   di working tree; pada jalan berikutnya lolos setelah perubahan itu lengkap. Bukan dari berkas
   tes ini.
 - `uvx ruff check tests/test_assistant_tools.py`: lolos.

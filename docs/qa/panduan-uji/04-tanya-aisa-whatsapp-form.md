@@ -706,7 +706,7 @@ WhatsApp.
 **Langkah:**
 
 1. Kirim pertanyaan panjang, mis. `Bandingkan semua proposal yang belum saya tanggapi satu per
-satu`.
+   satu`.
 2. Selagi "mengetik…" masih tampil, kirim: `STOP`
 3. Kirim: `LANJUT`
 

@@ -17,7 +17,7 @@ procedure at commit time; `AGENTS.md` > Engineering defaults is the why.
    two things, it is two commits. Prefer a new commit over `--amend` unless asked
    to rewrite.
 3. **Write a specific imperative subject:** `feat(items): persist an attachment
-key`, not `cleanup` / `wip` / `fix stuff`. The subject is the intent; the body
+   key`, not `cleanup` / `wip` / `fix stuff`. The subject is the intent; the body
    is why, and any constraint the next reader needs.
 4. **Use the configured git identity.** `git config user.name` / `user.email` —
    never invent, hardcode, or attribute a commit to anyone but the real author. If

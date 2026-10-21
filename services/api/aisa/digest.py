@@ -17,6 +17,7 @@ from .models import (
     Category,
     Digest,
     DigestCounts,
+    Fit,
     JobKind,
     JobStatus,
     Proposal,
@@ -25,7 +26,7 @@ from .models import (
     Via,
     to_doc,
 )
-from .scoring import format_idr
+from .scoring import NOT_MENTIONED, format_idr
 
 DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
 COCOK_INLINE_MAX = 15
@@ -34,6 +35,7 @@ QOF_MAX = 10
 MANUAL_MAX = 15
 # Below this weekly count a sector trend is noise, so no insight is written about it.
 MIN_INSIGHT_COUNT = 3
+INSIGHT_LABEL = "Yang menarik:"
 ADVICE_WORDS = ("sarankan", "sebaiknya", "rekomendasi", "rekomendasikan", "hubungi", "segera undang")
 
 
@@ -48,7 +50,8 @@ class Item:
     sector: str | None = None
     fundingAskIdr: int | None = None
     oneLiner: str | None = None
-    reasons: list[str] = field(default_factory=list)
+    reasons: list[str] = field(default_factory=list)  # criterion reasons, highest value first
+    fit_reasons: list[str] = field(default_factory=list)  # failed fit checks only
 
 
 @dataclass
@@ -61,6 +64,8 @@ class DigestData:
     manual: list[Item]
     baru_masuk: int
     insight: str | None = None
+    manager_name: str = ""
+    at: datetime | None = None  # send time; picks the greeting
 
     @property
     def belum(self) -> int:
@@ -82,17 +87,31 @@ def fmt_score(score: float) -> str:
 
 def opening(d: DigestData) -> str:
     sal = d.salutation
+    addressee = f"{sal} {d.manager_name}" if d.manager_name else sal
     if d.window_start is None:
         head = f"Ini ringkasan pertama dari AISA. Sejauh ini masuk {d.baru_masuk} proposal."
     else:
         w = d.window_start.astimezone(db.WIB)
         head = (f"Sejak ringkasan {DAYS[w.weekday()]} pukul {w.strftime('%H.%M')} masuk "
                 f"{d.baru_masuk} proposal baru.")
-    return f"{greeting(d.slot)}, {sal}. {head} Ada {d.belum} proposal yang belum {sal} tanggapi."
+    return f"{greeting(d.at or db.now())}, {addressee}. {head} Ada {d.belum} proposal yang belum {sal} tanggapi."
 
 
-def greeting(slot: str) -> str:
-    return "Selamat pagi" if slot == "09.00" else "Selamat sore"
+def greeting(at: datetime) -> str:
+    """By the WIB hour the message is sent, not by slot: a late retry must not say "pagi"."""
+    h = at.astimezone(db.WIB).hour
+    if h < 11:
+        return "Selamat pagi"
+    if h < 15:
+        return "Selamat siang"
+    if h < 18:
+        return "Selamat sore"
+    return "Selamat malam"
+
+
+def _qof_line(it: Item) -> str:
+    why = ", ".join(it.fit_reasons) or it.sector
+    return f"{it.name} ({fmt_score(it.score)})" + (f" · {why}" if why else "")
 
 
 def template(d: DigestData) -> str:
@@ -101,8 +120,9 @@ def template(d: DigestData) -> str:
     lines.append(f"*Sangat cocok ({len(sangat)})*")
     for i, it in enumerate(sangat[:SANGAT_DETAIL_MAX], 1):
         meta = ", ".join(x for x in (it.sector, format_idr(it.fundingAskIdr) if it.fundingAskIdr else None) if x)
+        why = it.reasons[0] if it.reasons else it.oneLiner
         lines.append(f"{i}. {it.name}{f' ({meta})' if meta else ''} · {fmt_score(it.score)}."
-                     + (f" {it.oneLiner}" if it.oneLiner else ""))
+                     + (f" {why}" if why else ""))
     if len(sangat) > SANGAT_DETAIL_MAX:
         lines.append(f"…dan {len(sangat) - SANGAT_DETAIL_MAX} lainnya")
     cocok = d.groups.get(Category.cocok, [])
@@ -112,16 +132,28 @@ def template(d: DigestData) -> str:
     lines.append(f"*Kurang cocok ({len(d.groups.get(Category.kurang_cocok, []))})*")
     lines.append(f"*Tidak cocok ({len(d.groups.get(Category.tidak_cocok, []))})*")
     if d.quality_outside_focus:
-        q = "; ".join(f"{it.name} ({fmt_score(it.score)})" + (f" · {it.sector}" if it.sector else "")
-                      for it in d.quality_outside_focus[:QOF_MAX])
+        q = "; ".join(_qof_line(it) for it in d.quality_outside_focus[:QOF_MAX])
         lines.append(f"*Berkualitas, di luar fokus ({len(d.quality_outside_focus)})*: {q}")
     if d.manual:
         m = ", ".join(it.name for it in d.manual[:MANUAL_MAX])
         more = f", dan {len(d.manual) - MANUAL_MAX} lainnya" if len(d.manual) > MANUAL_MAX else ""
         lines.append(f"*Perlu dicek manual ({len(d.manual)})*: {m}{more}")
     if d.insight:
-        lines += ["", f"Yang menarik: {d.insight}"]
+        lines += ["", f"{INSIGHT_LABEL} {d.insight}"]
     return "\n".join(lines)
+
+
+def label_ok(text: str, d: DigestData) -> bool:
+    """A digest that has an insight must still introduce it with the label."""
+    return not d.insight or INSIGHT_LABEL in text
+
+
+def strip_label(insight: str) -> str:
+    """The model sometimes repeats the label the template adds; drop it."""
+    s = insight.strip()
+    if s.lower().startswith(INSIGHT_LABEL.lower()):
+        s = s[len(INSIGHT_LABEL):].strip()
+    return s
 
 
 _DIGITS = re.compile(r"\d+")
@@ -210,8 +242,24 @@ RINGKASAN_SYSTEM = (
     "persis seperti di draf, jangan menambah angka baru, jangan menambah saran tindak lanjut "
     "(jangan menyarankan mengundang, menghubungi, atau mengarsipkan). Untuk setiap proposal "
     "Sangat cocok, boleh ganti kalimat penjelasnya dengan satu kalimat singkat dari 'alasan' "
-    "yang diberikan. Balas hanya dengan teks pesan."
+    "yang diberikan. Bila draf berisi baris 'Yang menarik:', pertahankan label itu persis di "
+    "awal barisnya. Balas hanya dengan teks pesan."
 )
+
+
+FIT_LABEL = {"sector": "sektor", "stage": "tahap", "funding": "dana"}
+
+
+def fit_reasons(fit: Fit | None) -> list[str]:
+    """Reasons of the failed fit checks; "tidak disebut" gets the check's name in front."""
+    if not fit:
+        return []
+    out = []
+    for key, label in FIT_LABEL.items():
+        item = getattr(fit.checks, key)
+        if not item.passed:
+            out.append(f"{label} {item.reason}" if item.reason == NOT_MENTIONED else item.reason)
+    return out
 
 
 def _item(pid: str, p: Proposal) -> Item:
@@ -221,7 +269,7 @@ def _item(pid: str, p: Proposal) -> Item:
         reasons = [r.reason for _, r in top]
     return Item(id=pid, name=p.name, score=p.assessment.score if p.assessment else 0.0,
                 sector=p.profile.sector, fundingAskIdr=p.profile.fundingAskIdr,
-                oneLiner=p.profile.oneLiner, reasons=reasons)
+                oneLiner=p.profile.oneLiner, reasons=reasons, fit_reasons=fit_reasons(p.fit))
 
 
 def collect(slot: str, now: datetime) -> tuple[DigestData, list[dict], list[str]]:
@@ -255,7 +303,8 @@ def collect(slot: str, now: datetime) -> tuple[DigestData, list[dict], list[str]
     rows = [(s.get("createdAt"), (s.to_dict().get("profile") or {}).get("sector"))
             for s in fs.collection("proposals").where(filter=FieldFilter("createdAt", ">=", now - timedelta(days=14))).stream()]
     data = DigestData(slot=slot, salutation=settings().manager_salutation, window_start=window_start,
-                      groups=groups, quality_outside_focus=qof, manual=manual, baru_masuk=int(baru))
+                      groups=groups, quality_outside_focus=qof, manual=manual, baru_masuk=int(baru),
+                      manager_name=settings().manager_name, at=now)
     return data, sector_candidates(rows, now), ids
 
 
@@ -275,6 +324,7 @@ def run_digest(slot: str, send: bool = True) -> dict:
         data, cands, ids = collect(slot, now)
         data.insight = template_insight(cands)
         return {"digestId": digest_id, "text": template(data), "usedTemplate": True,
+                "insight": data.insight,
                 "counts": to_doc(data.counts()), "insightCandidates": cands}
 
     job = JobLog(JobKind.ringkasan, "Pembuat ringkasan", f"Ringkasan {slot}",
@@ -297,7 +347,7 @@ def run_digest(slot: str, send: bool = True) -> dict:
                          status="ok" if ok else "gagal",
                          error=None if ok else "angka tidak cocok dengan data; pakai insight kode")
                 if ok:
-                    insight = r.text.strip()
+                    insight = strip_label(r.text) or insight
             except Exception as e:
                 job.step("Menulis insight", "gemini.generate_content", StepActor.model,
                          model=rules.models.insight, status="gagal", error=str(e)[:300])
@@ -317,7 +367,8 @@ def run_digest(slot: str, send: bool = True) -> dict:
                 candidate = r.text.strip()
                 with job.code_step("Cek angka di ringkasan", "kode"):
                     good = (bool(candidate) and numbers_ok(candidate, draft, SANGAT_DETAIL_MAX)
-                            and names_present(candidate, data) and not has_advice(candidate))
+                            and names_present(candidate, data) and label_ok(candidate, data)
+                            and not has_advice(candidate))
                 if good:
                     text, used_template = candidate, False
             except Exception as e:
@@ -331,7 +382,8 @@ def run_digest(slot: str, send: bool = True) -> dict:
             for phone in settings().manager_phones:
                 message_ids += gowa.send(phone, text)
         d = Digest(slot=slot, windowStart=data.window_start, sentAt=db.now(), text=text,
-                   counts=data.counts(), proposalIds=ids, usedTemplate=used_template, jobId=job.id,
+                   counts=data.counts(), proposalIds=ids, usedTemplate=used_template,
+                   insight=data.insight, jobId=job.id,
                    gowaMessageIds=message_ids)
         ref.set(to_doc(d))
         write_history(via=Via.sistem, action="ringkasan_terkirim",

@@ -39,6 +39,18 @@ def upload_deck(proposal_id: str, pdf: bytes) -> str:
     return f"gs://{blob.bucket.name}/{blob.name}"
 
 
+def delete_deck(gcs_path: str) -> bool:
+    """Delete a stored deck. Returns False when it was already gone."""
+    from google.api_core.exceptions import NotFound
+
+    bucket, _, name = gcs_path.removeprefix("gs://").partition("/")
+    try:
+        _gcs().bucket(bucket).blob(name).delete()
+        return True
+    except NotFound:
+        return False
+
+
 def download_drive(file_id: str) -> bytes:
     creds, _ = google.auth.default(scopes=[DRIVE_SCOPE])
     creds.refresh(Request())

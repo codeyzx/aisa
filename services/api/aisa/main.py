@@ -10,12 +10,13 @@ from datetime import datetime
 from pathlib import PurePath
 from typing import Any, Literal
 
-from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
+from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from google.api_core.exceptions import AlreadyExists
 from pydantic import BaseModel
 
-from . import db, digest, domain, gowa, intake, orchestrator, storage
+from . import db, digest, domain, gowa, intake, orchestrator, retention, storage
+from .auth import require_key, require_scheduler_or_key
 from .config import settings
 from .models import Category, Founder, ResponseKind, Source, SourceKind, Via, WebhookEvent, to_doc
 
@@ -28,14 +29,6 @@ app = FastAPI(title="aisa-api")
 @app.exception_handler(domain.DomainError)
 def _domain_error(_: Request, e: domain.DomainError):
     return JSONResponse({"detail": str(e)}, status_code=e.status)
-
-
-def require_key(x_aisa_key: str | None = Header(None)) -> None:
-    key = settings().internal_api_key
-    if not key:
-        raise HTTPException(503, "INTERNAL_API_KEY belum diatur")
-    if not x_aisa_key or not hmac.compare_digest(x_aisa_key, key):
-        raise HTTPException(401, "kunci tidak valid")
 
 
 @app.get("/health")
@@ -100,9 +93,14 @@ async def intake_form(request: Request, bg: BackgroundTasks) -> dict:
 # ---------- digest ----------
 
 
-@app.post("/digest/run", dependencies=[Depends(require_key)])
+@app.post("/digest/run", dependencies=[Depends(require_scheduler_or_key)])
 def digest_run(slot: Literal["09.00", "17.00"], dryRun: bool = False) -> dict:
     return digest.run_digest(slot, send=not dryRun)
+
+
+@app.post("/retention/run", dependencies=[Depends(require_scheduler_or_key)])
+def retention_run() -> dict:
+    return retention.run()
 
 
 # ---------- WhatsApp webhook ----------
@@ -174,6 +172,10 @@ class BulkIn(BaseModel):
     kind: ResponseKind
 
 
+class DeleteIn(BaseModel):
+    reason: str
+
+
 class RulesIn(BaseModel):
     rules: dict[str, Any]
     reason: str
@@ -192,6 +194,11 @@ def api_correction(pid: str, body: CorrectionIn) -> dict:
 @app.post("/api/proposals/bulk-response", dependencies=[Depends(require_key)])
 def api_bulk(body: BulkIn) -> dict:
     return {"count": domain.respond_bulk(body.category, body.kind, Via.dashboard)}
+
+
+@app.delete("/api/proposals/{pid}", dependencies=[Depends(require_key)])
+def api_delete(pid: str, body: DeleteIn) -> dict:
+    return domain.delete_proposal(pid, body.reason, Via.dashboard)
 
 
 @app.put("/api/rules", dependencies=[Depends(require_key)])

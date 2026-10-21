@@ -3,12 +3,13 @@ identical proposal changes and history rows."""
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
-from . import db
+from . import db, storage
 from .jobs import write_history
 from .models import (
     CATEGORY_LABEL,
@@ -139,3 +140,91 @@ def update_rules(new: dict[str, Any], reason: str, via: Via) -> Rules:
     write_history(via=via, action="aturan_diubah", before=rules.version - 1, after=rules.version,
                   reason=reason, detail=f"Aturan penilaian diubah ke versi {rules.version}")
     return rules
+
+
+# ---------- deletion ----------
+
+DELETED_NAME = "(dihapus)"
+_BATCH = 400
+
+
+def scrubbed_history() -> dict[str, Any]:
+    """What a kept history row of a deleted proposal becomes: the action and time stay for
+    the audit trail; the name, the before/after values, the reason and the detail (which
+    all can name or describe the startup) go."""
+    return {"proposalName": DELETED_NAME, "before": None, "after": None, "reason": None,
+            "detail": "Rincian dihapus bersama proposal"}
+
+
+def scrub_name(text: str, name: str) -> str:
+    """Replace whole-word occurrences of `name` (case-insensitive) with DELETED_NAME."""
+    if not name.strip():
+        return text
+    return re.sub(rf"(?<!\w){re.escape(name.strip())}(?!\w)", DELETED_NAME, text, flags=re.IGNORECASE)
+
+
+def _commit_in_batches(ops) -> int:
+    """`ops` yields (kind, ref, data); kind is "delete" or "update". Returns the count."""
+    batch, n = db.client().batch(), 0
+    for kind, ref, data in ops:
+        if kind == "delete":
+            batch.delete(ref)
+        else:
+            batch.update(ref, data)
+        n += 1
+        if n % _BATCH == 0:
+            batch.commit()
+            batch = db.client().batch()
+    batch.commit()
+    return n
+
+
+def delete_proposal(pid: str, reason: str, via: Via) -> dict:
+    """Delete a proposal and everything derived from it, for any status (a founder's
+    request or retention). Kept: history rows, scrubbed of the name and details, plus one
+    `proposal_dihapus` row. The proposal document goes last, so a failure part-way leaves
+    it in place and the call can be repeated."""
+    reason = (reason or "").strip()
+    if not reason:
+        raise DomainError("penghapusan proposal wajib disertai alasan")
+    p = get_proposal(pid)
+    fs = db.client()
+
+    def eq(field: str, value: Any) -> FieldFilter:
+        return FieldFilter(field, "==", value)
+
+    job_refs = {s.reference.path: s.reference
+                for s in fs.collection("jobs").where(filter=eq("proposalId", pid)).stream()}
+    if p.jobId:
+        job_refs.setdefault(f"jobs/{p.jobId}", fs.document(f"jobs/{p.jobId}"))
+
+    def ops():
+        for ref in job_refs.values():
+            for st in ref.collection("steps").stream():
+                yield "delete", st.reference, None
+            yield "delete", ref, None
+        for s in fs.collection("pendingConfirmations").where(
+                filter=FieldFilter("proposalIds", "array_contains", pid)).stream():
+            yield "delete", s.reference, None
+        for s in fs.collection("history").where(filter=eq("proposalId", pid)).stream():
+            yield "update", s.reference, scrubbed_history()
+        # Bulk responses list names in the detail without a proposalId.
+        for s in fs.collection("history").where(filter=eq("action", "tanggapan_massal")).stream():
+            detail = s.get("detail") or ""
+            new = scrub_name(detail, p.name)
+            if new != detail:
+                yield "update", s.reference, {"detail": new}
+        # A sent digest keeps its text as the record of what was sent, minus this name.
+        for s in fs.collection("digests").where(
+                filter=FieldFilter("proposalIds", "array_contains", pid)).stream():
+            yield "update", s.reference, {"text": scrub_name(s.get("text") or "", p.name),
+                                          "proposalIds": firestore.ArrayRemove([pid])}
+        yield "delete", fs.document(f"proposalTexts/{pid}"), None
+
+    _commit_in_batches(ops())
+    if p.source.gcsPath:
+        storage.delete_deck(p.source.gcsPath)
+    fs.document(f"proposals/{pid}").delete()
+    write_history(via=via, action="proposal_dihapus", proposalId=pid, reason=reason,
+                  detail="Proposal dihapus")
+    return {"deleted": True}

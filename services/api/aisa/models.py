@@ -102,6 +102,7 @@ HistoryAction = Literal[
     "lanjut",
     "ringkasan_terkirim",
     "proposal_masuk",
+    "proposal_dihapus",
 ]
 
 Slot = Literal["09.00", "17.00"]
@@ -120,6 +121,9 @@ class CriterionResult(_M):
     reason: str
     notMentioned: bool
     citations: list[Citation] = []
+    # Every quote the model gave was missing from its page, so the value (capped at 2)
+    # rests on no verified quote; `reason` says why.
+    citationsUnverified: bool = False
 
 
 class Assessment(_M):
@@ -237,11 +241,13 @@ class Thresholds(_M):
 
 
 class ModelNames(_M):
+    """Stored docs may still carry `orchestrator`; unknown keys are ignored on read."""
+
     penilai: str
     ringkasan: str
     insight: str
+    # Informational only: the Asisten runs the model in ASSISTANT_MODEL where it is deployed.
     asisten: str
-    orchestrator: str
 
 
 class Rules(_M):
@@ -252,6 +258,8 @@ class Rules(_M):
     thresholds: Thresholds
     models: ModelNames
     minCharsPerPage: int = 200
+    # Archived proposals are deleted this many days after the archive response.
+    retentionDays: int = Field(90, ge=1)
     changedAt: datetime
     reason: str
 
@@ -331,6 +339,7 @@ class Digest(_M):
     counts: DigestCounts
     proposalIds: list[str]
     usedTemplate: bool
+    insight: str | None = None  # the insight sentence used, without the "Yang menarik:" label
     jobId: str
     gowaMessageIds: list[str] = []
 
@@ -399,7 +408,7 @@ def default_rules(now: datetime) -> Rules:
             fundingMaxIdr=20_000_000_000,
         ),
         thresholds=Thresholds(),
-        models=ModelNames(penilai=m, ringkasan=m, insight=m, asisten=m, orchestrator=m),
+        models=ModelNames(penilai=m, ringkasan=m, insight=m, asisten=m),
         minCharsPerPage=200,
         changedAt=now,
         reason="Aturan awal (baseline)",

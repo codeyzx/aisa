@@ -22,10 +22,14 @@ class Settings:
     gowa_webhook_secret: str
     manager_phones: tuple[str, ...]
     manager_salutation: str
+    manager_name: str
     internal_api_key: str
     intake_secret: str
     assistant_engine_id: str
     signer_service_account: str
+    assistant_model: str
+    scheduler_sa_email: str
+    scheduler_audience: str
 
 
 @lru_cache
@@ -43,8 +47,13 @@ def settings() -> Settings:
         gowa_webhook_secret=_env("GOWA_WEBHOOK_SECRET"),
         manager_phones=phones,
         manager_salutation=_env("MANAGER_SALUTATION", "Ibu"),
+        manager_name=_env("MANAGER_NAME"),
         internal_api_key=_env("INTERNAL_API_KEY"),
         intake_secret=_env("INTAKE_SECRET"),
         assistant_engine_id=_env("ASSISTANT_ENGINE_ID"),
         signer_service_account=_env("SIGNER_SERVICE_ACCOUNT"),
+        # The model the deployed Asisten really runs; the job label reads it from here.
+        assistant_model=_env("ASSISTANT_MODEL", "gemini-3.8-flash"),
+        scheduler_sa_email=_env("SCHEDULER_SA_EMAIL"),
+        scheduler_audience=_env("SCHEDULER_AUDIENCE"),
     )

@@ -1,4 +1,5 @@
-"""Operator CLI: `uv run aisa seed-rules | intake-file <pdf> [--name N] | digest <slot> [--send]`."""
+"""Operator CLI: `uv run aisa seed-rules | intake-file <pdf> [--name N] | digest <slot> [--send]
+| delete-proposal <id> --reason R | retention`."""
 
 from __future__ import annotations
 
@@ -36,6 +37,10 @@ def main() -> None:
     d = sub.add_parser("digest")
     d.add_argument("slot", choices=["09.00", "17.00"])
     d.add_argument("--send", action="store_true", help="really send via GOWA and record it")
+    x = sub.add_parser("delete-proposal", help="delete a proposal and its data (history is scrubbed)")
+    x.add_argument("proposal_id")
+    x.add_argument("--reason", required=True)
+    sub.add_parser("retention", help="delete archived proposals past rules.retentionDays now")
     a = ap.parse_args()
 
     if a.cmd == "seed-rules":
@@ -54,6 +59,18 @@ def main() -> None:
         from .digest import run_digest
 
         print(json.dumps(run_digest(a.slot, send=a.send), ensure_ascii=False, indent=2, default=str))
+    elif a.cmd == "delete-proposal":
+        from .domain import DomainError, delete_proposal
+        from .models import Via
+
+        try:
+            print(json.dumps(delete_proposal(a.proposal_id, a.reason, Via.sistem)))
+        except DomainError as e:
+            raise SystemExit(f"gagal: {e}") from e
+    elif a.cmd == "retention":
+        from .retention import run
+
+        print(json.dumps(run(), ensure_ascii=False))
 
 
 if __name__ == "__main__":

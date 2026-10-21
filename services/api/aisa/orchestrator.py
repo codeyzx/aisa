@@ -22,6 +22,7 @@ from .jobs import JobLog
 from .models import CATEGORY_LABEL, JobKind, JobStatus, PendingConfirmation, Via, to_doc
 
 CONFIRM_TTL = timedelta(minutes=10)
+PAUSED_REPLY = "AISA sedang dijeda (STOP). Kirim LANJUT untuk melanjutkan."
 
 
 def _all_names() -> list[tuple[str, str]]:
@@ -103,6 +104,9 @@ def _execute(phone: str, cmd) -> str:
 def handle(phone: str, text: str) -> str:
     cmd = parse(text)
     if cmd is None:
+        # STOP pauses all AI work, the Asisten included; commands still run.
+        if db.is_paused():
+            return PAUSED_REPLY
         return assistant_client.ask(phone, text)
     job = JobLog(JobKind.perintah, "Orchestrator", f"Perintah: {text.strip()[:60]}")
     try:

@@ -18,7 +18,7 @@ def data():
     return DigestData(slot="09.00", salutation="Ibu", window_start=NOW - timedelta(hours=16), groups=g,
                       quality_outside_focus=[g[Category.tidak_cocok][0]],
                       manual=[Item("d", "Bengkel Online", 0)], baru_masuk=4,
-                      insight="proposal agritech naik 50% dibanding minggu lalu (2 → 3).")
+                      insight="proposal agritech naik 50% dibanding minggu lalu (2 → 3).", at=NOW)
 
 
 def test_template_contents_and_counts():

@@ -152,7 +152,8 @@ def verify_citations(c: CriterionResult, pages: list[str]) -> CriterionResult:
     """Drop citations whose quote is not on the cited page, and downgrade the value they
     were holding up: none verified → at most 2 (a claim the deck does not show), some
     verified → one step down, never below 2; a 1 (contradiction) stays 1. The reason records the downgrade, so a stored
-    value is never backed by a quote the deck does not contain."""
+    value is never backed by a quote the deck does not contain, and a value ≥ 2 left with no
+    quote at all carries `citationsUnverified`."""
     if c.notMentioned:
         return c
     ok = [x for x in c.citations if quote_found(x.quote, pages[x.page - 1])]
@@ -167,7 +168,8 @@ def verify_citations(c: CriterionResult, pages: list[str]) -> CriterionResult:
             "kutipan tidak ditemukan di halaman yang disebut)") if new != c.value else (
             f"({missing} dari {len(c.citations)} kutipan tidak ditemukan di halaman yang "
             "disebut dan dibuang)")
-    return c.model_copy(update={"value": new, "citations": ok, "reason": f"{c.reason} {note}"})
+    return c.model_copy(update={"value": new, "citations": ok, "reason": f"{c.reason} {note}",
+                                "citationsUnverified": not ok and new >= 2})
 
 
 def validate(out: PenilaiOutput, pages: list[str]) -> tuple[dict[Criterion, CriterionResult], Profile]:

@@ -60,8 +60,14 @@ class JobLog:
 
     def finish(self, status: JobStatus) -> None:
         end = db.now()
-        self.ref.update({"status": status.value, "endedAt": end,
-                         "durationMs": int((time.monotonic() - self._t0) * 1000)})
+        upd = {"status": status.value, "endedAt": end,
+               "durationMs": int((time.monotonic() - self._t0) * 1000)}
+        if not self.model_calls and self.job.model:
+            # No model was called (e.g. too little text, or a paused digest): the card must
+            # not name a model that did no work.
+            upd["model"] = None
+            self.job.model = None
+        self.ref.update(upd)
         if self.tokens_in or self.tokens_out or self.model_calls:
             inc = firestore.Increment
             db.client().document(f"dailyStats/{db.wib_date(end)}").set({

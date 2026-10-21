@@ -9,76 +9,56 @@ import { settleAction } from '@/lib/data/action.contract'
 import { getAssistantContextAction } from './assistant-context.action'
 import { AssistantDrawer } from './assistant-drawer'
 import { AssistantFab } from './assistant-fab'
+import {
+  deriveTitle,
+  historyKey,
+  loadHistory,
+  mergeHistory,
+  newConversationId,
+  parseHistory,
+  prune,
+  readActive,
+  saveHistory,
+  writeActive,
+  type Conversation,
+} from './assistant-history'
 import { type AssistantContext, type ChatMessage } from './assistant-types'
 import { ASK_EVENT, type AskEventDetail } from '@/components/shell/ask-event'
-
-/**
- * The chat survives navigation (this dock lives in the shell) and a reload of
- * the tab (sessionStorage). It is saved with the user's uid and restored only
- * for that same uid, so a different account signing in on this tab never sees
- * it.
- */
-const STORAGE_KEY = 'aisa:tanya-aisa'
-
-interface Saved {
-  uid: string
-  conversationId: string
-  messages: ChatMessage[]
-}
-
-function newConversationId() {
-  return crypto.randomUUID().replaceAll('-', '')
-}
-
-function readSaved(uid: string): Saved | null {
-  try {
-    const raw = sessionStorage.getItem(STORAGE_KEY)
-    const saved = raw ? (JSON.parse(raw) as Saved) : null
-    return saved?.uid === uid && Array.isArray(saved.messages) ? saved : null
-  } catch {
-    return null
-  }
-}
-
-function writeSaved(saved: Saved) {
-  try {
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
-  } catch {
-    // Storage blocked or full: the chat still works, it just won't survive a reload.
-  }
-}
 
 /**
  * "Tanya AISA": the floating launcher plus its chat panel, mounted once by the
  * app shell. Questions go to the real Asisten through `askAssistantAction`;
  * another page can open the panel and ask by dispatching an `aisa:ask` window
  * event with `detail.prompt`.
+ *
+ * Conversations are kept per user in localStorage (see `assistant-history`),
+ * so they survive navigation, reloads and new tabs; with storage blocked they
+ * live only as long as this page. The open one is remembered per tab.
  */
 export function AssistantDock() {
   const [open, setOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [activeId, setActiveId] = useState<string | null>(null)
   const [context, setContext] = useState<AssistantContext | null>(null)
   const [busy, setBusy] = useState(false)
   const [queued, setQueued] = useState<string | null>(null)
-  // The ask whose answer is still awaited; STOP or a new conversation clears
-  // it, and an answer arriving for any other ask is dropped.
+  // The ask whose answer is still awaited; STOP or switching conversation
+  // clears it, and an answer arriving for any other ask is dropped.
   const pending = useRef<string | null>(null)
-  const conversation = useRef<string | null>(null)
-  const restored = useRef(false)
+  // The id the next question goes to: the open conversation, or a fresh id
+  // for a new one that has no messages (and so no history entry) yet.
+  const conversation = useRef<string>(newConversationId())
+  const uid = context?.uid ?? null
+  // The uid whose stored history is in memory. Writes wait for it, so an
+  // empty list in memory can never overwrite what is stored.
+  const [loadedUid, setLoadedUid] = useState<string | null>(null)
+  // Set when the list was just read from storage, so it is not written back.
+  const fromStorage = useRef(false)
 
   const refreshContext = useCallback(async () => {
     const result = await settleAction(getAssistantContextAction)
-    if (!result.ok) return
-    const next = result.data
-    setContext(next)
-    if (restored.current) return
-    restored.current = true
-    const saved = readSaved(next.uid)
-    if (saved && !conversation.current) {
-      conversation.current = saved.conversationId
-      setMessages(saved.messages)
-    }
+    if (result.ok) setContext(result.data)
   }, [])
 
   useEffect(() => {
@@ -90,25 +70,72 @@ export function AssistantDock() {
   }, [open, refreshContext])
 
   useEffect(() => {
-    if (!context || !conversation.current) return
-    writeSaved({
-      uid: context.uid,
-      conversationId: conversation.current,
-      messages,
-    })
-  }, [messages, context])
+    if (!uid || uid === loadedUid) return
+    const { list, migratedId } = loadHistory(uid)
+    // Anything asked before the first uid arrived is kept alongside what was
+    // stored; a different account's conversations never are.
+    setConversations((held) => (loadedUid ? list : mergeHistory(list, held)))
+    setLoadedUid(uid)
+    const reopen = migratedId ?? readActive(uid)
+    if (reopen && list.some((c) => c.id === reopen) && !pending.current) {
+      conversation.current = reopen
+      setActiveId(reopen)
+    }
+  }, [uid, loadedUid])
+
+  useEffect(() => {
+    if (!uid || uid !== loadedUid) return
+    if (fromStorage.current) {
+      fromStorage.current = false
+      return
+    }
+    saveHistory(uid, conversations)
+  }, [conversations, uid, loadedUid])
+
+  useEffect(() => {
+    if (uid && uid === loadedUid) writeActive(uid, activeId)
+  }, [activeId, uid, loadedUid])
+
+  // Another tab of this user changed the history: show what it saved.
+  useEffect(() => {
+    if (!uid) return
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== historyKey(uid)) return
+      fromStorage.current = true
+      setConversations(parseHistory(event.newValue))
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [uid])
+
+  const append = useCallback(
+    (id: string, message: ChatMessage, now = Date.now()) => {
+      setConversations((list) => {
+        const held = list.find((c) => c.id === id)
+        const next: Conversation = held
+          ? { ...held, updatedAt: now, messages: [...held.messages, message] }
+          : {
+              id,
+              title: deriveTitle(message.content),
+              createdAt: now,
+              updatedAt: now,
+              messages: [message],
+            }
+        return prune([next, ...list.filter((c) => c.id !== id)])
+      })
+    },
+    [],
+  )
 
   const send = useCallback(
     async (text: string) => {
       if (pending.current) return
       const id = crypto.randomUUID()
-      const conversationId = (conversation.current ??= newConversationId())
+      const conversationId = conversation.current
       pending.current = id
       setBusy(true)
-      setMessages((list) => [
-        ...list,
-        { id: `${id}:q`, role: 'user', content: text },
-      ])
+      setActiveId(conversationId)
+      append(conversationId, { id: `${id}:q`, role: 'user', content: text })
       const result = await settleAction(() =>
         askAssistantAction(conversationId, text),
       )
@@ -118,26 +145,23 @@ export function AssistantDock() {
       const outcome = result.ok ? result.data : result
       if (!outcome.ok) {
         toast.error(outcome.error)
-        setMessages((list) => [
-          ...list,
-          {
-            id: `${id}:e`,
-            role: 'error',
-            content: outcome.error,
-            question: text,
-          },
-        ])
+        append(conversationId, {
+          id: `${id}:e`,
+          role: 'error',
+          content: outcome.error,
+          question: text,
+        })
         return
       }
-      const { answer } = outcome.data
-      setMessages((list) => [
-        ...list,
-        { id: `${id}:a`, role: 'assistant', content: answer },
-      ])
+      append(conversationId, {
+        id: `${id}:a`,
+        role: 'assistant',
+        content: outcome.data.answer,
+      })
       // The answer may be the paused reply; let the header catch up.
       void refreshContext()
     },
-    [refreshContext],
+    [append, refreshContext],
   )
 
   const stop = useCallback(() => {
@@ -149,17 +173,51 @@ export function AssistantDock() {
     (failed: ChatMessage) => {
       if (!failed.question || pending.current) return
       const ask = failed.id.split(':')[0]
-      setMessages((list) => list.filter((m) => m.id.split(':')[0] !== ask))
+      const id = conversation.current
+      setConversations((list) =>
+        list.map((c) =>
+          c.id === id
+            ? {
+                ...c,
+                messages: c.messages.filter((m) => m.id.split(':')[0] !== ask),
+              }
+            : c,
+        ),
+      )
       void send(failed.question)
     },
     [send],
   )
 
-  const clear = useCallback(() => {
+  const startNew = useCallback(() => {
     stop()
     conversation.current = newConversationId()
-    setMessages([])
+    setActiveId(null)
   }, [stop])
+
+  const select = useCallback(
+    (id: string) => {
+      if (id === conversation.current) return
+      stop()
+      conversation.current = id
+      setActiveId(id)
+    },
+    [stop],
+  )
+
+  const rename = useCallback((id: string, title: string) => {
+    setConversations((list) =>
+      list.map((c) => (c.id === id ? { ...c, title } : c)),
+    )
+  }, [])
+
+  const remove = useCallback(
+    (id: string) => {
+      if (id === conversation.current) startNew()
+      setConversations((list) => list.filter((c) => c.id !== id))
+    },
+    [startNew],
+  )
 
   const close = useCallback(() => setOpen(false), [])
 
@@ -181,6 +239,8 @@ export function AssistantDock() {
     void send(queued)
   }, [queued, busy, send])
 
+  const active = conversations.find((c) => c.id === activeId) ?? null
+
   return (
     <>
       {!(open && expanded) && (
@@ -189,13 +249,17 @@ export function AssistantDock() {
       {open && (
         <AssistantDrawer
           expanded={expanded}
-          messages={messages}
+          conversation={active}
+          conversations={conversations}
           busy={busy}
           context={context}
           onSend={(text) => void send(text)}
           onStop={stop}
           onRetry={retry}
-          onClear={clear}
+          onNew={startNew}
+          onSelect={select}
+          onRename={rename}
+          onDelete={remove}
           onClose={close}
           onExpandedChange={setExpanded}
         />

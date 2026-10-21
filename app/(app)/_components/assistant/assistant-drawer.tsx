@@ -7,6 +7,7 @@ import {
   CheckIcon,
   CopyIcon,
   GaugeIcon,
+  HistoryIcon,
   Maximize2Icon,
   MessageSquareTextIcon,
   Minimize2Icon,
@@ -17,13 +18,18 @@ import {
   XIcon,
   type LucideIcon,
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 
 import { cn } from '@/lib/utils'
 
 import { AssistantAnswer } from './assistant-answer'
 import { AssistantComposer } from './assistant-composer'
+import { startedBeforeToday, type Conversation } from './assistant-history'
+import {
+  AssistantHistoryList,
+  type AssistantHistoryListProps,
+} from './assistant-history-list'
 import type { AssistantContext, ChatMessage } from './assistant-types'
 
 /** The Asisten's own examples (overview-project.md, "Asisten"). */
@@ -151,32 +157,42 @@ function AisaAvatar({ className }: { className?: string }) {
   )
 }
 
-export interface AssistantDrawerProps {
+export interface AssistantDrawerProps extends Pick<
+  AssistantHistoryListProps,
+  'conversations' | 'onSelect' | 'onNew' | 'onRename' | 'onDelete'
+> {
   expanded: boolean
-  messages: ChatMessage[]
+  /** The open conversation; null for a new one nothing has been asked in. */
+  conversation: Conversation | null
   busy: boolean
   context: AssistantContext | null
   onSend: (text: string) => void
   onStop: () => void
   onRetry: (message: ChatMessage) => void
-  onClear: () => void
   onClose: () => void
   onExpandedChange: (expanded: boolean) => void
 }
 
 export function AssistantDrawer({
   expanded,
-  messages,
+  conversation,
+  conversations,
   busy,
   context,
   onSend,
   onStop,
   onRetry,
-  onClear,
+  onNew,
+  onSelect,
+  onRename,
+  onDelete,
   onClose,
   onExpandedChange,
 }: AssistantDrawerProps) {
   const scroller = useRef<HTMLDivElement>(null)
+  // The history as a sheet over the chat, wherever the sidebar is not shown.
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const messages = useMemo(() => conversation?.messages ?? [], [conversation])
 
   useEffect(() => {
     const node = scroller.current
@@ -188,12 +204,28 @@ export function AssistantDrawer({
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return
-      if (expanded) onExpandedChange(false)
+      // A menu or confirm dialog over the panel closes itself; the panel stays.
+      const target = event.target as Element | null
+      if (target?.closest?.('[role="menu"],[role="alertdialog"]')) return
+      if (historyOpen) setHistoryOpen(false)
+      else if (expanded) onExpandedChange(false)
       else onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [expanded, onExpandedChange, onClose])
+  }, [historyOpen, expanded, onExpandedChange, onClose])
+
+  const history = {
+    conversations,
+    activeId: conversation?.id ?? null,
+    onRename,
+    onDelete,
+    newDisabled: !messages.length,
+  }
+  // Server sessions are per WIB day and are wiped when a proposal is deleted,
+  // so a conversation begun on an earlier day may not be remembered.
+  const mayHaveForgotten =
+    conversation != null && startedBeforeToday(conversation, Date.now())
 
   return (
     <aside
@@ -208,35 +240,15 @@ export function AssistantDrawer({
       )}
     >
       {expanded && (
-        <div className="hidden w-72 shrink-0 flex-col gap-6 border-r bg-muted/40 p-4 lg:flex">
-          <button
-            type="button"
-            onClick={onClear}
-            disabled={!messages.length}
-            className="flex h-10 items-center gap-2 rounded-xl border bg-card px-3 text-sm font-medium transition-colors hover:bg-muted disabled:opacity-50"
-          >
-            <SquarePenIcon className="size-4" />
-            Percakapan baru
-          </button>
-          <div className="space-y-1">
-            <p className="px-2 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
-              Coba tanyakan
-            </p>
-            {suggestions.map((item) => (
-              <button
-                key={item.question}
-                type="button"
-                disabled={busy}
-                onClick={() => onSend(item.question)}
-                className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm text-muted-foreground transition-colors hover:bg-card hover:text-foreground disabled:opacity-50"
-              >
-                <item.icon className="size-4 shrink-0" />
-                <span className="truncate">{item.title}</span>
-              </button>
-            ))}
-          </div>
+        <div className="hidden w-72 shrink-0 flex-col border-r bg-sidebar lg:flex">
+          <AssistantHistoryList
+            {...history}
+            onSelect={onSelect}
+            onNew={onNew}
+            className="flex-1"
+          />
           {context && (
-            <div className="mt-auto space-y-3 rounded-xl border bg-card p-3">
+            <div className="m-3 mt-0 space-y-3 rounded-xl border bg-card p-3">
               <p className="text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
                 Data saat ini
               </p>
@@ -284,9 +296,17 @@ export function AssistantDrawer({
               </span>
             </p>
           </div>
+          <span className={cn(expanded && 'lg:hidden')}>
+            <IconButton
+              label="Riwayat percakapan"
+              onClick={() => setHistoryOpen(true)}
+            >
+              <HistoryIcon className="size-4" />
+            </IconButton>
+          </span>
           <IconButton
             label="Percakapan baru"
-            onClick={onClear}
+            onClick={onNew}
             disabled={!messages.length}
           >
             <SquarePenIcon className="size-4" />
@@ -315,13 +335,14 @@ export function AssistantDrawer({
             className={cn(
               'mx-auto flex w-full flex-col gap-5 px-4 py-5',
               expanded && 'max-w-3xl py-8',
+              expanded && !messages.length && 'min-h-full',
             )}
           >
             {messages.length === 0 ? (
               <div
                 className={cn(
                   'flex flex-col gap-6 pt-4',
-                  expanded && 'items-center pt-[8vh] text-center',
+                  expanded && 'my-auto items-center pt-0 pb-[6vh] text-center',
                 )}
               >
                 <div
@@ -349,33 +370,44 @@ export function AssistantDrawer({
                     </p>
                   </div>
                 </div>
-                <div
-                  className={cn(
-                    'grid w-full gap-2',
-                    expanded ? 'max-w-2xl sm:grid-cols-2' : 'grid-cols-1',
-                  )}
-                >
-                  {suggestions.slice(0, expanded ? 4 : 3).map((item) => (
-                    <button
-                      key={item.question}
-                      type="button"
-                      aria-label={item.question}
-                      onClick={() => onSend(item.question)}
-                      className="group flex items-start gap-3 rounded-xl border bg-background p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/50"
-                    >
-                      <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted transition-colors group-hover:bg-primary/10 group-hover:text-primary">
-                        <item.icon className="size-4" />
-                      </span>
-                      <span className="min-w-0">
-                        <span className="block text-sm font-medium">
-                          {item.title}
+                <div className="w-full space-y-2">
+                  <p className="text-left text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+                    Coba tanyakan
+                  </p>
+                  <div
+                    className={cn(
+                      'grid w-full gap-2',
+                      expanded
+                        ? 'sm:grid-cols-2 lg:grid-cols-3'
+                        : 'grid-cols-1',
+                    )}
+                  >
+                    {suggestions.slice(0, expanded ? 6 : 3).map((item, i) => (
+                      <button
+                        key={item.question}
+                        type="button"
+                        aria-label={item.question}
+                        onClick={() => onSend(item.question)}
+                        className={cn(
+                          'group flex items-start gap-3 rounded-xl border bg-background p-3 text-left transition-colors hover:border-primary/40 hover:bg-muted/50',
+                          // Six cards are a full screen on a phone; four leave the greeting in view.
+                          i >= 4 && 'max-sm:hidden',
+                        )}
+                      >
+                        <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                          <item.icon className="size-4" />
                         </span>
-                        <span className="block truncate text-xs text-muted-foreground">
-                          “{item.question}”
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-medium">
+                            {item.title}
+                          </span>
+                          <span className="block truncate text-xs text-muted-foreground">
+                            “{item.question}”
+                          </span>
                         </span>
-                      </span>
-                    </button>
-                  ))}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
             ) : (
@@ -456,6 +488,13 @@ export function AssistantDrawer({
                 ))}
               </div>
             )}
+            {mayHaveForgotten && (
+              <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-muted-foreground">
+                <HistoryIcon className="size-3 shrink-0" />
+                AISA mungkin tidak ingat konteks percakapan lama; tanyakan ulang
+                bila perlu.
+              </p>
+            )}
             <AssistantComposer
               busy={busy}
               onSend={onSend}
@@ -469,6 +508,50 @@ export function AssistantDrawer({
           </div>
         </div>
       </div>
+
+      {historyOpen && (
+        <div className="absolute inset-0 z-20 flex">
+          <button
+            type="button"
+            aria-label="Tutup riwayat"
+            tabIndex={-1}
+            onClick={() => setHistoryOpen(false)}
+            className="absolute inset-0 animate-in bg-black/20 duration-150 fade-in supports-backdrop-filter:backdrop-blur-[1px]"
+          />
+          <section
+            aria-label="Riwayat percakapan"
+            className="relative flex w-[min(20rem,88%)] animate-in flex-col border-r bg-sidebar shadow-xl duration-200 slide-in-from-left-8"
+          >
+            <div className="flex h-14 shrink-0 items-center justify-between border-b px-3">
+              <p className="flex items-center gap-2 text-sm font-semibold">
+                <HistoryIcon className="size-4 text-muted-foreground" />
+                Riwayat
+              </p>
+              <IconButton
+                label="Tutup riwayat"
+                onClick={() => setHistoryOpen(false)}
+              >
+                <XIcon className="size-4" />
+              </IconButton>
+            </div>
+            <AssistantHistoryList
+              {...history}
+              // Not on touch: focusing the search there pops the keyboard
+              // over the list the user opened the sheet to read.
+              autoFocusSearch={window.matchMedia('(pointer: fine)').matches}
+              onSelect={(id) => {
+                onSelect(id)
+                setHistoryOpen(false)
+              }}
+              onNew={() => {
+                onNew()
+                setHistoryOpen(false)
+              }}
+              className="flex-1"
+            />
+          </section>
+        </div>
+      )}
     </aside>
   )
 }

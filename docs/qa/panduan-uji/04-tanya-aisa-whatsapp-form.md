@@ -40,6 +40,7 @@ ditanggapi" lagi, jadi jangan jalankan perintah ⚠️ ke proposal sungguhan.
 - [UC-AST-14 · Kartu Tanya AISA di detail proposal](#uc-ast-14--kartu-tanya-aisa-di-detail-proposal)
 - [UC-AST-15 · Tanya asisten dari ⌘K](#uc-ast-15--tanya-asisten-dari-k)
 - [UC-AST-16 · Tanya AISA tidak menjalankan perintah](#uc-ast-16--tanya-aisa-tidak-menjalankan-perintah)
+- [UC-AST-17 · Riwayat percakapan: membuka, mencari, mengganti nama, menghapus](#uc-ast-17--riwayat-percakapan-membuka-mencari-mengganti-nama-menghapus)
 
 **WhatsApp**
 
@@ -91,7 +92,8 @@ ditanggapi" lagi, jadi jangan jalankan perintah ⚠️ ke proposal sungguhan.
 2. Klik tombol itu.
 
 **Yang seharusnya terlihat:** panel kecil terbuka di atas tombol. Di kepala panel: **Tanya
-AISA** dan di bawahnya titik hijau dengan teks **Asisten yang sama di WhatsApp**. Di tengah:
+AISA** dan di bawahnya titik hijau dengan teks **Asisten yang sama di WhatsApp**; di kanannya
+ikon jam (**Riwayat percakapan**), pensil, layar penuh, dan ✕. Di tengah:
 **Halo** dan kalimat "Ada yang mau ditanyakan soal _N_ proposal? Jawaban diambil langsung dari
 data AISA." Di bawahnya tiga kartu contoh, mis. **Fintech sangat cocok**, **Berkualitas, di luar
 fokus**, **Alasan skor** ("Kenapa skor Kopi Teras Senja segitu?"). Kolom ketik berplaceholder
@@ -177,13 +179,16 @@ diminta dalam bentuk singkat (mis. "Rp15 M"). Cek dengan dana di halaman detail 
 1. Di kepala panel, klik ikon panah keluar (**Layar penuh**).
 
 **Yang seharusnya terlihat:** panel memenuhi seluruh layar, tombol bulat kanan bawah hilang.
-Di kiri ada panel samping berisi tombol **Percakapan baru**, judul kecil **COBA TANYAKAN** dengan
-enam contoh (**Fintech sangat cocok**, **Berkualitas, di luar fokus**, **Alasan skor**,
-**Bandingkan proposal**, **Pertanyaan untuk founder**, **Dana di bawah Rp3 M**), dan kotak
+Di kiri ada panel samping berisi tombol **Percakapan baru**, kolom **Cari percakapan**, daftar
+riwayat percakapan yang dikelompokkan per tanggal (lihat UC-AST-17), dan di bawahnya kotak
 **DATA SAAT INI** berisi **Total proposal**, **Belum ditanggapi**, **Sangat cocok, menunggu**.
+Bila percakapan yang terbuka masih kosong, di tengah tampil **Halo**, judul kecil **COBA
+TANYAKAN**, dan enam kartu contoh (**Fintech sangat cocok**, **Berkualitas, di luar fokus**,
+**Alasan skor**, **Bandingkan proposal**, **Pertanyaan untuk founder**, **Dana di bawah Rp3 M**).
 Ikon di kepala berubah menjadi **Kecilkan jendela**. Cek: **Total proposal** sama dengan jumlah
 di halaman **Proposal**; **Sangat cocok, menunggu** sama dengan jumlah Sangat cocok yang belum
-ditanggapi. Di layar sempit (ponsel), panel samping tidak tampil; itu memang begitu.
+ditanggapi. Di layar sempit (ponsel), panel samping tidak tampil dan kartu contoh hanya empat;
+riwayat dibuka lewat ikon jam di kepala panel.
 **Kalau berbeda:** catat angka di kotak dan di halaman Proposal.
 
 ### UC-AST-07 · Menutup dengan Esc
@@ -211,9 +216,11 @@ ada.
 2. Ketik `Berapa dana yang dia minta?` lalu Enter.
 
 **Yang seharusnya terlihat:** setelah langkah 1, layar kembali ke **Halo** dan kartu contoh.
-Saat belum ada pesan, ikon **Percakapan baru** abu-abu (tidak bisa diklik). Di langkah 2,
-AISA tidak tahu siapa "dia" dan menanyakan proposal mana; percakapan lama memang sudah tidak
-dipakai.
+Saat belum ada pesan, ikon **Percakapan baru** abu-abu (tidak bisa diklik). Percakapan lama tidak
+hilang: ia tetap ada di riwayat (UC-AST-17). Di langkah 2, AISA tidak tahu siapa "dia" dan
+menanyakan proposal mana; percakapan baru memang tidak membawa konteks yang lama. Setelah langkah
+2, percakapan baru muncul paling atas di riwayat di bawah **HARI INI**, berjudul pertanyaan
+pertamanya.
 **Kalau berbeda:** bila AISA masih menjawab tentang proposal sebelumnya, catat.
 
 ### UC-AST-09 · Berhenti menunggu jawaban
@@ -242,9 +249,11 @@ pekerjaan itu tetap tercatat di sidebar **Ruang kerja** → **Aktivitas AI** seb
 2. Tekan F5 (muat ulang). Buka lagi Tanya AISA.
 3. Buka dashboard di tab baru, buka Tanya AISA.
 
-**Yang seharusnya terlihat:** langkah 1 dan 2: percakapan masih ada. Langkah 3: tab baru mulai
-kosong (**Halo**); percakapan disimpan per tab, bukan per akun. Bila keluar lalu masuk dengan akun
-lain di tab yang sama, percakapan akun sebelumnya tidak terlihat.
+**Yang seharusnya terlihat:** langkah 1 dan 2: percakapan yang sama masih terbuka. Langkah 3:
+tab baru mulai dengan percakapan kosong (**Halo**), tetapi percakapan tadi ada di riwayat dan bisa
+dibuka dari sana. Riwayat disimpan di browser ini (localStorage) per akun: browser atau perangkat
+lain tidak melihatnya, dan akun lain yang masuk di browser yang sama tidak melihat riwayat akun
+Anda. Percakapan yang sedang terbuka diingat per tab.
 **Kalau berbeda:** catat langkah mana yang kehilangan percakapan.
 
 ### UC-AST-11 · Menyalin jawaban
@@ -354,6 +363,43 @@ halaman detailnya.
 hanya bisa membaca data, dan boleh menyebut cara mengubahnya (tombol di dashboard atau perintah
 WhatsApp `arsipkan <nama>`). Kartu **Keputusan Anda** di detail tidak berubah.
 **Kalau berbeda:** bila status berubah, atau AISA mengaku "sudah diarsipkan", itu bug serius.
+
+### UC-AST-17 · Riwayat percakapan: membuka, mencari, mengganti nama, menghapus
+
+**Situasi:** Anda ingin kembali ke percakapan kemarin, atau merapikan riwayat.
+**Sebelum mulai:** sudah ada minimal dua percakapan (pakai **Percakapan baru** di antaranya).
+Laptop, Tanya AISA layar penuh.
+**Langkah:**
+
+1. Lihat daftar di panel samping kiri.
+2. Klik percakapan yang bukan yang sedang terbuka.
+3. Ketik sebagian kata dari salah satu pertanyaan atau jawaban di **Cari percakapan**, lalu
+   hapus lagi isinya.
+4. Arahkan kursor ke satu percakapan, klik **⋯**, pilih **Ganti nama**, ketik `Rapat Senin`, lalu
+   Enter.
+5. Klik **⋯** lagi pada percakapan itu, pilih **Hapus**, lalu **Hapus** di dialog.
+6. Kecilkan jendela, klik ikon jam (**Riwayat percakapan**) di kepala panel kecil.
+
+**Yang seharusnya terlihat:** langkah 1: percakapan dikelompokkan menurut waktu terakhir
+dipakai (WIB) di bawah judul kecil **HARI INI**, **KEMARIN**, **7 HARI TERAKHIR**, **30 HARI
+TERAKHIR**, lalu per bulan (mis. **SEPTEMBER 2026**); judul kelompok tetap menempel di atas saat
+daftar digulir. Tiap baris berjudul pertanyaan pertama percakapan itu (satu baris, dipotong
+dengan "…" bila panjang); arahkan kursor untuk melihat kapan terakhir diperbarui. Percakapan yang
+terbuka diberi latar putih dan garis biru di kiri. Langkah 2: pesan percakapan itu tampil dan
+pertanyaan berikutnya melanjutkannya. Bila percakapan itu dimulai sebelum hari ini, di atas kolom
+ketik muncul "AISA mungkin tidak ingat konteks percakapan lama; tanyakan ulang bila perlu." —
+ingatan Asisten di server berganti tiap hari (WIB) dan dikosongkan saat ada proposal dihapus, jadi
+pesan lama hanya tersimpan di layar Anda. Langkah 3: daftar hanya menampilkan percakapan yang
+judul atau isinya cocok; bila tidak ada, "Tidak ada percakapan yang cocok dengan …". Langkah 4:
+judul berganti menjadi **Rapat Senin**; Esc membatalkan, nama kosong tidak disimpan. Langkah 5:
+dialog **Hapus percakapan?** muncul; setelah dikonfirmasi baris itu hilang, dan bila itu
+percakapan yang terbuka, layar kembali ke **Halo**. Langkah 6: lembar **Riwayat** meluncur dari
+kiri di dalam panel dengan isi yang sama; memilih percakapan menutup lembar itu. Panah atas/bawah
+berpindah antarbaris, Enter membuka. Bila belum ada percakapan sama sekali: "Belum ada
+percakapan". Riwayat menyimpan paling banyak 50 percakapan; yang paling lama tidak dipakai
+terhapus lebih dulu.
+**Kalau berbeda:** catat langkah dan apa yang tampil; bila percakapan muncul di kelompok tanggal
+yang salah, catat juga jam percakapan terakhir dipakai.
 
 ---
 

@@ -150,6 +150,7 @@ export function eventStats(events: RiwayatEvent[], now: number): EventStat[] {
   const decisions = recent.filter((e) => e.kind === 'keputusan')
   const by = (kind: string) =>
     decisions.filter((e) => e.decision === kind).length
+  const unknown = decisions.filter((e) => e.decision === undefined).length
   const viaWhatsapp = decisions.filter((e) => e.via === 'wa').length
   const assessed = recent.filter((e) => e.kind === 'penilaian')
   const scores = assessed
@@ -161,7 +162,14 @@ export function eventStats(events: RiwayatEvent[], now: number): EventStat[] {
     build(
       'keputusan',
       decisions.length
-        ? `${by('undang')} diundang · ${by('pantau')} dipantau · ${by('arsipkan')} diarsip`
+        ? [
+            `${by('undang')} diundang`,
+            `${by('pantau')} dipantau`,
+            `${by('arsipkan')} diarsip`,
+            // Deleting a proposal blanks its rows' before/after, so their kind
+            // is gone; counting them keeps the breakdown summing to the total.
+            ...(unknown ? [`${unknown} tanpa rincian`] : []),
+          ].join(' · ')
         : 'Belum ada keputusan',
     ),
     build(

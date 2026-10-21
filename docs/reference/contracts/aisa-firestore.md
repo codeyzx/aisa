@@ -133,7 +133,8 @@ updated with `Increment`.
   reuses for that key during one WIB `date`; a new day creates a new session. The key is a
   manager phone for WhatsApp, or `dashboard-<uid>-<conversationId>` for the dashboard's
   Tanya AISA (`POST /api/assistant/ask`), so a dashboard conversation never shares a
-  session with a phone or with another user.
+  session with a phone or with another user. Every `assistantSessions` doc is deleted when a proposal is
+  deleted (see below), so the next question opens a new session.
 
 ## Deleting a proposal
 
@@ -148,3 +149,8 @@ it as a whole word has the name replaced by "(dihapus)", except in jobs owned by
 proposal. `history` rows
 for the proposal are kept but scrubbed: `proposalName` becomes "(dihapus)" and `before` /
 `after` are removed. One `proposal_dihapus` row records the deletion and its reason.
+Afterwards the Asisten's state outside Firestore is cleared: the `assistantSessions` docs,
+every Agent Runtime session of the engine, and every Memory Bank memory whose fact names the
+proposal (whole word, case-insensitive); the other memories stay. That step never fails the
+deletion: an Agent Runtime error is returned as `assistantScrub.error` and nothing is
+retried. The manager's WhatsApp chat is outside AISA and keeps what was already sent.

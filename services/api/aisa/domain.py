@@ -9,7 +9,7 @@ from typing import Any
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
-from . import db, storage
+from . import assistant_client, db, storage
 from .jobs import write_history
 from .models import (
     CATEGORY_LABEL,
@@ -158,11 +158,20 @@ def scrubbed_history() -> dict[str, Any]:
             "detail": "Rincian dihapus bersama proposal"}
 
 
+def _name_re(name: str) -> re.Pattern[str]:
+    return re.compile(rf"(?<!\w){re.escape(name.strip())}(?!\w)", re.IGNORECASE)
+
+
 def scrub_name(text: str, name: str) -> str:
     """Replace whole-word occurrences of `name` (case-insensitive) with DELETED_NAME."""
     if not name.strip():
         return text
-    return re.sub(rf"(?<!\w){re.escape(name.strip())}(?!\w)", DELETED_NAME, text, flags=re.IGNORECASE)
+    return _name_re(name).sub(DELETED_NAME, text)
+
+
+def mentions(text: str, name: str) -> bool:
+    """Whether `text` names `name` by the same whole-word, case-insensitive rule as scrub_name."""
+    return bool(name.strip()) and bool(_name_re(name).search(text))
 
 
 def _commit_in_batches(ops) -> int:
@@ -221,7 +230,8 @@ def _scrub_other_jobs(pid: str, name: str, deleted: set[str]):
 def delete_proposal(pid: str, reason: str, via: Via) -> dict:
     """Delete a proposal and everything derived from it, for any status (a founder's
     request or retention). Kept: history rows, scrubbed of the name and details, plus one
-    `proposal_dihapus` row. The proposal document goes last, so a failure part-way leaves
+    `proposal_dihapus` row. Then the Asisten's sessions and the memories naming it go
+    (`assistant_client.forget`). The proposal document goes last, so a failure part-way leaves
     it in place and the call can be repeated."""
     reason = (reason or "").strip()
     if not reason:
@@ -271,4 +281,7 @@ def delete_proposal(pid: str, reason: str, via: Via) -> dict:
     fs.document(f"proposals/{pid}").delete()
     write_history(via=via, action="proposal_dihapus", proposalId=pid, reason=reason,
                   detail="Proposal dihapus")
-    return {"deleted": True}
+    # After Firestore, and never raising: an unreachable Agent Runtime must not undo or
+    # fail a deletion that already happened; its error is reported instead.
+    return {"deleted": True,
+            "assistantScrub": assistant_client.forget(lambda text: mentions(text, p.name))}

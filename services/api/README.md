@@ -39,7 +39,7 @@ CLI helpers:
 | `POST /api/proposals/{id}/response`                   | `X-AISA-Key`                                                            | `{kind: undang\|pantau\|arsipkan, note?}`                                                                                                                                                                                                                      |
 | `POST /api/proposals/{id}/correction`                 | `X-AISA-Key`                                                            | `{category, reason}`; reason required; only `dinilai` proposals                                                                                                                                                                                                |
 | `POST /api/proposals/bulk-response`                   | `X-AISA-Key`                                                            | `{category, kind}` → `{count}`                                                                                                                                                                                                                                 |
-| `DELETE /api/proposals/{id}`                          | `X-AISA-Key`                                                            | body `{reason}` (required, non-empty, else 422); any status; 404 if missing → 200 `{deleted: true}`. See "Deleting a proposal" below                                                                                                                           |
+| `DELETE /api/proposals/{id}`                          | `X-AISA-Key`                                                            | body `{reason}` (required, non-empty, else 422); any status; 404 if missing → 200 `{deleted: true, assistantScrub}`. See "Deleting a proposal" below                                                                                                           |
 | `PUT /api/rules`                                      | `X-AISA-Key`                                                            | `{rules, reason}`; weights must cover all five criteria and sum to 1 ± 0.001, else 422. Version is bumped by the server                                                                                                                                        |
 | `POST /api/runtime/stop` / `POST /api/runtime/resume` | `X-AISA-Key`                                                            | pause / resume; resume assesses `antre` and `dihentikan` proposals                                                                                                                                                                                             |
 | `GET /api/proposals/{id}/deck-url`                    | `X-AISA-Key`                                                            | uploads: V4 signed GCS URL, 15 min. Form decks stay in Drive, so this returns the Drive view link                                                                                                                                                              |
@@ -65,6 +65,20 @@ details and in the text of `digests` that listed the proposal (whose `proposalId
 id). Finally one `history` row `{action: "proposal_dihapus", via, proposalId, reason}` is
 written, with no name or founder data. Aggregate counters in `dailyStats` are not changed.
 The proposal document is deleted last, so a failed call can be repeated.
+
+Then the Asisten's state is cleared (`assistant_client.forget`), since its conversations may
+name the startup. With `ASSISTANT_ENGINE_ID` set: every `assistantSessions` doc is deleted
+(so the next question opens a new session), then every Agent Runtime session of the engine
+(`agent_engines.sessions.list` / `.delete`, the mapped ones and earlier days' alike; a 404 is
+skipped), then every Memory Bank memory whose `fact` names the proposal by the same
+whole-word, case-insensitive rule as the scrub above (`agent_engines.memories.list` /
+`.delete`); other memories stay. Without it, the in-process runner's in-memory sessions are
+cleared. The response carries `assistantScrub: {sessions, memories}`, counting the deletes
+Agent Runtime accepted (they finish as long-running operations; nothing waits for them). An
+Agent Runtime failure is logged and returned as `assistantScrub.error`; the Firestore
+deletion stands and is not retried, and what was not deleted stays until a later deletion
+clears sessions again. The manager's WhatsApp chat itself is not ours to edit: answers
+already sent there keep the name.
 
 ### WhatsApp commands (recognised by code, case-insensitive)
 

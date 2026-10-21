@@ -322,7 +322,8 @@ def test_dsb_rute04_delete_removes_everything_derived(client, fs, env):
                                    "action": "tanggapan", "before": None, "after": "undang", "reason": None})
     fs.document("digests/d1").set({"text": "1. Tani Maju · 80", "proposalIds": ["p1", "p2"]})
     r = api(client, "DELETE", "/api/proposals/p1", {"reason": "permintaan founder (uji)"})
-    assert r.status_code == 200 and r.json() == {"deleted": True}
+    assert r.status_code == 200 and r.json()["deleted"] is True
+    assert "error" not in r.json()["assistantScrub"]
     for path in ("proposals/p1", "proposalTexts/p1", "jobs/job1", "jobs/job1/steps/001",
                  f"pendingConfirmations/{MANAGER}"):
         assert fs.get(path) is None, path

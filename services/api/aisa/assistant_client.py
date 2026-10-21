@@ -3,7 +3,8 @@
 With ASSISTANT_ENGINE_ID set (full resource name `projects/…/locations/…/reasoningEngines/…`)
 the deployed Agent Runtime engine is called, with one session per manager phone per WIB day
 cached in `assistantSessions/{phone}`. Without it, `aisa.assistant.agent:root_agent` runs
-in-process with an in-memory session (lost on restart)."""
+in-process with an in-memory session (lost on restart). `forget` removes that state when a
+proposal is deleted."""
 
 from __future__ import annotations
 
@@ -148,13 +149,16 @@ def _ask_local(phone: str, text: str, on_event: OnEvent) -> str:
 
 
 @lru_cache
-def _engine():
+def _client():
     import vertexai
 
-    name = settings().assistant_engine_id
-    location = name.split("/locations/")[1].split("/")[0]
-    client = vertexai.Client(project=settings().project, location=location)
-    return client.agent_engines.get(name=name)
+    location = settings().assistant_engine_id.split("/locations/")[1].split("/")[0]
+    return vertexai.Client(project=settings().project, location=location)
+
+
+@lru_cache
+def _engine():
+    return _client().agent_engines.get(name=settings().assistant_engine_id)
 
 
 def _session_id(phone: str) -> str:
@@ -187,6 +191,81 @@ def _ask_remote(phone: str, text: str, on_event: OnEvent) -> str:
             if t:
                 texts.append(t)
     return texts[-1] if texts else ""
+
+
+# ---------- forgetting a deleted proposal ----------
+
+
+def _not_found(e: Exception) -> bool:
+    return getattr(e, "code", None) == 404
+
+
+def _forget_remote(mentions: Callable[[str], bool], out: dict) -> None:
+    """Sessions cannot be edited, so every one goes. The `assistantSessions` mappings are
+    dropped first: if a session delete then fails, the next question still starts a fresh
+    session instead of reopening the one that names the proposal. Memory Bank memories are
+    deleted only when their fact mentions the proposal; the others are the manager's
+    preferences and stay."""
+    engine = settings().assistant_engine_id
+    api = _client().agent_engines
+    names: set[str] = set()
+    for s in db.client().collection("assistantSessions").stream():
+        if sid := (s.to_dict() or {}).get("sessionId"):
+            names.add(f"{engine}/sessions/{sid}")
+        s.reference.delete()
+    # Also sessions no mapping points to any more (earlier days), which still hold events.
+    names.update(s.name for s in api.sessions.list(name=engine) if s.name)
+    for name in sorted(names):
+        try:
+            api.sessions.delete(name=name)
+        except Exception as e:
+            if not _not_found(e):
+                raise
+            continue
+        out["sessions"] += 1
+    for m in api.memories.list(name=engine):
+        if m.name and m.fact and mentions(m.fact):
+            try:
+                api.memories.delete(name=m.name)
+            except Exception as e:
+                if not _not_found(e):
+                    raise
+                continue
+            out["memories"] += 1
+
+
+def _forget_local(out: dict) -> None:
+    """The in-process runner keeps sessions in memory and has no memory service. Nothing to
+    clear when no question has been asked since start (the runner was never built)."""
+    if not _runner.cache_info().currsize:
+        return
+    sessions = _runner().session_service.sessions
+
+    async def clear() -> int:  # on the runner's loop, so no answer reads it mid-change
+        n = sum(len(by_id) for users in sessions.values() for by_id in users.values())
+        sessions.clear()
+        return n
+
+    out["sessions"] += _run(clear())
+
+
+def forget(mentions: Callable[[str], bool]) -> dict:
+    """Remove the Asisten state that may still hold a deleted proposal: every session (the
+    conversation events) and every Memory Bank memory whose fact `mentions` it. Returns
+    `{"sessions": n, "memories": m}`, plus `error` when Agent Runtime could not be reached
+    or refused; that never raises, since the proposal is already deleted from Firestore.
+    The counts are deletes Agent Runtime accepted (it completes them as operations). The
+    manager's WhatsApp chat is not AISA's to edit and is left as it is."""
+    out: dict[str, Any] = {"sessions": 0, "memories": 0}
+    try:
+        if settings().assistant_engine_id:
+            _forget_remote(mentions, out)
+        else:
+            _forget_local(out)
+    except Exception as e:  # noqa: BLE001
+        log.warning("asisten state scrub failed", exc_info=True)
+        out["error"] = str(e)[:300] or type(e).__name__
+    return out
 
 
 # ---------- STOP and progress ----------

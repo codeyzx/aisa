@@ -182,6 +182,7 @@ Membaca Firestore langsung lewat Admin SDK; semua penulisan lewat aisa-api. Tomb
 1. **Atas permintaan founder:** tombol "Hapus data" di dashboard (`DELETE /api/proposals/{id}`, alasan wajib) atau CLI `aisa delete-proposal`.
 2. **Retensi:** Cloud Scheduler `aisa-retensi` setiap hari pukul 02.00 WIB memanggil `POST /retention/run`, yang menghapus proposal bertanggapan arsipkan lebih lama dari `rules.retentionDays` (default 90).
 3. Yang dihapus: dokumen proposal, `proposalTexts`, deck di GCS, pekerjaan penilaiannya beserta langkahnya, dan konfirmasi tertunda yang menyebutnya. Baris Riwayat dipertahankan tetapi disamarkan (nama menjadi "(dihapus)", sebelum/sesudah dibuang), dan satu baris `proposal_dihapus` dicatat.
+4. Setelah itu state Asisten dibersihkan: semua session Agent Runtime dihapus (beserta pemetaan `assistantSessions`, jadi pertanyaan berikutnya membuka session baru) dan memory di Memory Bank yang menyebut nama proposal dihapus; preferensi lain tetap. Bila Agent Runtime gagal, penghapusan di Firestore tetap berlaku dan galatnya dilaporkan di respons (`assistantScrub.error`). Chat WhatsApp manajer tidak bisa diubah AISA: jawaban yang sudah terkirim tetap memuat nama itu.
 
 ---
 
@@ -197,8 +198,8 @@ Membaca Firestore langsung lewat Admin SDK; semua penulisan lewat aisa-api. Tomb
 | Teks deck per halaman (`proposalTexts`)                 | Firestore (ikut dihapus saat penghapusan/retensi)       |
 | Pitch deck dari Form                                    | Google Drive (tidak disalin ke tempat lain)             |
 | Pitch deck unggahan dashboard                           | Bucket GCS deck (ikut dihapus saat penghapusan/retensi) |
-| Konteks percakapan                                      | Sessions                                                |
-| Preferensi manajer                                      | Memory Bank                                             |
+| Konteks percakapan                                      | Sessions (semua dihapus saat penghapusan proposal)      |
+| Preferensi manajer                                      | Memory Bank (yang menyebut proposal ikut dihapus)       |
 
 Skema rinci: `docs/reference/contracts/aisa-firestore.md`.
 
@@ -226,7 +227,7 @@ Semua agent menulis log dengan format seragam:
 - Hanya **teks** pitch deck yang dikirim ke model; gambar dan file PDF tidak.
 - Data founder (kontak) tidak dikirim ke WhatsApp dan tidak masuk prompt.
 - Data tidak dipakai untuk melatih model.
-- Proposal yang diarsipkan dihapus setelah periode retensi atau atas permintaan founder (Bagian 7E).
+- Proposal yang diarsipkan dihapus setelah periode retensi atau atas permintaan founder (Bagian 7E), termasuk session Asisten dan memory Memory Bank yang menyebutnya; chat WhatsApp yang sudah terkirim tidak ikut terhapus.
 - Dashboard dilindungi login Firebase Auth email/password (1 akun).
 - **Keterbatasan:** Asisten di Agent Runtime berjalan sebagai service account runtime (`hackathon-runtime`), yang punya IAM baca-tulis Firestore. Jaminan baca-saja Asisten ada di kode (tidak ada tool tulis), bukan di IAM. Service account khusus `aisa-assistant@hackathon-primestep-09.iam.gserviceaccount.com` sudah dibuat tetapi belum dipakai: pemberian `roles/datastore.viewer` (dan `roles/aiplatform.user`) membutuhkan admin IAM project, lalu Asisten dideploy ulang dengan `ASSISTANT_SERVICE_ACCOUNT` diisi akun itu.
 

@@ -261,6 +261,19 @@ export const RuntimeSchema = z.object({
 })
 export type Runtime = z.infer<typeof RuntimeSchema>
 
+/**
+ * The step a running job has started but not yet recorded under `steps`. The
+ * API sets it before each step and clears it when the step is recorded or the
+ * job ends, so a non-null value always names work still in progress.
+ */
+export const CurrentStepSchema = z.object({
+  action: z.string(),
+  tool: z.string(),
+  actor: StepActorSchema,
+  startedAt: TimestampSchema,
+})
+export type CurrentStep = z.infer<typeof CurrentStepSchema>
+
 export const JobSchema = z.object({
   id: z.string(),
   kind: JobKindSchema,
@@ -276,6 +289,8 @@ export const JobSchema = z.object({
   stepCount: z.number().int().default(0),
   tokensIn: z.number().default(0),
   tokensOut: z.number().default(0),
+  /** Absent on jobs written before the API recorded it: read as null. */
+  currentStep: CurrentStepSchema.nullish(),
 })
 export type Job = z.infer<typeof JobSchema>
 

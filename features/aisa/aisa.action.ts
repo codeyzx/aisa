@@ -2,7 +2,7 @@
 
 import 'server-only'
 
-import { revalidatePath } from 'next/cache'
+import { refresh, revalidatePath } from 'next/cache'
 import * as z from 'zod'
 
 import { callAisaApi, type AisaApiOutcome } from '@/lib/aisa-api/client'
@@ -10,12 +10,17 @@ import { runAction, type ActionResult } from '@/lib/data/action-result'
 
 import { AISA_CONFIGURE, AISA_READ, AISA_RESPOND } from './aisa.capability'
 import { deckRefusal, MAX_REASON_LENGTH } from './aisa.limits'
-import { getRules } from './aisa.repo'
+import {
+  getAssessmentProgress,
+  getRules,
+  type AssessmentProgress,
+} from './aisa.repo'
 import {
   CategorySchema,
   ResponseKindSchema,
   type Category,
   type EditableRules,
+  type ProposalStatus,
   type ResponseKind,
 } from './aisa.schema'
 
@@ -142,6 +147,30 @@ export async function getDeckUrlAction(
       'GET',
       `/api/proposals/${encodeURIComponent(id)}/deck-url`,
     )
+  })
+}
+
+/**
+ * The detail page's live progress poll: a read of Firestore, not a call to
+ * `aisa-api`, so it resolves to the progress itself (null once the proposal is
+ * gone). The browser polls this instead of listening to Firestore, whose rules
+ * deny every client read.
+ *
+ * `seenStatus` is the proposal status the browser last showed. When the
+ * status has moved on (claimed, scored, flagged, failed, deleted), the same
+ * response carries a re-render of the page, so its header, result and log
+ * change together with the progress card instead of waiting for a reload.
+ */
+export async function getAssessmentProgressAction(
+  proposalId: string,
+  seenStatus?: ProposalStatus,
+): Promise<ActionResult<AssessmentProgress | null>> {
+  return runAction(AISA_READ, async () => {
+    const progress = await getAssessmentProgress(
+      ProposalIdSchema.parse(proposalId),
+    )
+    if (seenStatus !== undefined && progress?.status !== seenStatus) refresh()
+    return progress
   })
 }
 

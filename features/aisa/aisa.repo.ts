@@ -18,6 +18,7 @@ import type {
   Digest,
   Job,
   Proposal,
+  ProposalStatus,
   Rules,
   Runtime,
   Step,
@@ -136,6 +137,82 @@ export interface JobWithSteps extends Job {
 async function withSteps(job: Job): Promise<JobWithSteps> {
   const snap = await jobStepsCollection(job.id).orderBy('seq', 'asc').get()
   return { ...job, steps: snap.docs.map((doc) => doc.data()) }
+}
+
+/** One job with its steps, or null when it does not exist. */
+export async function getJobWithSteps(
+  jobId: string,
+): Promise<JobWithSteps | null> {
+  const job = (await jobsCollection().doc(jobId).get()).data()
+  return job ? withSteps(job) : null
+}
+
+/** What the live progress view needs of one recorded step. */
+export type ProgressStep = Pick<
+  Step,
+  'seq' | 'action' | 'tool' | 'actor' | 'at' | 'durationMs' | 'status' | 'error'
+>
+
+/**
+ * A proposal's assessment as it stands right now, for the detail page's live
+ * progress view: its status, whether STOP is on, and its job's steps so far
+ * plus the step still running. `serverNow` lets the browser time the running
+ * step on the server's clock rather than its own.
+ */
+export interface AssessmentProgress {
+  status: ProposalStatus
+  statusReason: string | null
+  paused: boolean
+  serverNow: Date
+  job:
+    | (Pick<Job, 'id' | 'status' | 'startedAt'> & {
+        endedAt: Date | null
+        durationMs: number | null
+        currentStep: NonNullable<Job['currentStep']> | null
+        steps: ProgressStep[]
+      })
+    | null
+}
+
+/** Null when the proposal does not exist (it may have been deleted meanwhile). */
+export async function getAssessmentProgress(
+  proposalId: string,
+): Promise<AssessmentProgress | null> {
+  const [proposal, runtime] = await Promise.all([
+    proposalsCollection().doc(proposalId).get(),
+    getRuntime(),
+  ])
+  const p = proposal.data()
+  if (!p) return null
+  const job = p.jobId ? await getJobWithSteps(p.jobId) : null
+  return {
+    status: p.status,
+    statusReason: p.statusReason ?? null,
+    paused: runtime?.paused ?? false,
+    serverNow: new Date(),
+    job: job
+      ? {
+          id: job.id,
+          status: job.status,
+          startedAt: job.startedAt,
+          endedAt: job.endedAt ?? null,
+          durationMs: job.durationMs ?? null,
+          currentStep: job.currentStep ?? null,
+          steps: job.steps.map(
+            ({ seq, action, tool, actor, at, durationMs, status, error }) => ({
+              seq,
+              action,
+              tool,
+              actor,
+              at,
+              durationMs,
+              status,
+              error: error ?? null,
+            }),
+          ),
+        }
+      : null,
+  }
 }
 
 /** The newest jobs, without their steps. */

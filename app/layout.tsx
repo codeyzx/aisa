@@ -1,5 +1,5 @@
 import { type Metadata } from 'next'
-import { Geist_Mono, Inter } from 'next/font/google'
+import { Instrument_Sans, JetBrains_Mono } from 'next/font/google'
 import { NuqsAdapter } from 'nuqs/adapters/next/app'
 
 import './globals.css'
@@ -54,11 +54,15 @@ export const metadata: Metadata = {
   },
 }
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' })
-
-const fontMono = Geist_Mono({
+const instrumentSans = Instrument_Sans({
   subsets: ['latin'],
-  variable: '--font-mono',
+  variable: '--font-sans',
+})
+
+// `--font-geist-mono` is the name `globals.css` maps `--font-mono` from.
+const fontMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-geist-mono',
 })
 
 interface RootLayoutProps {
@@ -74,7 +78,7 @@ export default function RootLayout({ children }: Readonly<RootLayoutProps>) {
         'antialiased',
         fontMono.variable,
         'font-sans',
-        inter.variable,
+        instrumentSans.variable,
       )}
     >
       <body>

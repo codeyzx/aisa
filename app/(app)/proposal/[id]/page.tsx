@@ -35,7 +35,7 @@ import { requireCapability } from '@/lib/auth/guards'
 import { can } from '@/lib/auth/rbac'
 import { formatRupiah } from '@/lib/format/currency'
 import { formatDate, formatTime } from '@/lib/format/date'
-import { formatNumber } from '@/lib/format/number'
+import { formatNumber, formatScore } from '@/lib/format/number'
 import { cn } from '@/lib/utils'
 
 import { CategoryCell } from '../../_components/badges'
@@ -190,7 +190,7 @@ export default async function ProposalDetailPage({
             Tahap 1 — Skor kualitas{' '}
             {assessment ? (
               <span className="tabular-nums">
-                {assessment.score.toFixed(1)}
+                {formatScore(assessment.score)}
               </span>
             ) : null}
           </CardTitle>

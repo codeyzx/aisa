@@ -14,6 +14,7 @@ import {
   type Criterion,
   type EditableRules,
 } from '@/features/aisa/aisa.schema'
+import { formatPercent } from '@/lib/format/number'
 
 import { useApiAction } from '../../_components/use-api-action'
 
@@ -100,7 +101,9 @@ export function RulesForm({
   function submit(event: React.FormEvent) {
     event.preventDefault()
     if (Math.abs(total - 100) > 0.01) {
-      setLocalError(`Total bobot harus 100% (sekarang ${total}%).`)
+      setLocalError(
+        `Total bobot harus 100% (sekarang ${formatPercent(total)}).`,
+      )
       return
     }
     if (!reason.trim()) {
@@ -159,7 +162,8 @@ export function RulesForm({
               : 'text-sm text-muted-foreground'
           }
         >
-          Total: {total}% {Math.abs(total - 100) > 0.01 ? '— harus 100%' : '✓'}
+          Total: {formatPercent(total)}{' '}
+          {Math.abs(total - 100) > 0.01 ? '— harus 100%' : '✓'}
         </p>
       </fieldset>
 

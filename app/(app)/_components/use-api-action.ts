@@ -18,7 +18,8 @@ export function useApiAction() {
   function run<T>(
     action: () => Promise<ActionResult<AisaApiOutcome<T>>>,
     options: {
-      success?: string
+      /** A fixed message, or one built from what the API answered. */
+      success?: string | ((data: T) => string)
       onSuccess?: (data: T) => void
       onError?: (message: string) => void
     } = {},
@@ -38,7 +39,12 @@ export function useApiAction() {
         return
       }
       if (result.ok && result.data.ok) {
-        if (options.success) toast.success(options.success)
+        if (options.success)
+          toast.success(
+            typeof options.success === 'function'
+              ? options.success(result.data.data)
+              : options.success,
+          )
         options.onSuccess?.(result.data.data)
       }
     })

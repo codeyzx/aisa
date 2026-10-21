@@ -18,3 +18,39 @@ const numberFormatter = new Intl.NumberFormat(LOCALE)
 export function formatNumber(value: number): string {
   return numberFormatter.format(value)
 }
+
+// One formatter per fraction-digit shape, built on first use and then shared.
+const decimalFormatters = new Map<string, Intl.NumberFormat>()
+
+/**
+ * Format a decimal MEASURE — a score, a percentage — with the `id-ID` decimal
+ * COMMA (`92,5`, not `92.5`), so every number on screen reads the way the
+ * WhatsApp texts and the rules summary already write it. `min` pads trailing
+ * zeros (`50,0`); `max` rounds. Prefer `formatScore` / `formatPercent`, which pin
+ * the shape each kind of number uses.
+ */
+export function formatDecimal(
+  value: number,
+  { min = 0, max }: { min?: number; max: number },
+): string {
+  const key = `${min}:${max}`
+  let formatter = decimalFormatters.get(key)
+  if (!formatter) {
+    formatter = new Intl.NumberFormat(LOCALE, {
+      minimumFractionDigits: min,
+      maximumFractionDigits: max,
+    })
+    decimalFormatters.set(key, formatter)
+  }
+  return formatter.format(value)
+}
+
+/** A 0–100 quality score, always one decimal: `92,5`, `50,0`. */
+export function formatScore(score: number): string {
+  return formatDecimal(score, { min: 1, max: 1 })
+}
+
+/** A value already in percent units, up to two decimals: `27,5%`, `30%`. */
+export function formatPercent(percent: number): string {
+  return `${formatDecimal(percent, { max: 2 })}%`
+}

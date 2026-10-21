@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 import { Page } from '@/components/shell/page-container'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { AISA_READ } from '@/features/aisa/aisa.capability'
+import { AISA_READ, AISA_RESPOND } from '@/features/aisa/aisa.capability'
 import {
   CATEGORY_LABEL,
   QUALITY_OUTSIDE_FOCUS_LABEL,
@@ -19,6 +19,7 @@ import {
   showsQualityOutsideFocus,
 } from '@/features/aisa/aisa.schema'
 import { requireCapability } from '@/lib/auth/guards'
+import { can } from '@/lib/auth/rbac'
 import { formatDate, formatTime } from '@/lib/format/date'
 import { formatNumber } from '@/lib/format/number'
 
@@ -59,7 +60,7 @@ function Tile({
 }
 
 export default async function HariIniPage() {
-  await requireCapability(AISA_READ)
+  const session = await requireCapability(AISA_READ)
 
   const [unresponded, digest, runtime] = await Promise.all([
     listUnrespondedProposals(),
@@ -84,7 +85,7 @@ export default async function HariIniPage() {
         title="Hari ini"
         description={`${formatNumber(unresponded.length)} proposal belum ditanggapi.`}
       >
-        <UploadDeckButton />
+        {can(session, AISA_RESPOND) ? <UploadDeckButton /> : null}
       </Page.Header>
 
       {runtime?.paused ? (

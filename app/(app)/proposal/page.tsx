@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { AISA_READ } from '@/features/aisa/aisa.capability'
+import { AISA_READ, AISA_RESPOND } from '@/features/aisa/aisa.capability'
 import {
   CATEGORY_LABEL,
   QUALITY_OUTSIDE_FOCUS_LABEL,
@@ -26,8 +26,9 @@ import {
   showsQualityOutsideFocus,
 } from '@/features/aisa/aisa.schema'
 import { requireCapability } from '@/lib/auth/guards'
+import { can } from '@/lib/auth/rbac'
 import { formatDate } from '@/lib/format/date'
-import { formatNumber } from '@/lib/format/number'
+import { formatNumber, formatScore } from '@/lib/format/number'
 import { cn } from '@/lib/utils'
 
 import { CategoryCell, ResponseCell } from '../_components/badges'
@@ -45,7 +46,8 @@ export default async function ProposalListPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>
 }) {
-  await requireCapability(AISA_READ)
+  const session = await requireCapability(AISA_READ)
+  const canRespond = can(session, AISA_RESPOND)
   const params = parseProposalListParams(await searchParams)
   const all = await listRecentProposals()
 
@@ -76,7 +78,7 @@ export default async function ProposalListPage({
         title="Proposal"
         description="Semua proposal yang masuk, terbaru di atas."
       >
-        <UploadDeckButton />
+        {canRespond ? <UploadDeckButton /> : null}
       </Page.Header>
 
       {/* A GET form: filters are a shareable URL and work before hydration. */}
@@ -169,7 +171,7 @@ export default async function ProposalListPage({
         </form>
       </search>
 
-      {params.kategori && bulkCandidates > 0 ? (
+      {canRespond && params.kategori && bulkCandidates > 0 ? (
         <BulkRespond
           category={params.kategori}
           categoryLabel={CATEGORY_LABEL[params.kategori]}
@@ -220,7 +222,7 @@ export default async function ProposalListPage({
                 </TableCell>
                 <TableCell>{p.profile?.sector ?? '—'}</TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {p.assessment ? p.assessment.score.toFixed(1) : '—'}
+                  {p.assessment ? formatScore(p.assessment.score) : '—'}
                 </TableCell>
                 <TableCell>
                   <CategoryCell proposal={p} />

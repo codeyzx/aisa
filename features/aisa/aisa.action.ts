@@ -94,18 +94,26 @@ export async function correctCategoryAction(
   })
 }
 
-/** Respond to every unresponded proposal in one effective category. */
+/**
+ * Respond to every unresponded proposal in one effective category. Answers how
+ * many the API actually responded to, which can differ from the count on screen
+ * when some were answered over WhatsApp in the meantime.
+ */
 export async function bulkRespondAction(
   category: Category,
   kind: ResponseKind,
-): ApiAction<unknown> {
+): ApiAction<{ count: number }> {
   return runAction(AISA_RESPOND, async () => {
     const body = {
       category: CategorySchema.parse(category),
       kind: ResponseKindSchema.parse(kind),
     }
     return afterWrite(
-      await callAisaApi('POST', '/api/proposals/bulk-response', body),
+      await callAisaApi<{ count: number }>(
+        'POST',
+        '/api/proposals/bulk-response',
+        body,
+      ),
     )
   })
 }

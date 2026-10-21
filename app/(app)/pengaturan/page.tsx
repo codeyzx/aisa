@@ -19,6 +19,7 @@ import { requireCapability } from '@/lib/auth/guards'
 import { can } from '@/lib/auth/rbac'
 import { formatRupiah } from '@/lib/format/currency'
 import { formatDate, formatTime } from '@/lib/format/date'
+import { formatPercent } from '@/lib/format/number'
 
 import { RulesForm } from './_components/rules-form'
 import { RulesSummary } from './_components/rules-summary'
@@ -53,9 +54,6 @@ const BASELINE: Record<
     baseline: '10%',
   },
 }
-
-const percent = (weight: number) =>
-  `${(Math.round(weight * 1000) / 10).toLocaleString('id-ID')}%`
 
 export default async function PengaturanPage() {
   const session = await requireCapability(AISA_READ)
@@ -117,7 +115,7 @@ export default async function PengaturanPage() {
                   <dd>
                     {CRITERIA.map(
                       (c) =>
-                        `${CRITERION_LABEL[c]} ${percent(rules.weights[c])}`,
+                        `${CRITERION_LABEL[c]} ${formatPercent(rules.weights[c] * 100)}`,
                     ).join(' · ')}
                   </dd>
                 </div>

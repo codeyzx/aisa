@@ -48,7 +48,10 @@ export function BulkRespond({
             disabled={pending}
             onClick={() =>
               run(() => bulkRespondAction(category, confirming), {
-                success: `${RESPONSE_LABEL[confirming]}: ${count} proposal ${categoryLabel}.`,
+                // The API's count, not the page's: proposals answered over
+                // WhatsApp since this page rendered are not counted again.
+                success: ({ count: done }) =>
+                  `${RESPONSE_LABEL[confirming]}: ${done} proposal ${categoryLabel}.`,
                 onSuccess: () => setConfirming(null),
               })
             }

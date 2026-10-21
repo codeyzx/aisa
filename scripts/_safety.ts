@@ -7,7 +7,8 @@
  *      (`migration/run.ts`, `snapshot/restore.ts`).
  *   2. `requireEmulatorTarget` — refuse to run at all unless the emulator hosts
  *      are set, so the script provably cannot reach a real database
- *      (`seed-emulator.ts`, `setup-local.ts`, `db-reset.ts`). This list is meant
+ *      (`seed-emulator.ts`, `setup-local.ts`, `db-reset.ts`, and the E2E
+ *      specs' emulator helper `_e2e-firestore.ts`). This list is meant
  *      to be exhaustive: this module IS the manifest, so a gate whose callers are
  *      under-listed here is the one place the count may not drift.
  *
@@ -141,7 +142,7 @@ const EMULATOR_HOST_ENV = {
  * be earned and machine-verified, not merely asserted in a comment a structure
  * check cannot read.
  *
- * It now has three callers, which is what makes the machine check worth its
+ * It now has four callers, which is what makes the machine check worth its
  * keep: `db-reset.ts` arrived later and is the most destructive script in the
  * repo, and it was covered by the same rule without anyone having to remember.
  */

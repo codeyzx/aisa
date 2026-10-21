@@ -170,6 +170,15 @@ export function shortSha(): string {
 }
 
 /**
+ * Where a test container sends its `aisa-api` calls when the caller names no
+ * other address, and the key it sends. Exported so the E2E mock of `aisa-api`
+ * (`e2e/acceptance/mock-aisa-api.ts`) listens on, and checks, the same values the
+ * container was started with. `e2e-fast.ts` overrides both per shard.
+ */
+export const DEFAULT_AISA_API_URL = 'http://127.0.0.1:8787'
+export const DEFAULT_AISA_API_KEY = 'local-test-key'
+
+/**
  * The MINIMUM runtime env `lib/env/registry.ts` accepts, and no more — a run that
  * only works with a fully-populated production `.env` would not tell a deployer
  * which variables the container actually needs.
@@ -188,8 +197,8 @@ export function minimalRuntimeEnv(
     FIREBASE_AUTH_EMULATOR_HOST: `${emulatorHost}:9099`,
     // Required at boot. Dummy, test-only values: the container they reach is a
     // local test artifact talking to emulators.
-    AISA_API_URL: process.env.AISA_API_URL ?? 'http://127.0.0.1:8787',
-    AISA_API_KEY: process.env.AISA_API_KEY ?? 'local-test-key',
+    AISA_API_URL: process.env.AISA_API_URL ?? DEFAULT_AISA_API_URL,
+    AISA_API_KEY: process.env.AISA_API_KEY ?? DEFAULT_AISA_API_KEY,
   }
 }
 

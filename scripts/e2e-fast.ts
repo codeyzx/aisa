@@ -10,7 +10,13 @@
  *     3201 upward — never 3100, which `pnpm test:e2e:container` defaults to),
  *     run by its own copy of `scripts/e2e-container.ts`;
  *   - its own Playwright process, running `--shard=i/N --fully-parallel` with
- *     `workers: 1` and its own `--output` directory.
+ *     `workers: 1` and its own `--output` directory;
+ *   - its own `aisa-api` address, `127.0.0.1:(E2E_FAST_AISA_API_BASE_PORT + i)`
+ *     (default 8791 upward), handed to the container as `AISA_API_URL` and to
+ *     Playwright in the same variable. Nothing listens there unless a spec
+ *     starts the mock (`e2e/acceptance/mock-aisa-api.ts`), which reads it back,
+ *     so the write-path specs run on any number of shards without two shards'
+ *     dashboards calling one mock.
  *
  * WHY A FIRESTORE EMULATOR PER SHARD, AND NOT ONE EMULATOR WITH A PROJECT ID PER
  * SHARD: the emulators do keep data per project id, but the app has ONE
@@ -75,6 +81,9 @@ const RUN_DIR = join(ROOT, 'test-results', 'e2e-fast')
 const BASE_PORT = Number(process.env.E2E_FAST_BASE_PORT ?? '3201')
 const FIRESTORE_BASE_PORT = Number(
   process.env.E2E_FAST_FIRESTORE_BASE_PORT ?? '8180',
+)
+const AISA_API_BASE_PORT = Number(
+  process.env.E2E_FAST_AISA_API_BASE_PORT ?? '8790',
 )
 const PROJECT_ID = 'demo-aisa'
 /** The Auth emulator's address — fixed by the image, see the header. */
@@ -487,6 +496,7 @@ function runShard(index: number): Promise<number> {
         FIREBASE_PROJECT_ID: PROJECT_ID,
         FIREBASE_AUTH_EMULATOR_HOST: AUTH_HOST,
         FIRESTORE_EMULATOR_HOST: `127.0.0.1:${firestorePort(index)}`,
+        AISA_API_URL: `http://127.0.0.1:${AISA_API_BASE_PORT + index}`,
         PLAYWRIGHT_BLOB_OUTPUT_DIR: join(RUN_DIR, `blob-${index}`),
       },
     },
@@ -519,7 +529,7 @@ try {
   await Promise.all([buildImage(), prepareEmulators()])
   for (let index = 1; index <= shardCount; index++) {
     say(
-      `shard ${index}: app :${BASE_PORT + index - 1}, firestore :${firestorePort(index)}`,
+      `shard ${index}: app :${BASE_PORT + index - 1}, firestore :${firestorePort(index)}, aisa-api :${AISA_API_BASE_PORT + index}`,
     )
   }
   codes = await Promise.all(

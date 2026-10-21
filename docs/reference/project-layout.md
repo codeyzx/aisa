@@ -36,6 +36,7 @@ What is listed: every directory the repository intends to contain, plus one leve
   - `ui/` — The primitive component set the rest of the UI is built from.
 - `docs/` — The documentation surface. Its own index maps it.
 - `e2e/` — Browser specs driven against a running app.
+  - `acceptance/` — Acceptance specs for the AISA screens and write buttons, with a mock `aisa-api` the container calls.
 - `features/` — Vertical slices, one directory per entity, each owning its schema, repo, actions and UI.
   - `_template/` — The copy-me entity template. Excluded from the normal typecheck, checked separately.
   - `aisa/` — The AISA read model: zod mirrors of the Firestore contract, repos, labels, and the server actions that call `aisa-api`.

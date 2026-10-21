@@ -156,6 +156,7 @@ export const docsManifest: DocEntry[] = [
     type: 'how-to',
     normative: false,
   },
+  { path: 'docs/how-to/test-a-feature.md', type: 'how-to', normative: false },
 
   // The normative contracts.
   ...contractDocs,
@@ -173,6 +174,16 @@ export const docsManifest: DocEntry[] = [
   // about this build, not rules, so not normative.
   { path: 'docs/TESTING.md', type: 'reference', normative: false },
   { path: 'docs/AI_USAGE.md', type: 'reference', normative: false },
+  // QA records: one acceptance matrix per feature, with actual results and evidence ids.
+  { path: 'docs/qa/inventaris-fitur.md', type: 'reference', normative: false },
+  { path: 'docs/qa/api.md', type: 'reference', normative: false },
+  { path: 'docs/qa/dashboard.md', type: 'reference', normative: false },
+  {
+    path: 'docs/qa/penerimaan-produksi.md',
+    type: 'reference',
+    normative: false,
+  },
+  { path: 'docs/qa/asisten.md', type: 'reference', normative: false },
 
   // Generated reference facts.
   ...generatedReferenceDocs,

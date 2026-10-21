@@ -43,6 +43,10 @@
  * shard, and runs this script for each shard. The container gets the SAME two
  * hosts the caller has, which is correct only because of `--network host`.
  *
+ * `AISA_API_URL` reaches BOTH the container and Playwright unchanged (default
+ * `DEFAULT_AISA_API_URL`), so the mock `aisa-api` a write-path spec starts
+ * (`e2e/acceptance/mock-aisa-api.ts`) listens exactly where the dashboard calls.
+ *
  * ARGUMENTS go straight to `playwright test` (spec files, `--grep`, `--shard`).
  *
  * `E2E_IMAGE` names an image a caller already built from this working tree with

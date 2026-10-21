@@ -213,7 +213,7 @@ The full non-driven chain: static gates, unit, integration, build. It ends by na
 node scripts/ci-local.ts
 ```
 
-Run the actual .github/workflows/ci.yml locally, in containers, via nektos/act — both jobs, including the merge-only artifact job (image build, container E2E, Trivy). Same file CI runs, so no second list drifts, and it runs on the shipped Node rather than your host, curing the wrong-runtime skew node:check warns about. The fallback when CI is unavailable or the minute budget is spent. `--fresh` disables caching; act is ~90% faithful, not the authority. The tool is pinned via @kie/act-js and fetched on first use, not at install.
+Run the actual .github/workflows/ci.yml locally, in containers, via nektos/act — both jobs, including the merge-only artifact job (image build, container E2E, Trivy). Same file CI runs, so no second list drifts, and it runs on the shipped Node rather than your host, curing the wrong-runtime skew node:check warns about. The fallback when CI is unavailable or the minute budget is spent. `--fresh` disables caching; act is ~90% faithful, not the authority. act is pinned to one release and sha256 and fetched on first use, not at install.
 
 ## Tests
 

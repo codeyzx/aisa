@@ -20,12 +20,6 @@ allowBuilds:
   # worktree's `pnpm install` would rewrite the hooks every other worktree commits
   # through. Run `lefthook install` once, deliberately, when landing lefthook.yml.
   lefthook: false
-  # NOT true: the postinstall downloads a ~30MB nektos/act binary from GitHub
-  # releases, and only `pnpm ci:local` ever needs it. Left true, every contributor
-  # install AND the Containerfile deps layer (which installs devDeps to run
-  # `pnpm build`) would fetch a tool the app never runs. `scripts/ci-local.ts`
-  # fetches it on first use instead — the same deferred-setup shape as `lefthook`.
-  '@kie/act-js': false
 
 minimumReleaseAge: 10080
 

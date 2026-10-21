@@ -87,7 +87,8 @@ toolchains — and act is ~90% faithful, not a VM; the `artifact` half runs
 docker-in-docker through your daemon. Treat a green `ci:local` as strong local
 evidence, **not** as the authority. GitHub's runners are that, and the driven steps
 below (browser, env fail-fast) are still yours to run — `ci:local` does not cover them.
-The tool is pinned via `@kie/act-js`, fetched on first use (not at `pnpm install`).
+act is pinned to one release and sha256 in `scripts/ci-local.ts`, fetched on first use
+into `node_modules/.cache/act/` (not at `pnpm install`).
 
 **What the gate covers under act.** A full `ci:local` gate runs the whole chain on the
 faithful Node — `check:static`, `test:unit`, `test:integration` (a real emulator) and

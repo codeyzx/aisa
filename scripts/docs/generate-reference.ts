@@ -565,8 +565,8 @@ const COMMAND_NOTES: Record<string, CommandNote> = {
       'and it runs on the shipped Node rather than your host, curing the ' +
       'wrong-runtime skew node:check warns about. The fallback when CI is ' +
       'unavailable or the minute budget is spent. `--fresh` disables caching; act ' +
-      'is ~90% faithful, not the authority. The tool is pinned via @kie/act-js and ' +
-      'fetched on first use, not at install.',
+      'is ~90% faithful, not the authority. act is pinned to one release and sha256 ' +
+      'and fetched on first use, not at install.',
   },
   prepare: {
     group: 'Lifecycle',

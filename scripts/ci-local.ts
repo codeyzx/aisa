@@ -7,15 +7,14 @@
  * WHY THIS EXISTS: the container `artifact` job runs on CI only at merge-to-main
  * (see ci.yml), and a Free-plan minute budget can run out. This is the fallback —
  * the whole workflow on your own machine, on the SHIPPED Node (act runs the
- * workflow's own `setup-node@.node-version`, so 24.18, not whatever this host's
+ * workflow's own `setup-node@.node-version`, not whatever this host's
  * version manager serves). That closes the local-vs-container skew this repo's
  * CLAUDE.local.md documents.
  *
- * THE act BINARY IS FETCHED ON FIRST USE, not at install. `@kie/act-js` pins the
- * act version but its download postinstall is disabled in pnpm-workspace.yaml
- * (`'@kie/act-js': false`) so a normal `pnpm install` and the Containerfile deps
- * layer never pull a ~30MB tool the app does not run. We run that same postinstall
- * here, once, when it is actually needed.
+ * THE act BINARY IS FETCHED ON FIRST USE, not at install, so a normal
+ * `pnpm install` and the Containerfile deps layer never pull a ~30MB tool the app
+ * does not run. It comes straight from the nektos/act GitHub release and is
+ * checked against a sha256 pinned below before it is ever executed.
  *
  * FIDELITY IS ~90%, NOT 100%. act's images are containers, not GitHub's VMs, and
  * the `artifact` job runs docker-in-docker (image build + Trivy) through the host
@@ -23,29 +22,37 @@
  * here as strong local evidence, not as the authority; GitHub's runners remain
  * that. See docs/how-to/verify-change.md.
  */
-import { execFileSync, execSync, spawnSync } from 'node:child_process'
+import { execFileSync, spawnSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import {
-  copyFileSync,
+  chmodSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   writeFileSync,
 } from 'node:fs'
-import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
-
-const require = createRequire(import.meta.url)
+import { join } from 'node:path'
 
 /**
- * The act version to run — PINNED HERE, not inherited from `@kie/act-js@2.6.2`,
- * which hardcodes 0.2.61. act itself flags 0.2.61 as vulnerable to CVE-2026-34041
- * and CVE-2026-34042 and asks for >= 0.2.86; 0.2.89 is the release it names.
- * act-js is only the DOWNLOAD MECHANISM (its postinstall honors an ACT_VERSION
- * env) and its programmatic API is unused, so the version is ours to choose and
- * audit. Bump this the way the Trivy pin is bumped — deliberately, on a notice.
+ * The act version to run. act flags releases below 0.2.86 as vulnerable to
+ * CVE-2026-34041 and CVE-2026-34042; 0.2.89 is the release it names. Bump it the
+ * way the Trivy pin is bumped — deliberately, on a notice — and replace the
+ * digests below from that release's `checksums.txt` in the same change.
  */
 const ACT_VERSION = '0.2.89'
+
+/** sha256 of each release archive this script will run, keyed `<os>_<arch>`. */
+const ACT_SHA256: Record<string, string> = {
+  Linux_x86_64:
+    '0191d6f1f3b716b5c55820032605d05fc3c1cdbf581ebeff655019e5dd1524c0',
+  Linux_arm64:
+    'daa8679ba9615a74d2d0cec321dc593f21948a2a11bb65862b063d8b930f4bcb',
+  Darwin_x86_64:
+    '41b31488e7c254baec31cce12c7dade3e35973b8a31b9486206ad43f233d814e',
+  Darwin_arm64:
+    '48ae218af96725f7635a66de2b87e1e346893b02add0f16b92f560296b2151fc',
+}
 
 /** The act version currently on disk, or undefined if the binary is absent/broken. */
 function installedVersion(bin: string): string | undefined {
@@ -59,45 +66,54 @@ function installedVersion(bin: string): string | undefined {
   }
 }
 
+/** The release asset name for this host, or a thrown error naming what is unsupported. */
+function actAsset(): string {
+  const os = { linux: 'Linux', darwin: 'Darwin' }[process.platform as string]
+  const arch = { x64: 'x86_64', arm64: 'arm64' }[process.arch as string]
+  const key = `${os}_${arch}`
+  if (!os || !arch || !ACT_SHA256[key]) {
+    throw new Error(
+      `ci-local: no pinned act build for ${process.platform}/${process.arch}; set ACT_BINARY to a system act.`,
+    )
+  }
+  return key
+}
+
 /**
  * Resolve the act binary, fetching the PINNED version on first use (or replacing a
- * stale one). `@kie/act-js`'s download postinstall is disabled in
- * pnpm-workspace.yaml, so a normal `pnpm install` and the Containerfile deps layer
- * never pull it — this is the one place that does, and only when actually running.
- * `ACT_BINARY` is act-js's own override hook, honored so a contributor can point at
- * a system act (they own its version then).
+ * stale one) into node_modules/.cache, which every install keeps out of git and the
+ * image. An archive whose sha256 differs from the pin is refused before extraction.
+ * `ACT_BINARY` points at a system act instead (its owner owns its version then).
  */
-function actBinary(): string {
+async function actBinary(): Promise<string> {
   const override = process.env.ACT_BINARY
   if (override) return override
 
-  const pkgDir = dirname(require.resolve('@kie/act-js/package.json'))
-  const bin = join(
-    pkgDir,
-    'build',
-    'bin',
-    process.platform === 'win32' ? 'act.exe' : 'act',
-  )
+  const dir = join(process.cwd(), 'node_modules', '.cache', 'act', ACT_VERSION)
+  const bin = join(dir, 'act')
+  if (installedVersion(bin) === ACT_VERSION) return bin
 
+  const key = actAsset()
+  const url = `https://github.com/nektos/act/releases/download/v${ACT_VERSION}/act_${key}.tar.gz`
+  console.log(`ci-local: fetching pinned act ${ACT_VERSION} on first use...`)
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`ci-local: ${url} answered ${res.status}.`)
+  const archive = Buffer.from(await res.arrayBuffer())
+  const digest = createHash('sha256').update(archive).digest('hex')
+  if (digest !== ACT_SHA256[key]) {
+    throw new Error(
+      `ci-local: act archive sha256 ${digest} does not match the pinned ${ACT_SHA256[key]}; refusing to run it.`,
+    )
+  }
+  mkdirSync(dir, { recursive: true })
+  const archivePath = join(dir, 'act.tar.gz')
+  writeFileSync(archivePath, archive)
+  execFileSync('tar', ['-xzf', archivePath, '-C', dir, 'act'])
+  chmodSync(bin, 0o755)
   if (installedVersion(bin) !== ACT_VERSION) {
-    // Reuse act-js's downloader with OUR version. Its postinstall reads ACT_VERSION
-    // from the env when no version arg is passed, and writes to build/bin/.
-    console.log(`ci-local: fetching pinned act ${ACT_VERSION} on first use...`)
-    execSync('node scripts/postinstall.js', {
-      cwd: pkgDir,
-      env: { ...process.env, ACT_VERSION },
-      stdio: 'inherit',
-    })
-    if (installedVersion(bin) !== ACT_VERSION) {
-      throw new Error(
-        `ci-local: act ${ACT_VERSION} still not present after fetch at ${bin}.`,
-      )
-    }
-    // Mirror the binary to the package's declared bin path so pnpm stops warning it
-    // cannot create the `.bin/act-js` link on the next install (cosmetic, harmless).
-    const declaredBin = join(pkgDir, 'bin', 'act')
-    mkdirSync(dirname(declaredBin), { recursive: true })
-    copyFileSync(bin, declaredBin)
+    throw new Error(
+      `ci-local: act ${ACT_VERSION} still not runnable at ${bin}.`,
+    )
   }
   return bin
 }
@@ -134,7 +150,7 @@ console.log(
     'ci-local: toolchains; later runs reuse them. This mirrors CI, it is not the authority.',
 )
 
-const result = spawnSync(actBinary(), args, {
+const result = spawnSync(await actBinary(), args, {
   cwd: process.cwd(),
   stdio: 'inherit',
 })

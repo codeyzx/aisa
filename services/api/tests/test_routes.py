@@ -405,4 +405,58 @@ def test_dsb_rute13_form_deck_url_is_the_drive_link(client, fs):
     seed_proposal(fs, "form-drv1", "Tani Maju", source={"kind": "form", "driveFileId": "drv1",
                                                          "gcsPath": None, "fileName": "deck.pdf"})
     r = api(client, "GET", "/api/proposals/form-drv1/deck-url")
-    assert r.json() == {"url": "https://drive.google.com/file/d/drv1/view", "expiresIn": None}
+    assert r.json() == {"url": "https://drive.google.com/file/d/drv1/view",
+                        "previewUrl": "https://drive.google.com/file/d/drv1/preview", "expiresIn": None}
+
+
+class _FakeBlob:
+    def __init__(self, bucket: str, name: str, calls: list):
+        self.bucket_name, self.name, self.calls = bucket, name, calls
+
+    def generate_signed_url(self, **kw):
+        self.calls.append(kw)
+        return f"https://storage.googleapis.com/{self.bucket_name}/{self.name}?X-Goog-Signature=s"
+
+
+class _FakeGcs:
+    def __init__(self, calls: list):
+        self.calls = calls
+
+    def bucket(self, b):
+        calls = self.calls
+        return type("B", (), {"blob": lambda _self, n: _FakeBlob(b, n, calls)})()
+
+
+class _FakeCreds:
+    token = "tok"
+    service_account_email = "signer@p.iam.gserviceaccount.com"
+
+    def refresh(self, _req):
+        pass
+
+
+def test_upload_deck_url_is_signed_inline_pdf_and_doubles_as_preview(client, fs, env):
+    seed_proposal(fs, "up1", "Tani Maju", source={"kind": "upload", "driveFileId": None,
+                                                   "gcsPath": "gs://b/decks/up1.pdf",
+                                                   "fileName": 'Pitch "Final"\r\nX.pdf'})
+    calls: list = []
+    env.setattr(storage, "_gcs", lambda: _FakeGcs(calls))
+    env.setattr(storage.google.auth, "default", lambda *a, **k: (_FakeCreds(), "p"))
+    r = api(client, "GET", "/api/proposals/up1/deck-url")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["url"] == body["previewUrl"] == "https://storage.googleapis.com/b/decks/up1.pdf?X-Goog-Signature=s"
+    assert body["expiresIn"] == 900
+    (kw,) = calls
+    assert kw["response_type"] == "application/pdf"
+    assert kw["response_disposition"] == 'inline; filename="Pitch _Final_X.pdf"'
+    assert kw["version"] == "v4" and kw["service_account_email"] == "signer@p.iam.gserviceaccount.com"
+
+
+@pytest.mark.parametrize(("name", "want"), [
+    ("deck.pdf", 'inline; filename="deck.pdf"'),
+    ("Proposal Tani Maju", 'inline; filename="Proposal Tani Maju.pdf"'),
+    ('"\n.pdf', 'inline; filename="deck.pdf"'),
+])
+def test_inline_pdf_disposition_is_header_safe(name, want):
+    assert storage.inline_pdf_disposition(name) == want

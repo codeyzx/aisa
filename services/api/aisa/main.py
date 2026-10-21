@@ -228,10 +228,14 @@ def api_resume(bg: BackgroundTasks) -> dict:
 def api_deck_url(pid: str) -> dict:
     p = domain.get_proposal(pid)
     if p.source.kind == SourceKind.form and p.source.driveFileId:
-        # Form decks stay in Drive (not copied); the manager opens them there.
-        return {"url": f"https://drive.google.com/file/d/{p.source.driveFileId}/view", "expiresIn": None}
+        # Form decks stay in Drive (not copied). /preview is Drive's embeddable viewer; it
+        # renders only for a Google account that can open the file.
+        drive = f"https://drive.google.com/file/d/{p.source.driveFileId}"
+        return {"url": f"{drive}/view", "previewUrl": f"{drive}/preview", "expiresIn": None}
     try:
-        return {"url": storage.signed_deck_url(p.source, pid), "expiresIn": 900}
+        # The signed URL is already inline, so one URL serves both the iframe and a new tab.
+        signed = storage.signed_deck_url(p.source, pid)
+        return {"url": signed, "previewUrl": signed, "expiresIn": 900}
     except FileNotFoundError as e:
         raise HTTPException(404, str(e)) from e
     except RuntimeError as e:  # bucket or signer not configured

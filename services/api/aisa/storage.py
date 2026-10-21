@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import timedelta
 from functools import lru_cache
 
@@ -73,8 +74,18 @@ def fetch_pdf(source: Source) -> bytes:
     raise ValueError("sumber pitch deck tidak diketahui")
 
 
+def inline_pdf_disposition(file_name: str) -> str:
+    """Content-Disposition that makes the browser render the deck instead of downloading it.
+    The name is reduced to a header-safe ASCII subset so a quote or newline in an uploaded
+    file name cannot break the signed header."""
+    stem = re.sub(r"[^A-Za-z0-9._ -]+", "_", file_name.removesuffix(".pdf")).strip(" ._") or "deck"
+    return f'inline; filename="{stem}.pdf"'
+
+
 def signed_deck_url(source: Source, proposal_id: str) -> str:
-    """V4 signed URL valid 15 minutes. Signing uses IAM signBlob for the runtime service
+    """V4 signed URL valid 15 minutes that renders inline as a PDF (the response headers are
+    overridden in the signature, so a stored object with a different Content-Type still opens
+    in the browser's PDF viewer). Signing uses IAM signBlob for the runtime service
     account (Cloud Run has no private key), so that account needs
     roles/iam.serviceAccountTokenCreator on itself. Locally, set SIGNER_SERVICE_ACCOUNT to
     an account your user may impersonate for signing."""
@@ -91,4 +102,6 @@ def signed_deck_url(source: Source, proposal_id: str) -> str:
     if not email or email == "default":
         raise RuntimeError("tidak ada service account untuk menandatangani URL")
     return blob.generate_signed_url(version="v4", expiration=timedelta(minutes=15), method="GET",
-                                    service_account_email=email, access_token=creds.token)
+                                    service_account_email=email, access_token=creds.token,
+                                    response_disposition=inline_pdf_disposition(source.fileName),
+                                    response_type="application/pdf")

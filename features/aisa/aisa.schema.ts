@@ -190,6 +190,21 @@ export function showsQualityOutsideFocus(
   return p.qualityOutsideFocus && p.effectiveCategory === 'tidak_cocok'
 }
 
+/**
+ * An unanswered proposal the manager can decide on, as the ringkasan in
+ * `services/api/aisa/digest.py` lists them: scored with a kategori, or flagged
+ * for a manual check. One still queued or being scored has nothing to decide on.
+ */
+export function awaitsDecision(
+  p: Pick<Proposal, 'status' | 'effectiveCategory' | 'responded'>,
+): boolean {
+  if (p.responded) return false
+  return (
+    (p.status === 'dinilai' && p.effectiveCategory != null) ||
+    p.status === 'perlu_dicek_manual'
+  )
+}
+
 export const RulesSchema = z.object({
   id: z.string(),
   version: z.number().int(),

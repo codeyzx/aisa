@@ -1,7 +1,13 @@
 import Link from 'next/link'
 
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -26,11 +32,15 @@ export function Kalibrasi({ calibration }: { calibration: Calibration }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Kalibrasi</CardTitle>
+        <CardTitle className="font-semibold">Kalibrasi</CardTitle>
+        <CardDescription>
+          Seberapa sering manajer membiarkan kategori dari AI, sebagai bahan
+          menyesuaikan aturan di halaman ini.
+        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6 text-sm">
         <section aria-labelledby="kalibrasi-manajer" className="space-y-3">
-          <h3 id="kalibrasi-manajer" className="font-medium">
+          <h3 id="kalibrasi-manajer" className="text-sm font-semibold">
             Koreksi manajer
           </h3>
           <p className="text-muted-foreground">
@@ -48,18 +58,18 @@ export function Kalibrasi({ calibration }: { calibration: Calibration }) {
             </p>
           ) : (
             <>
-              <dl className="grid gap-3 sm:grid-cols-3">
+              <dl className="grid gap-3 rounded-xl border p-4 sm:grid-cols-3">
                 <div>
                   <dt className="text-xs text-muted-foreground">
                     Ditinjau manajer
                   </dt>
-                  <dd className="text-lg font-medium">
+                  <dd className="font-mono text-xl font-semibold tabular-nums">
                     {formatNumber(reviewed)}
                   </dd>
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Dikoreksi</dt>
-                  <dd className="text-lg font-medium">
+                  <dd className="font-mono text-xl font-semibold tabular-nums">
                     {formatNumber(corrections.length)}
                   </dd>
                 </div>
@@ -135,7 +145,7 @@ export function Kalibrasi({ calibration }: { calibration: Calibration }) {
         <section aria-labelledby="kalibrasi-analis" className="space-y-2">
           <h3
             id="kalibrasi-analis"
-            className="flex items-center gap-2 font-medium"
+            className="flex items-center gap-2 text-sm font-semibold"
           >
             Kalibrasi analis <Badge variant="outline">belum ada data</Badge>
           </h3>

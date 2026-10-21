@@ -5,6 +5,7 @@ import { ExternalLinkIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { getDeckUrlAction } from '@/features/aisa/aisa.action'
+import { cn } from '@/lib/utils'
 
 import { useApiAction } from '../../_components/use-api-action'
 
@@ -18,13 +19,20 @@ import { useApiAction } from '../../_components/use-api-action'
  * the user gesture, and popup blockers drop it. A failed fetch closes the empty
  * tab again.
  */
-export function DeckButton({ proposalId }: { proposalId: string }) {
+export function DeckButton({
+  proposalId,
+  className,
+}: {
+  proposalId: string
+  className?: string
+}) {
   const [url, setUrl] = useState<string | null>(null)
   const { pending, error, run } = useApiAction()
   return (
-    <span className="inline-flex flex-col items-end gap-1">
+    <span className={cn('flex flex-col gap-1', className)}>
       <Button
         variant="outline"
+        size="sm"
         disabled={pending}
         onClick={() => {
           // No `noopener` feature here: it makes `window.open` return null, and

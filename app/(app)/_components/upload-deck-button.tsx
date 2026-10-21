@@ -26,7 +26,7 @@ import { useApiAction } from './use-api-action'
  * same intake `aisa-api` runs for the Form. Scoring is asynchronous, so success
  * opens the new proposal, which shows `Antre`/`Sedang dinilai` until it is done.
  */
-export function UploadDeckButton() {
+export function UploadDeckButton({ className }: { className?: string }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [localError, setLocalError] = useState<string | null>(null)
@@ -62,7 +62,7 @@ export function UploadDeckButton() {
   const shown = localError ?? error
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button />}>
+      <DialogTrigger render={<Button className={className} />}>
         <UploadIcon data-icon="inline-start" />
         Unggah pitch deck
       </DialogTrigger>

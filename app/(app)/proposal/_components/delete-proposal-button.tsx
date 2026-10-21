@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { Trash2Icon } from 'lucide-react'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
@@ -66,7 +67,8 @@ export function DeleteProposalButton({
         setOpen(next)
       }}
     >
-      <AlertDialogTrigger render={<Button variant="destructive" />}>
+      <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
+        <Trash2Icon data-icon="inline-start" />
         Hapus data
       </AlertDialogTrigger>
       <AlertDialogContent>

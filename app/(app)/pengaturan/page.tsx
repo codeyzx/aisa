@@ -1,220 +1,236 @@
 import { type Metadata } from 'next'
 
-import { Page } from '@/components/shell/page-container'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 import { AISA_CONFIGURE, AISA_READ } from '@/features/aisa/aisa.capability'
-import { CRITERION_LABEL, VIA_LABEL } from '@/features/aisa/aisa.labels'
-import { calibrate } from '@/features/aisa/aisa.calibration'
+import { VIA_LABEL } from '@/features/aisa/aisa.labels'
 import {
+  countProposalsSince,
+  getLatestDigest,
   getRules,
   getRuntime,
-  listReviewedProposals,
+  listRecentProposals,
+  listUnrespondedProposals,
 } from '@/features/aisa/aisa.repo'
-import { CRITERIA, type Criterion } from '@/features/aisa/aisa.schema'
+import type { EditableRules, Rules, Runtime } from '@/features/aisa/aisa.schema'
+import { callAisaApi } from '@/lib/aisa-api/client'
 import { requireCapability } from '@/lib/auth/guards'
 import { can } from '@/lib/auth/rbac'
-import { formatRupiah } from '@/lib/format/currency'
 import { formatDate, formatTime } from '@/lib/format/date'
-import { formatPercent } from '@/lib/format/number'
 
-import { Kalibrasi } from './_components/kalibrasi'
-import { RulesForm } from './_components/rules-form'
-import { RulesSummary } from './_components/rules-summary'
-import { RuntimeToggle } from './_components/runtime-toggle'
+import { AppearanceTab } from './_components/appearance-tab'
+import { DigestTab } from './_components/digest-tab'
+import type { Integration } from './_components/integration-card'
+import { IntegrationsTab } from './_components/integrations-tab'
+import { PrivacyTab } from './_components/privacy-tab'
+import { ProfileTab } from './_components/profile-tab'
+import { settingsTabOf } from './_components/sections'
+import { SettingsView } from './_components/settings-view'
 
 export const metadata: Metadata = { title: 'Pengaturan' }
 
-/** The "Dasar bobot (baseline)" table from overview-project.md, verbatim. */
-const BASELINE: Record<
-  Criterion,
-  { scorecard: string; hustle: string; baseline: string }
-> = {
-  tim: { scorecard: 'Tim 30', hustle: 'Tim 25', baseline: '27,5%' },
-  pasar: {
-    scorecard: 'Peluang 25',
-    hustle: 'Pasar 25 + insight 10',
-    baseline: '30%',
-  },
-  produk: {
-    scorecard: 'Produk 15 + persaingan 10',
-    hustle: 'Produk 10 + keunggulan 5',
-    baseline: '20%',
-  },
-  traksi: {
-    scorecard: 'Kanal penjualan & kemitraan 10',
-    hustle: 'Traksi 10 + go-to-market 5',
-    baseline: '12,5%',
-  },
-  bisnis: {
-    scorecard: 'Kebutuhan dana 5 + lainnya 5',
-    hustle: 'Unit economics 5 + kesiapan dana 3 + risiko 2',
-    baseline: '10%',
-  },
+const when = (date: Date) => `${formatDate(date)}, ${formatTime(date)}`
+
+function editable(rules: Rules): EditableRules {
+  return {
+    weights: rules.weights,
+    anchors: rules.anchors,
+    fit: rules.fit,
+    thresholds: rules.thresholds,
+    models: {
+      penilai: rules.models.penilai,
+      ringkasan: rules.models.ringkasan,
+      insight: rules.models.insight,
+    },
+    minCharsPerPage: rules.minCharsPerPage,
+    retentionDays: rules.retentionDays,
+  }
 }
 
-export default async function PengaturanPage() {
+function runtimeDetail(runtime: Runtime | null): string {
+  if (!runtime?.paused)
+    return 'AI menilai proposal yang masuk. STOP menghentikan pekerjaan yang sedang berjalan.'
+  const since = runtime.pausedAt ? ` sejak ${when(runtime.pausedAt)}` : ''
+  const via = runtime.pausedVia
+    ? ` (lewat ${VIA_LABEL[runtime.pausedVia]})`
+    : ''
+  return `Pekerjaan AI berhenti${since}${via}. Proposal baru menunggu sebagai Antre sampai LANJUT.`
+}
+
+/** `GET /health` on aisa-api, timed. A refusal or no answer is "terputus". */
+async function checkAisaApi() {
+  const started = performance.now()
+  const outcome = await callAisaApi<{ ok?: boolean }>('GET', '/health')
+  const ok = outcome.ok && outcome.data?.ok === true
+  return {
+    ok,
+    latencyMs: Math.round(performance.now() - started),
+    at: formatTime(new Date()),
+    error: outcome.ok
+      ? ok
+        ? null
+        : 'Jawaban /health tidak dikenali'
+      : outcome.error,
+  }
+}
+
+async function integrations(rules: Rules | null): Promise<Integration[]> {
+  const [check, latest, recent] = await Promise.all([
+    checkAisaApi(),
+    getLatestDigest(),
+    listRecentProposals(),
+  ])
+  const lastForm = recent.find((p) => p.source.kind === 'form')
+  const lastUpload = recent.find((p) => p.source.kind === 'upload')
+  return [
+    {
+      id: 'aisa-api',
+      name: 'aisa-api',
+      role: 'Menerima deck, membaca teksnya, menjalankan penilaian, ringkasan, dan perintah WhatsApp.',
+      status: check.ok ? 'terhubung' : 'terputus',
+      fact: check.ok
+        ? `Merespons dalam ${check.latencyMs} ms saat halaman dimuat`
+        : 'Tidak merespons saat halaman dimuat',
+      details: [
+        { label: 'Dicek lewat', value: 'GET /health dari server dashboard' },
+        { label: 'Dicek pukul', value: check.at },
+      ],
+      checkable: true,
+      check,
+    },
+    {
+      id: 'firestore',
+      name: 'Firestore',
+      role: 'Menyimpan proposal, aturan penilaian, aktivitas AI, dan riwayat.',
+      status: rules ? 'terhubung' : null,
+      fact: rules
+        ? `Aturan versi ${rules.version} terbaca saat halaman dimuat`
+        : 'Aturan penilaian belum ada (settings/rules)',
+      details: rules
+        ? [
+            { label: 'Aturan aktif', value: `Versi ${rules.version}` },
+            { label: 'Diubah', value: when(rules.changedAt) },
+          ]
+        : [],
+    },
+    {
+      id: 'gowa',
+      name: 'GOWA (WhatsApp)',
+      role: 'Mengirim ringkasan ke WhatsApp manajer dan menerima balasannya.',
+      status: null,
+      fact: latest
+        ? `Ringkasan terakhir terkirim ${when(latest.sentAt)}`
+        : 'Belum ada ringkasan yang terkirim',
+      details: latest
+        ? [
+            {
+              label: 'Ringkasan terakhir',
+              value: `${latest.slot} · ${when(latest.sentAt)}`,
+            },
+            {
+              label: 'Pesan terkirim',
+              value: String(latest.gowaMessageIds.length),
+            },
+            {
+              label: 'Teks',
+              value: latest.usedTemplate
+                ? 'Template (tanpa AI)'
+                : 'Dirapikan AI',
+            },
+          ]
+        : [],
+    },
+    {
+      id: 'form',
+      name: 'Formulir founder',
+      role: 'Google Form mengirim proposal dan pitch deck dari Google Drive ke aisa-api.',
+      status: null,
+      fact: lastForm
+        ? `Proposal terakhir masuk ${when(lastForm.createdAt)}`
+        : 'Belum ada proposal dari formulir',
+      details: [
+        {
+          label: 'Lewat formulir',
+          value: lastForm
+            ? `${lastForm.name} · ${when(lastForm.createdAt)}`
+            : '—',
+        },
+        {
+          label: 'Unggah dashboard',
+          value: lastUpload
+            ? `${lastUpload.name} · ${when(lastUpload.createdAt)}`
+            : '—',
+        },
+      ],
+    },
+  ]
+}
+
+export default async function PengaturanPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const session = await requireCapability(AISA_READ)
   const canConfigure = can(session, AISA_CONFIGURE)
-  const [rules, runtime, reviewed] = await Promise.all([
-    getRules(),
-    getRuntime(),
-    listReviewedProposals(),
-  ])
-  const paused = runtime?.paused ?? false
+  const tab = settingsTabOf((await searchParams).tab)
 
-  return (
-    <Page.Root>
-      <Page.Header
-        title="Pengaturan"
-        description="Aturan penilaian dan kendali AI."
-      />
+  let content: React.ReactNode
+  switch (tab) {
+    case 'profil':
+      content = <ProfileTab session={session} />
+      break
+    case 'tampilan':
+      content = <AppearanceTab />
+      break
+    case 'ringkasan': {
+      const latest = await getLatestDigest()
+      const [unresponded, newCount] = await Promise.all([
+        listUnrespondedProposals(),
+        countProposalsSince(latest?.sentAt ?? new Date(0)),
+      ])
+      content = (
+        <DigestTab
+          unresponded={unresponded}
+          latest={latest}
+          newCount={newCount}
+          now={new Date()}
+        />
+      )
+      break
+    }
+    case 'integrasi': {
+      const [rules, runtime] = await Promise.all([getRules(), getRuntime()])
+      content = (
+        <IntegrationsTab
+          integrations={await integrations(rules)}
+          runtime={{
+            paused: runtime?.paused ?? false,
+            detail: runtimeDetail(runtime),
+            canConfigure,
+          }}
+        />
+      )
+      break
+    }
+    case 'privasi': {
+      const [rules, proposalCount] = await Promise.all([
+        getRules(),
+        countProposalsSince(new Date(0)),
+      ])
+      content = rules ? (
+        <PrivacyTab
+          rules={editable(rules)}
+          version={rules.version}
+          proposalCount={proposalCount}
+          canConfigure={canConfigure}
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Aturan penilaian belum ada di Firestore (settings/rules).
+        </p>
+      )
+      break
+    }
+  }
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            Status AI
-            <Badge variant={paused ? 'destructive' : 'secondary'}>
-              {paused ? 'Dijeda (STOP)' : 'Berjalan'}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p className="text-muted-foreground">
-            {paused
-              ? `Pekerjaan AI berhenti${runtime?.pausedAt ? ` sejak ${formatDate(runtime.pausedAt)} ${formatTime(runtime.pausedAt)}` : ''}${runtime?.pausedVia ? ` (lewat ${VIA_LABEL[runtime.pausedVia]})` : ''}. Proposal baru menunggu sebagai Antre sampai LANJUT.`
-              : 'AI menilai proposal yang masuk. STOP menghentikan pekerjaan yang sedang berjalan.'}
-          </p>
-          {canConfigure ? <RuntimeToggle paused={paused} /> : null}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Aturan penilaian{' '}
-            {rules ? (
-              <Badge variant="outline">versi {rules.version}</Badge>
-            ) : null}
-          </CardTitle>
-          {rules ? (
-            <p className="text-xs text-muted-foreground">
-              Diubah {formatDate(rules.changedAt)} {formatTime(rules.changedAt)}{' '}
-              — {rules.reason}
-            </p>
-          ) : null}
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {!rules ? (
-            <p className="text-sm text-muted-foreground">
-              Aturan penilaian belum ada di Firestore (settings/rules).
-            </p>
-          ) : (
-            <>
-              <dl className="grid gap-3 text-sm sm:grid-cols-3">
-                <div>
-                  <dt className="text-xs text-muted-foreground">Bobot aktif</dt>
-                  <dd>
-                    {CRITERIA.map(
-                      (c) =>
-                        `${CRITERION_LABEL[c]} ${formatPercent(rules.weights[c] * 100)}`,
-                    ).join(' · ')}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">Fokus</dt>
-                  <dd>
-                    {rules.fit.sectors.join(', ')} ·{' '}
-                    {rules.fit.stages.join(', ')} ·{' '}
-                    {formatRupiah(rules.fit.fundingMinIdr)}–
-                    {formatRupiah(rules.fit.fundingMaxIdr)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs text-muted-foreground">
-                    Model penilai
-                  </dt>
-                  <dd>
-                    <code>{rules.models.penilai}</code>
-                  </dd>
-                </div>
-              </dl>
-              {canConfigure ? (
-                <RulesForm
-                  initial={{
-                    weights: rules.weights,
-                    anchors: rules.anchors,
-                    fit: rules.fit,
-                    thresholds: rules.thresholds,
-                    models: {
-                      penilai: rules.models.penilai,
-                      ringkasan: rules.models.ringkasan,
-                      insight: rules.models.insight,
-                    },
-                    minCharsPerPage: rules.minCharsPerPage,
-                    retentionDays: rules.retentionDays,
-                  }}
-                  asistenModel={rules.models.asisten}
-                />
-              ) : (
-                <RulesSummary rules={rules} />
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Dasar bobot (baseline)</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <p className="text-muted-foreground">
-            Bobot baseline adalah rata-rata dua benchmark, dengan rujukan
-            tambahan dari survei Gompers dkk. (885 VC, 47% menyebut tim sebagai
-            faktor terpenting).
-          </p>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Kriteria</TableHead>
-                <TableHead>Scorecard Method</TableHead>
-                <TableHead>Hustle Fund (pre-seed)</TableHead>
-                <TableHead className="text-right">Baseline</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {CRITERIA.map((c) => (
-                <TableRow key={c}>
-                  <TableCell className="font-medium">
-                    {CRITERION_LABEL[c]}
-                  </TableCell>
-                  <TableCell>{BASELINE[c].scorecard}</TableCell>
-                  <TableCell>{BASELINE[c].hustle}</TableCell>
-                  <TableCell className="text-right font-medium">
-                    {BASELINE[c].baseline}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          <p className="text-xs text-muted-foreground">
-            Keterbatasan: kedua sumber adalah metode angel dan investor tahap
-            awal, bukan standar resmi VC, dan pemetaan ke 5 kriteria AISA adalah
-            interpretasi tim.
-          </p>
-        </CardContent>
-      </Card>
-
-      <Kalibrasi calibration={calibrate(reviewed)} />
-    </Page.Root>
-  )
+  return <SettingsView tab={tab}>{content}</SettingsView>
 }

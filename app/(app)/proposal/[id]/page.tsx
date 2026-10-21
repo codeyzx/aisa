@@ -1,67 +1,125 @@
+import {
+  AlertTriangleIcon,
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  BanknoteIcon,
+  CalendarIcon,
+  CheckCircle2Icon,
+  CircleHelpIcon,
+  FileTextIcon,
+  LayersIcon,
+  ListTreeIcon,
+  MailIcon,
+  SparklesIcon,
+  TagIcon,
+  XCircleIcon,
+  type LucideIcon,
+} from 'lucide-react'
 import { type Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 
-import { Page } from '@/components/shell/page-container'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import {
   AISA_CONFIGURE,
   AISA_READ,
   AISA_RESPOND,
 } from '@/features/aisa/aisa.capability'
+import { isCorrected } from '@/features/aisa/aisa.calibration'
 import {
   CATEGORY_LABEL,
   CRITERION_LABEL,
   HISTORY_ACTION_LABEL,
   labelOf,
   QUALITY_OUTSIDE_FOCUS_LABEL,
-  RESPONSE_LABEL,
   STATUS_LABEL,
   VIA_LABEL,
 } from '@/features/aisa/aisa.labels'
-import { getProposal, listProposalHistory } from '@/features/aisa/aisa.repo'
-import { CRITERIA, showsQualityOutsideFocus } from '@/features/aisa/aisa.schema'
+import {
+  getProposal,
+  getRules,
+  listJobsWithSteps,
+  listProposalHistory,
+} from '@/features/aisa/aisa.repo'
+import {
+  CRITERIA,
+  showsQualityOutsideFocus,
+  type Proposal,
+} from '@/features/aisa/aisa.schema'
 import { requireCapability } from '@/lib/auth/guards'
 import { can } from '@/lib/auth/rbac'
 import { formatRupiah } from '@/lib/format/currency'
-import { formatDate, formatTime } from '@/lib/format/date'
-import { formatNumber, formatScore } from '@/lib/format/number'
+import { formatDecimal, formatNumber, formatScore } from '@/lib/format/number'
 import { cn } from '@/lib/utils'
 
-import { CategoryCell } from '../../_components/badges'
+import {
+  CategoryBadge,
+  DECISION_LABEL,
+  DecisionBadge,
+  ScoreBar,
+  scoreTone,
+} from '../../_components/badges'
+import { AskAisaCard } from '../_components/ask-aisa-card'
+import { AssessmentLogProvider, LogButton } from '../_components/assessment-log'
+import { buildAssessmentLog } from '../_components/assessment-log-data'
 import { CorrectionForm } from '../_components/correction-form'
 import { DeckButton } from '../_components/deck-button'
 import { DeleteProposalButton } from '../_components/delete-proposal-button'
+import {
+  compactNumber,
+  dateTime,
+  initials,
+} from '../_components/proposal-format'
 import { RespondPanel } from '../_components/respond-panel'
 
 export const metadata: Metadata = { title: 'Detail proposal' }
 
-function when(date: Date) {
-  return `${formatDate(date)} ${formatTime(date)}`
-}
-
-function Fact({ label, value }: { label: string; value: React.ReactNode }) {
+function Meta({
+  icon: Icon,
+  children,
+}: {
+  icon: LucideIcon
+  children: React.ReactNode
+}) {
   return (
-    <div>
-      <dt className="text-xs text-muted-foreground">{label}</dt>
-      <dd className="text-sm">{value}</dd>
-    </div>
+    <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
+      <Icon className="size-3.5" />
+      {children}
+    </span>
   )
 }
 
-const notMentioned = (
-  <span className="text-muted-foreground">tidak disebut</span>
-)
+const capitalized = 'first-letter:uppercase'
+
+/**
+ * Kelebihan and Perlu dicek, read straight from the AI's per-criterion
+ * reasons: a criterion it scored 4–5 is a strength, one it scored 1–2 — or
+ * found nothing for, or could not back with a verified quote — is a thing to
+ * check. Nothing is written that the assessment did not say.
+ */
+function strengthsAndChecks(proposal: Proposal) {
+  const strengths: string[] = []
+  const checks: string[] = []
+  const criteria = proposal.assessment?.criteria ?? {}
+  for (const criterion of CRITERIA) {
+    const item = criteria[criterion]
+    if (!item) continue
+    const line = `${CRITERION_LABEL[criterion]}: ${item.reason}`
+    if (item.notMentioned || item.citationsUnverified || item.value <= 2)
+      checks.push(line)
+    else if (item.value >= 4) strengths.push(line)
+  }
+  return { strengths, checks }
+}
 
 export default async function ProposalDetailPage({
   params,
@@ -71,330 +129,606 @@ export default async function ProposalDetailPage({
   const session = await requireCapability(AISA_READ)
   const { id } = await params
   const proposalId = decodeURIComponent(id)
-  const [proposal, history] = await Promise.all([
+  const [proposal, history, rules] = await Promise.all([
     getProposal(proposalId),
     listProposalHistory(proposalId),
+    getRules(),
   ])
   if (!proposal) notFound()
+  const job = proposal.jobId
+    ? ((await listJobsWithSteps(1, proposal.jobId)).find(
+        (candidate) => candidate.id === proposal.jobId,
+      ) ?? null)
+    : null
+
   const canRespond = can(session, AISA_RESPOND)
   const canDelete = can(session, AISA_CONFIGURE)
   const { assessment, fit, profile } = proposal
+  const thresholds = rules?.thresholds ?? null
+  const log = job ? buildAssessmentLog(job, proposal, history, rules) : null
+  const tone = assessment ? scoreTone(assessment.score, thresholds) : null
+  const decision = proposal.response?.kind ?? null
+  const { strengths, checks } = strengthsAndChecks(proposal)
+  const tokens = proposal.tokens.in + proposal.tokens.out
+  const weightsDiffer =
+    assessment && rules && rules.version !== assessment.rulesVersion
+
+  const fitItems = fit
+    ? [
+        { key: 'Sektor', check: fit.checks.sector },
+        { key: 'Tahap', check: fit.checks.stage },
+        { key: 'Dana', check: fit.checks.funding },
+      ]
+    : []
+  const fitCount = fitItems.filter((item) => item.check.passed).length
 
   return (
-    <Page.Root>
-      <Page.Header
-        eyebrow={<Link href="/proposal">← Proposal</Link>}
-        title={proposal.name}
-        description={profile?.oneLiner ?? undefined}
-      >
-        {proposal.source.kind === 'upload' ? (
-          <DeckButton proposalId={proposal.id} />
-        ) : null}
-        {proposal.jobId ? (
+    <AssessmentLogProvider log={log} thresholds={thresholds}>
+      <div className="flex flex-col gap-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Link
-            href={`/aktivitas?job=${encodeURIComponent(proposal.jobId)}#job-${proposal.jobId}`}
-            className={cn(buttonVariants({ variant: 'outline' }))}
-          >
-            Lihat log penilaian
-          </Link>
-        ) : null}
-        {canDelete ? (
-          <DeleteProposalButton
-            proposalId={proposal.id}
-            proposalName={proposal.name}
-          />
-        ) : null}
-      </Page.Header>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {proposal.effectiveCategory ? (
-          <CategoryCell proposal={proposal} />
-        ) : null}
-        <Badge
-          variant={
-            proposal.status === 'perlu_dicek_manual' ? 'destructive' : 'outline'
-          }
-        >
-          {STATUS_LABEL[proposal.status]}
-        </Badge>
-        {proposal.statusReason ? (
-          <span className="text-sm text-muted-foreground">
-            {proposal.statusReason}
-          </span>
-        ) : null}
-      </div>
-
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Profil</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <Fact label="Sektor" value={profile?.sector ?? notMentioned} />
-              <Fact label="Tahap" value={profile?.stage ?? notMentioned} />
-              <Fact
-                label="Dana yang diminta"
-                value={
-                  profile?.fundingAskIdr != null
-                    ? formatRupiah(profile.fundingAskIdr)
-                    : notMentioned
-                }
-              />
-              <Fact label="Halaman" value={formatNumber(proposal.pageCount)} />
-              <Fact
-                label="Sumber"
-                value={`${proposal.source.kind === 'form' ? 'Form' : 'Unggahan'} · ${proposal.source.fileName}`}
-              />
-              <Fact label="Masuk" value={when(proposal.createdAt)} />
-              <Fact
-                label="Token (masuk / keluar)"
-                value={`${formatNumber(proposal.tokens.in)} / ${formatNumber(proposal.tokens.out)}`}
-              />
-              <Fact
-                label="Dinilai"
-                value={proposal.assessedAt ? when(proposal.assessedAt) : '—'}
-              />
-            </dl>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Tanggapan</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {proposal.response ? (
-              <p className="text-sm">
-                <Badge>{RESPONSE_LABEL[proposal.response.kind]}</Badge>{' '}
-                {when(proposal.response.at)} via{' '}
-                {VIA_LABEL[proposal.response.via]}
-                {proposal.response.note ? ` — ${proposal.response.note}` : ''}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground">Belum ditanggapi.</p>
+            href="/proposal"
+            className={cn(
+              buttonVariants({ variant: 'ghost', size: 'sm' }),
+              '-ml-2',
             )}
-            {canRespond ? (
-              <RespondPanel
-                proposalId={proposal.id}
-                current={proposal.response?.kind ?? null}
-              />
-            ) : null}
+          >
+            <ArrowLeftIcon />
+            Semua proposal
+          </Link>
+          {canDelete ? (
+            <DeleteProposalButton
+              proposalId={proposal.id}
+              proposalName={proposal.name}
+            />
+          ) : null}
+        </div>
+
+        <Card className="py-0">
+          <CardContent className="flex flex-col gap-5 p-5 md:flex-row md:items-center">
+            <div className="flex min-w-0 flex-1 items-start gap-4">
+              <span className="grid size-14 shrink-0 place-items-center rounded-2xl bg-primary/10 text-lg font-semibold text-primary">
+                {initials(proposal.name)}
+              </span>
+              <div className="min-w-0 space-y-2">
+                <div>
+                  <h2 className="text-2xl font-semibold tracking-tight">
+                    {proposal.name}
+                  </h2>
+                  {profile?.oneLiner ? (
+                    <p className="text-muted-foreground">{profile.oneLiner}</p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  <Meta icon={TagIcon}>
+                    {profile?.sector ? (
+                      <span className={capitalized}>{profile.sector}</span>
+                    ) : (
+                      'Sektor tidak disebut'
+                    )}
+                  </Meta>
+                  <Meta icon={LayersIcon}>
+                    {profile?.stage ? (
+                      <span className={capitalized}>{profile.stage}</span>
+                    ) : (
+                      'Tahap tidak disebut'
+                    )}
+                  </Meta>
+                  <Meta icon={BanknoteIcon}>
+                    {profile?.fundingAskIdr != null
+                      ? `Cari ${formatRupiah(profile.fundingAskIdr)}`
+                      : 'Dana tidak disebut'}
+                  </Meta>
+                  <Meta icon={CalendarIcon}>
+                    Masuk {dateTime(proposal.createdAt)}
+                  </Meta>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {proposal.effectiveCategory ? (
+                    <CategoryBadge category={proposal.effectiveCategory} />
+                  ) : null}
+                  {proposal.status !== 'dinilai' ? (
+                    <Badge
+                      variant="outline"
+                      className={
+                        proposal.status === 'perlu_dicek_manual'
+                          ? 'border-warning/40 bg-warning-soft text-warning'
+                          : undefined
+                      }
+                    >
+                      {STATUS_LABEL[proposal.status]}
+                    </Badge>
+                  ) : null}
+                  <DecisionBadge decision={decision} />
+                  {isCorrected(proposal) ? (
+                    <Badge variant="outline">dikoreksi</Badge>
+                  ) : null}
+                  {showsQualityOutsideFocus(proposal) ? (
+                    <Badge
+                      variant="outline"
+                      className="border-warning/40 bg-warning-soft text-warning"
+                    >
+                      {QUALITY_OUTSIDE_FOCUS_LABEL}
+                    </Badge>
+                  ) : null}
+                </div>
+                {proposal.statusReason ? (
+                  <p className="text-[13px] text-muted-foreground">
+                    {proposal.statusReason}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <div className="w-full shrink-0 rounded-xl bg-muted/50 p-4 md:w-56">
+              <p className="text-xs font-medium text-muted-foreground">
+                Skor kualitas
+              </p>
+              {assessment && tone ? (
+                <>
+                  <p className="mt-1 flex items-baseline gap-1">
+                    <span
+                      className={cn(
+                        'text-4xl font-semibold tabular-nums',
+                        tone.text,
+                      )}
+                    >
+                      {formatScore(assessment.score)}
+                    </span>
+                    <span className="text-sm text-muted-foreground">/100</span>
+                  </p>
+                  <ScoreBar
+                    score={assessment.score}
+                    thresholds={thresholds}
+                    className="mt-3 h-2"
+                  />
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {fit
+                      ? `${fitCount} dari 3 syarat fokus terpenuhi`
+                      : 'Belum ada cek kecocokan'}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="mt-1 text-4xl font-semibold text-muted-foreground">
+                    —
+                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {proposal.status === 'perlu_dicek_manual'
+                      ? 'Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori.'
+                      : 'Belum ada penilaian.'}
+                  </p>
+                </>
+              )}
+              <LogButton
+                variant="outline"
+                size="sm"
+                className="mt-3 w-full bg-card"
+              >
+                <ListTreeIcon />
+                Lihat log penilaian
+              </LogButton>
+            </div>
           </CardContent>
         </Card>
-      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            Tahap 1 — Skor kualitas{' '}
+        <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="flex min-w-0 flex-col gap-5">
             {assessment ? (
-              <span className="tabular-nums">
-                {formatScore(assessment.score)}
-              </span>
+              <Card className="gap-4 border-primary/25 bg-gradient-to-b from-primary/[0.06] to-transparent">
+                <CardHeader>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="gap-1 bg-primary text-primary-foreground">
+                      <SparklesIcon />
+                      Ringkasan AI
+                    </Badge>
+                    <span
+                      className="text-xs text-muted-foreground"
+                      title={`${formatNumber(proposal.tokens.in)} token masuk / ${formatNumber(proposal.tokens.out)} token keluar`}
+                    >
+                      Dibuat dari pitch deck · {compactNumber(tokens)} token
+                    </span>
+                  </div>
+                  <CardAction>
+                    <LogButton variant="ghost" size="sm">
+                      Cara AI menilai
+                      <ArrowRightIcon />
+                    </LogButton>
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {profile?.oneLiner ? (
+                    <p className="text-[15px] leading-relaxed">
+                      {proposal.name} — {profile.oneLiner}
+                    </p>
+                  ) : null}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-xl border border-success/20 bg-success-soft/50 p-4">
+                      <p className="flex items-center gap-1.5 text-sm font-semibold text-success">
+                        <CheckCircle2Icon className="size-4" />
+                        Kelebihan
+                      </p>
+                      {strengths.length ? (
+                        <ul className="mt-2 space-y-1.5 text-sm">
+                          {strengths.map((item) => (
+                            <li key={item} className="flex gap-2">
+                              <span className="mt-2 size-1 shrink-0 rounded-full bg-success" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Tidak ada kriteria bernilai 4 atau 5.
+                        </p>
+                      )}
+                    </div>
+                    <div className="rounded-xl border border-warning/25 bg-warning-soft/50 p-4">
+                      <p className="flex items-center gap-1.5 text-sm font-semibold text-warning">
+                        <AlertTriangleIcon className="size-4" />
+                        Perlu dicek
+                      </p>
+                      {checks.length ? (
+                        <ul className="mt-2 space-y-1.5 text-sm">
+                          {checks.map((item) => (
+                            <li key={item} className="flex gap-2">
+                              <span className="mt-2 size-1 shrink-0 rounded-full bg-warning" />
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Tidak ada kriteria bernilai 1–2 atau tanpa bukti.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    AI bisa salah. Cocokkan dengan kutipan di bawah, atau buka
+                    log penilaian untuk melihat alasannya.
+                  </p>
+                </CardContent>
+              </Card>
             ) : null}
-          </CardTitle>
-          {assessment ? (
-            <p className="text-xs text-muted-foreground">
-              Aturan v{assessment.rulesVersion} · model {assessment.model} ·
-              skor = Σ bobot × (nilai − 1) / 4, dihitung kode
-            </p>
-          ) : null}
-        </CardHeader>
-        <CardContent>
-          {assessment ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Kriteria</TableHead>
-                  <TableHead className="text-right">Nilai</TableHead>
-                  <TableHead>Alasan dan kutipan</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {CRITERIA.map((criterion) => {
-                  const item = assessment.criteria[criterion]
-                  if (!item)
-                    return (
-                      <TableRow key={criterion}>
-                        <TableCell className="font-medium">
-                          {CRITERION_LABEL[criterion]}
-                        </TableCell>
-                        <TableCell className="text-right">—</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          Tidak ada hasil untuk kriteria ini.
-                        </TableCell>
-                      </TableRow>
-                    )
-                  return (
-                    <TableRow key={criterion} className="align-top">
-                      <TableCell className="font-medium">
-                        {CRITERION_LABEL[criterion]}
-                      </TableCell>
-                      <TableCell className="text-right tabular-nums">
-                        {item.value}/5
-                      </TableCell>
-                      <TableCell className="space-y-1 whitespace-normal">
-                        {item.notMentioned || item.citationsUnverified ? (
-                          <div className="flex flex-wrap gap-1">
-                            {item.notMentioned ? (
-                              <Badge variant="destructive">tidak disebut</Badge>
-                            ) : null}
-                            {item.citationsUnverified ? (
-                              <Badge
-                                variant="outline"
-                                title="Tidak ada kutipan yang ditemukan di halamannya, jadi nilai dibatasi 2"
-                              >
-                                kutipan tidak terverifikasi
-                              </Badge>
+
+            <Card className="gap-0 pb-0">
+              <CardHeader className="border-b pb-4">
+                <CardTitle>Nilai per kriteria</CardTitle>
+                <CardDescription>
+                  AI memberi nilai 1–5 beserta kutipan dari pitch deck. Skor
+                  akhir dihitung dari bobotnya.
+                  {assessment
+                    ? ` Aturan v${assessment.rulesVersion} · model ${assessment.model}.`
+                    : ''}
+                  {weightsDiffer
+                    ? ` Bobot yang tampil dari aturan v${rules.version} yang berlaku sekarang.`
+                    : ''}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                {assessment ? (
+                  <ul>
+                    {CRITERIA.map((criterion) => {
+                      const item = assessment.criteria[criterion]
+                      return (
+                        <li
+                          key={criterion}
+                          data-criterion={criterion}
+                          className="grid gap-3 border-b px-6 py-4 last:border-0 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-6"
+                        >
+                          <div>
+                            <div className="flex items-baseline justify-between gap-2">
+                              <p className="font-medium">
+                                {CRITERION_LABEL[criterion]}
+                              </p>
+                              <p className="text-sm font-semibold tabular-nums">
+                                {item ? item.value : '–'}
+                                <span className="text-xs font-normal text-muted-foreground">
+                                  /5
+                                </span>
+                              </p>
+                            </div>
+                            <ScoreBar
+                              score={(item?.value ?? 0) * 20}
+                              thresholds={thresholds}
+                              className="mt-2"
+                            />
+                            {rules ? (
+                              <p className="mt-1.5 text-xs text-muted-foreground">
+                                Bobot{' '}
+                                {formatDecimal(rules.weights[criterion] * 100, {
+                                  max: 1,
+                                })}
+                                %
+                              </p>
                             ) : null}
                           </div>
-                        ) : null}
-                        <p>{item.reason}</p>
-                        {item.citations.length ? (
-                          <ul className="space-y-0.5 text-xs text-muted-foreground">
-                            {item.citations.map((c, i) => (
-                              <li key={i}>
-                                <span className="font-medium text-foreground">
-                                  hal. {c.page}
-                                </span>{' '}
-                                “{c.quote}”
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {proposal.status === 'perlu_dicek_manual'
-                ? 'Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori.'
-                : 'Belum ada penilaian.'}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+                          {!item ? (
+                            <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                              Tidak ada hasil untuk kriteria ini.
+                            </p>
+                          ) : (
+                            <div className="space-y-2 md:border-l-2 md:border-border md:pl-4">
+                              {item.notMentioned ? (
+                                <p className="flex items-center gap-1.5 text-sm text-warning">
+                                  <CircleHelpIcon className="size-4" />
+                                  Tidak dibahas di pitch deck
+                                  <span className="sr-only">
+                                    (tidak disebut)
+                                  </span>
+                                </p>
+                              ) : null}
+                              {item.citations.map((citation) => (
+                                <blockquote
+                                  key={`${citation.page}:${citation.quote}`}
+                                  className="text-[13.5px] leading-relaxed"
+                                >
+                                  “{citation.quote}”
+                                  <span className="ml-1.5 inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 align-middle text-[11px] font-medium whitespace-nowrap text-muted-foreground">
+                                    <FileTextIcon className="size-3" />
+                                    Hal. {citation.page}
+                                  </span>
+                                </blockquote>
+                              ))}
+                              <p className="text-[13px] text-muted-foreground">
+                                {item.reason}
+                              </p>
+                              {item.citationsUnverified ? (
+                                <Badge
+                                  variant="outline"
+                                  title="Tidak ada kutipan yang ditemukan di halamannya, jadi nilai dibatasi 2"
+                                >
+                                  kutipan tidak terverifikasi
+                                </Badge>
+                              ) : null}
+                            </div>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                ) : (
+                  <p className="px-6 py-6 text-sm text-muted-foreground">
+                    {proposal.status === 'perlu_dicek_manual'
+                      ? 'Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori.'
+                      : 'Belum ada penilaian.'}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Tahap 2 — Cek kecocokan{' '}
-              {fit ? (
-                <Badge variant={fit.passed ? 'secondary' : 'destructive'}>
-                  {fit.passed ? 'Lulus' : 'Gagal'}
-                </Badge>
-              ) : null}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {fit ? (
-              <ul className="space-y-2 text-sm">
-                {(
-                  [
-                    ['Sektor', fit.checks.sector],
-                    ['Tahap pendanaan', fit.checks.stage],
-                    ['Besar dana', fit.checks.funding],
-                  ] as const
-                ).map(([label, check]) => (
-                  <li key={label} className="flex gap-2">
-                    <Badge variant={check.passed ? 'secondary' : 'destructive'}>
-                      {check.passed ? 'Lulus' : 'Gagal'}
-                    </Badge>
-                    <span>
-                      <span className="font-medium">{label}:</span>{' '}
-                      {check.reason}
+            <Card>
+              <CardHeader>
+                <CardTitle>Sesuai fokus investasi?</CardTitle>
+                <CardDescription>
+                  Dicek otomatis dari aturan penilaian, tanpa AI.
+                </CardDescription>
+                <CardAction>
+                  <Link
+                    href="/aturan"
+                    className={buttonVariants({ variant: 'ghost', size: 'sm' })}
+                  >
+                    Lihat aturan
+                  </Link>
+                </CardAction>
+              </CardHeader>
+              <CardContent>
+                {fit ? (
+                  <ul className="grid gap-3 sm:grid-cols-3">
+                    {fitItems.map((item) => (
+                      <li
+                        key={item.key}
+                        className={cn(
+                          'rounded-xl border p-3',
+                          item.check.passed
+                            ? 'border-success/20 bg-success-soft/40'
+                            : 'border-danger/20 bg-danger-soft/40',
+                        )}
+                      >
+                        <p
+                          className={cn(
+                            'flex items-center gap-1.5 text-sm font-semibold',
+                            item.check.passed ? 'text-success' : 'text-danger',
+                          )}
+                        >
+                          {item.check.passed ? (
+                            <CheckCircle2Icon className="size-4" />
+                          ) : (
+                            <XCircleIcon className="size-4" />
+                          )}
+                          {item.key}
+                          <span className="sr-only">
+                            {item.check.passed ? ' lulus' : ' gagal'}
+                          </span>
+                        </p>
+                        <p className="mt-1 text-[13px] text-muted-foreground">
+                          {item.check.reason}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Belum ada cek kecocokan.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Riwayat</CardTitle>
+                <CardDescription>
+                  Dari proposal masuk sampai keputusan terakhir
+                </CardDescription>
+                <CardAction>
+                  <LogButton variant="ghost" size="sm">
+                    Log penilaian
+                  </LogButton>
+                </CardAction>
+              </CardHeader>
+              <CardContent>
+                {history.length ? (
+                  <ol className="ml-1.5 space-y-6 border-l pl-6">
+                    {history.map((row, i) => (
+                      <li key={row.id} className="relative">
+                        <span
+                          aria-hidden
+                          className={cn(
+                            'absolute top-1 -left-[calc(1.5rem+5.5px)] size-2.5 rounded-full ring-4 ring-card',
+                            i === 0 ? 'bg-primary' : 'bg-muted-foreground/40',
+                          )}
+                        />
+                        <p className="text-sm font-medium">
+                          {labelOf(HISTORY_ACTION_LABEL, row.action)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {row.detail}
+                          {row.reason ? ` — ${row.reason}` : ''} · via{' '}
+                          {VIA_LABEL[row.via]}
+                        </p>
+                        <time className="text-xs text-muted-foreground">
+                          {dateTime(row.at)}
+                        </time>
+                      </li>
+                    ))}
+                  </ol>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Belum ada riwayat.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <aside className="flex flex-col gap-5 xl:sticky xl:top-0">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {canRespond ? 'Keputusan Anda' : 'Keputusan'}
+                </CardTitle>
+                <CardDescription>
+                  Sekarang:{' '}
+                  <span className="font-medium text-foreground">
+                    {DECISION_LABEL[decision ?? 'baru']}
+                  </span>
+                  {proposal.response
+                    ? ` · ${dateTime(proposal.response.at)} via ${VIA_LABEL[proposal.response.via]}`
+                    : ''}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {proposal.response?.note ? (
+                  <p className="rounded-lg bg-muted/60 px-3 py-2 text-[13px]">
+                    “{proposal.response.note}”
+                  </p>
+                ) : null}
+                {canRespond ? (
+                  <RespondPanel
+                    proposalId={proposal.id}
+                    proposalName={proposal.name}
+                    current={decision}
+                  />
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Akun Anda hanya bisa membaca; tanggapan diberikan manajer
+                    investasi.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            <AskAisaCard proposalName={proposal.name} />
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Founder</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {proposal.founder?.name || proposal.founder?.email ? (
+                  <div className="flex items-center gap-3">
+                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-muted text-sm font-semibold">
+                      {initials(
+                        proposal.founder.name ?? proposal.founder.email ?? '',
+                      )}
                     </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                Belum ada cek kecocokan.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">
+                        {proposal.founder.name ?? 'Nama tidak disebut'}
+                      </p>
+                      {proposal.founder.email ? (
+                        <p className="truncate text-sm text-muted-foreground">
+                          {proposal.founder.email}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Data founder tidak disebut.
+                  </p>
+                )}
+                {proposal.founder?.email ||
+                proposal.source.kind === 'upload' ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    {proposal.founder?.email ? (
+                      <a
+                        href={`mailto:${proposal.founder.email}`}
+                        className={cn(
+                          buttonVariants({ variant: 'outline', size: 'sm' }),
+                          proposal.source.kind !== 'upload' && 'col-span-2',
+                        )}
+                      >
+                        <MailIcon />
+                        Email
+                      </a>
+                    ) : null}
+                    {proposal.source.kind === 'upload' ? (
+                      <DeckButton
+                        proposalId={proposal.id}
+                        className={
+                          proposal.founder?.email ? undefined : 'col-span-2'
+                        }
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <FileTextIcon className="size-3.5 shrink-0" />
+                  <span className="truncate">
+                    {proposal.source.kind === 'form' ? 'Form' : 'Unggahan'} ·{' '}
+                    {proposal.source.fileName} ·{' '}
+                    {formatNumber(proposal.pageCount)} halaman
+                  </span>
+                </p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Kategori</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <dl className="grid grid-cols-2 gap-3">
-              <Fact
-                label="Dari kode"
-                value={
-                  proposal.category ? CATEGORY_LABEL[proposal.category] : '—'
-                }
-              />
-              <Fact
-                label="Efektif"
-                value={
-                  proposal.effectiveCategory
-                    ? CATEGORY_LABEL[proposal.effectiveCategory]
-                    : '—'
-                }
-              />
-            </dl>
-            {showsQualityOutsideFocus(proposal) ? (
-              <Badge variant="outline">{QUALITY_OUTSIDE_FOCUS_LABEL}</Badge>
+            {(canRespond && proposal.status === 'dinilai') ||
+            proposal.correction ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Kategori kurang pas?</CardTitle>
+                  <CardDescription>
+                    {proposal.correction
+                      ? `AI menilai ${proposal.category ? CATEGORY_LABEL[proposal.category] : '—'}, lalu dikoreksi ke ${CATEGORY_LABEL[proposal.correction.category]} (${dateTime(proposal.correction.at)}, ${VIA_LABEL[proposal.correction.via]}): “${proposal.correction.reason}”.`
+                      : 'Ubah kategorinya. Skor dari AI tetap disimpan.'}
+                  </CardDescription>
+                </CardHeader>
+                {canRespond && proposal.status === 'dinilai' ? (
+                  <CardContent>
+                    <CorrectionForm
+                      proposalId={proposal.id}
+                      current={proposal.effectiveCategory ?? null}
+                    />
+                  </CardContent>
+                ) : null}
+              </Card>
             ) : null}
-            {proposal.correction ? (
-              <p>
-                Dikoreksi ke{' '}
-                <strong>{CATEGORY_LABEL[proposal.correction.category]}</strong>{' '}
-                ({when(proposal.correction.at)},{' '}
-                {VIA_LABEL[proposal.correction.via]}):{' '}
-                {proposal.correction.reason}
-              </p>
-            ) : null}
-            {canRespond && proposal.status === 'dinilai' ? (
-              <CorrectionForm
-                proposalId={proposal.id}
-                current={proposal.effectiveCategory ?? null}
-              />
-            ) : null}
-          </CardContent>
-        </Card>
+          </aside>
+        </div>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Riwayat proposal ini</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {history.length ? (
-            <ul className="space-y-2 text-sm">
-              {history.map((row) => (
-                <li key={row.id} className="flex flex-wrap gap-2">
-                  <span className="text-muted-foreground tabular-nums">
-                    {when(row.at)}
-                  </span>
-                  <Badge variant="outline">
-                    {labelOf(HISTORY_ACTION_LABEL, row.action)}
-                  </Badge>
-                  <span>{row.detail}</span>
-                  {row.reason ? (
-                    <span className="text-muted-foreground">
-                      — {row.reason}
-                    </span>
-                  ) : null}
-                  <span className="text-muted-foreground">
-                    ({VIA_LABEL[row.via]})
-                  </span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-muted-foreground">Belum ada riwayat.</p>
-          )}
-        </CardContent>
-      </Card>
-    </Page.Root>
+    </AssessmentLogProvider>
   )
 }

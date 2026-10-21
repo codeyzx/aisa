@@ -1,122 +1,100 @@
 import { type Metadata } from 'next'
 
-import { Page } from '@/components/shell/page-container'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { AISA_READ } from '@/features/aisa/aisa.capability'
-import { CATEGORY_LABEL } from '@/features/aisa/aisa.labels'
 import {
   getLatestInsightDigest,
   listDailyStats,
+  listRecentProposals,
+  PROPOSAL_WINDOW,
 } from '@/features/aisa/aisa.repo'
-import { CATEGORIES } from '@/features/aisa/aisa.schema'
 import { requireCapability } from '@/lib/auth/guards'
 import { formatDate } from '@/lib/format/date'
+import { formatDecimal, formatNumber } from '@/lib/format/number'
 
-import { BarList, ColumnChart, shortDate } from '../_components/charts'
 import { dailyWindow } from '../_components/daily-window'
+import { TrendCharts } from './_components/trend-view'
+import { buildTrend, TREND_DAYS } from './trend-data'
 
 export const metadata: Metadata = { title: 'Tren' }
 
-const DAYS = 14
+function Insight({ children }: { children: React.ReactNode }) {
+  return (
+    <li>
+      <span
+        aria-hidden
+        className="mt-1.5 size-2 rounded-full"
+        style={{ background: 'var(--primary)' }}
+      />
+      <span>{children}</span>
+    </li>
+  )
+}
 
 export default async function TrenPage() {
   await requireCapability(AISA_READ)
-  const [stats, insightDigest] = await Promise.all([
-    listDailyStats(DAYS),
+  const [stats, proposals, insightDigest] = await Promise.all([
+    listDailyStats(TREND_DAYS),
+    listRecentProposals(),
     getLatestInsightDigest(),
   ])
-  const days = dailyWindow(stats, DAYS)
+  const data = buildTrend(stats, proposals)
+  const { days } = data
 
-  const perDay = days.map((d) => ({
-    label: shortDate(d.date),
-    value: d.stats?.proposalsIn ?? 0,
-  }))
-  const tokensPerDay = days.map((d) => ({
-    label: shortDate(d.date),
-    value: (d.stats?.tokensIn ?? 0) + (d.stats?.tokensOut ?? 0),
-  }))
-  const sectorTotals = new Map<string, number>()
-  for (const d of days)
-    for (const [sector, n] of Object.entries(d.stats?.bySector ?? {}))
-      sectorTotals.set(sector, (sectorTotals.get(sector) ?? 0) + n)
-  const perSector = [...sectorTotals]
-    .map(([label, value]) => ({ label, value }))
-    .sort((a, b) => b.value - a.value)
-  const perCategory = CATEGORIES.map((category) => ({
-    label: CATEGORY_LABEL[category],
-    value: days.reduce(
-      (sum, d) => sum + (d.stats?.byCategory[category] ?? 0),
-      0,
-    ),
-  }))
-  const manual = days.reduce(
-    (sum, d) => sum + (d.stats?.perluDicekManual ?? 0),
-    0,
-  )
+  const today = days.at(-1)?.total ?? 0
+  const maxBefore = Math.max(0, ...days.slice(0, -1).map((d) => d.total))
+  const total = days.reduce((sum, d) => sum + d.total, 0)
+  const average = formatDecimal(total / TREND_DAYS, { max: 1 })
+  const dailySub =
+    today > maxBefore
+      ? `Hari ini ${formatNumber(today)} proposal, terbanyak dalam dua minggu`
+      : `Hari ini ${formatNumber(today)} proposal · rata-rata 14 hari ${average} per hari`
+  const veryFit = days.reduce((sum, d) => sum + d.sangat_cocok, 0)
+  const manual = days.reduce((sum, d) => sum + d.manual, 0)
+
+  // The mean score reads the newest PROPOSAL_WINDOW proposals; when that
+  // window does not reach back to the first charted day, say so.
+  const windowStart = dailyWindow([], TREND_DAYS)[0]?.date ?? ''
+  const oldest = proposals.at(-1)?.createdAt
+  const truncated =
+    proposals.length >= PROPOSAL_WINDOW &&
+    oldest !== undefined &&
+    oldest.getTime() > Date.parse(`${windowStart}T00:00:00+07:00`)
 
   return (
-    <Page.Root>
-      <Page.Header title="Tren" description={`${DAYS} hari terakhir (WIB).`} />
-      {insightDigest?.insight ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>Insight terbaru</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Dari ringkasan {insightDigest.slot} ·{' '}
-              {formatDate(insightDigest.sentAt)}
-            </p>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">Yang menarik: {insightDigest.insight}</p>
-          </CardContent>
-        </Card>
-      ) : null}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Proposal masuk per hari</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ColumnChart
-              points={perDay}
-              caption="Proposal masuk per hari"
-              unit="proposal"
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Token per hari (masuk + keluar)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ColumnChart
-              points={tokensPerDay}
-              caption="Token per hari"
-              unit="token"
-            />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Per sektor</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <BarList points={perSector} unit="proposal" />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>Per kategori</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <BarList points={perCategory} unit="proposal" />
-            <p className="text-xs text-muted-foreground">
-              Kategori dari kode saat dinilai. Ditambah {manual} proposal perlu
-              dicek manual (tanpa kategori).
-            </p>
-          </CardContent>
-        </Card>
+    <div className="a-stack">
+      <div className="a-sh">
+        <h2>Tren 14 hari terakhir</h2>
+        <span className="a-note">Rekap harian (WIB) dari proposal masuk</span>
       </div>
-    </Page.Root>
+      <ul className="a-ins">
+        <Insight>{dailySub}.</Insight>
+        <Insight>
+          {formatNumber(veryFit)} proposal sangat cocok dari{' '}
+          {formatNumber(total)} proposal masuk ·{' '}
+          {total ? Math.round((veryFit / total) * 100) : 0}% dari 14 hari
+          terakhir.
+        </Insight>
+        <Insight>
+          {formatNumber(manual)} proposal perlu dicek manual. Teksnya tidak
+          terbaca atau penilaian gagal, jadi keputusan ada di tangan manajer.
+        </Insight>
+        {insightDigest?.insight ? (
+          <Insight>
+            Yang menarik: {insightDigest.insight}{' '}
+            <span className="text-xs text-muted-foreground">
+              (ringkasan {insightDigest.slot} ·{' '}
+              {formatDate(insightDigest.sentAt)})
+            </span>
+          </Insight>
+        ) : null}
+      </ul>
+      <TrendCharts data={data} dailySub={dailySub} />
+      {truncated ? (
+        <p className="a-note">
+          Rata-rata skor dihitung dari {formatNumber(PROPOSAL_WINDOW)} proposal
+          terbaru; hari-hari paling awal bisa belum lengkap.
+        </p>
+      ) : null}
+    </div>
   )
 }

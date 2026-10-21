@@ -38,3 +38,10 @@ export const ORG_NAME = 'Aixel'
  */
 export const APP_DESCRIPTION =
   'Aplikasi internal — akses khusus untuk pengguna terautentikasi.'
+
+/**
+ * How the dashboard addresses the manager. The WhatsApp ringkasan reads its
+ * own `MANAGER_SALUTATION` (aisa-api env, default `Pak`); keep the two equal
+ * or the dashboard and the ringkasan greet the same person differently.
+ */
+export const MANAGER_SALUTATION = 'Pak'

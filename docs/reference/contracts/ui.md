@@ -77,7 +77,7 @@ No example route ships these side by side any more; the ladder is the rule, and
    |   View/query state that should be shareable, bookmarkable and
    |   back-button-friendly: filter, sort, pagination, active tab, search.
    v
-3. React Context     e.g. SidebarContext in components/ui/sidebar.tsx
+3. React Context     e.g. the unsaved-changes context in app/(app)/pengaturan/_components/settings-dirty.tsx
    |   Dependency injection / scoped providers (session, theme, feature config)
    |   and the backbone of compound components. NOT a state container — it does
    |   not store state, it TRANSPORTS it down a subtree.
@@ -127,9 +127,9 @@ it through props stops scaling. Until then it is weight the ladder does not need
   by hand, a filter rebuilding it from an href template) and changing the key on
   one side drifts silently while both halves still compile.
 - **MUST derive a parser's value set from the schema that already owns it**, never
-  a hand-listed literal copy. `app/(app)/proposal/search-params.ts` parses
-  `kategori` and `status` with `CategorySchema` / `ProposalStatusSchema` from
-  `features/aisa/aisa.schema.ts` — the enum owns the set, and a copy here would be
+  a hand-listed literal copy. `app/(app)/proposal/search-params.ts` builds
+  `kategori`, `status` and `tanggapan` from `CATEGORIES`, `PROPOSAL_STATUSES` and
+  `RESPONSE_KINDS` in `features/aisa/aisa.schema.ts` — the enum owns the set, and a copy here would be
   a parallel taxonomy that goes stale in silence.
 - **MUST use `shallow: false` when a URL write must re-query the server.** Without
   it the URL changes and the list does not — the Server Component never re-runs.
@@ -227,8 +227,8 @@ answer.
 - **Write what the table LISTS, not the page title** — name the columns, e.g.
   "Daftar proposal — nama, sektor, skor, kategori, tanggapan, tanggal masuk".
 - A table that does not use `DataTable` still carries a visually hidden caption:
-  `app/(app)/proposal/page.tsx` renders `Table` directly with an `sr-only`
-  `TableCaption`.
+  `app/(app)/proposal/_components/proposals-list.tsx` renders a native `<table>`
+  with an `sr-only` `<caption>`.
 
 ## Which control a list choice gets
 
@@ -425,8 +425,10 @@ The state mechanisms are pull-based; there is no "state module" to delete. What
 is removable is a dependency.
 
 - **Dropping nuqs:** grep `nuqs` — today it reaches `app/layout.tsx`
-  (`NuqsAdapter`), `lib/search-param.ts` (which wraps it) and the
-  `features/_template/` list page. Replace each `search-params.ts` with hand
+  (`NuqsAdapter`), `lib/search-param.ts` (which wraps it), the
+  `features/_template/` list page, and the Proposal list
+  (`app/(app)/proposal/search-params.ts`, read with `useQueryStates` in
+  `proposals-list.tsx`). Replace each `search-params.ts` with hand
   parsing in the RSC and `<Link>`/`router.push` on the write side, remove
   `NuqsAdapter`, then `pnpm remove nuqs`. **Grep, do not work from a list.** Note
   what you give up: the single URL-contract declaration above.

@@ -105,7 +105,8 @@ carries the claims it was minted with. Locally, `pnpm seed` creates
    an API route, but the client Router Cache still holds server-rendered HTML from
    before. After `establishSession()` (POST) **or** `revokeSession()` (DELETE) resolves,
    the caller **must** `router.refresh()`. The `client.ts` helpers do not do this for
-   you — the login form and the topbar's sign-out own it.
+   you — the login form and the user menu's sign-out
+   (`components/shell/user-menu.tsx`) own it.
 
 4. **Never `unstable_cache` session-scoped data without the uid in the key** — a bare
    `unstable_cache` entry is shared across all visitors. If you must persist-cache
@@ -135,7 +136,7 @@ throttles password guessing itself (`auth/too-many-requests`, which the form sho
 
 `proxy.ts` preserves the path a signed-out reader was aiming for as `?next` (pathname +
 query), and the login form sends them there on success instead of always landing on
-`/hari-ini`. The value is validated through `safeInternalPath` (`lib/safe-path.ts`), so
+`/dashboard`. The value is validated through `safeInternalPath` (`lib/safe-path.ts`), so
 a crafted `?next` (`//evil.com`, a protocol-relative or absolute URL) cannot turn login
 into an open redirect.
 

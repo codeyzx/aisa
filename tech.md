@@ -29,7 +29,7 @@
 - Ringkasan WhatsApp pukul **09.00 dan 17.00** berisi proposal yang belum ditanggapi, dikelompokkan per kategori
 - Perintah manajer di WhatsApp: tanggapi proposal, koreksi kategori, STOP/LANJUT
 - Asisten tanya data dan saran
-- Dashboard: Hari ini, Proposal + detail, Tren, Aktivitas AI, Riwayat, Pengaturan (ubah aturan penilaian dan retensi), unggah PDF, hapus data atas permintaan founder
+- Dashboard: Dashboard (beranda), Proposal + detail, Tren, Aktivitas AI, Riwayat, Aturan penilaian (lihat, ubah dengan pratinjau dampak, kalibrasi), Pengaturan (profil, tampilan, ringkasan, integrasi dan STOP/LANJUT, privasi dan retensi), panel Tanya AISA ke Asisten, unggah PDF, hapus data atas permintaan founder
 - Retensi harian: proposal yang diarsipkan lebih lama dari periode retensi dihapus
 
 **Tidak masuk:** saran tindak lanjut otomatis, audio/voice note, OCR, analisis mendalam/memo, banyak pengguna (hanya 1 manajer), pengiriman pesan ke founder, masking dokumen (dikerjakan terpisah), pencarian internet.
@@ -88,12 +88,12 @@
 | Framework agent          | Google Agent Development Kit (ADK), Python    | `google-adk>=2.12.0`                                                                                                 |
 | Model                    | Gemini lewat Gemini Enterprise Agent Platform | Lokasi `global`; lihat Bagian 6                                                                                      |
 | Hosting agent percakapan | Agent Runtime (dulu Agent Engine)             | Deploy dengan `deploy_assistant.py` lewat `vertexai` Client `agent_engines` (create/update); dipanggil dari aisa-api |
-| Konteks percakapan       | Sessions                                      | Satu session per hari untuk manajer                                                                                  |
+| Konteks percakapan       | Sessions                                      | Satu session per hari per nomor manajer, dan per percakapan Tanya AISA di dashboard                                  |
 | Ingatan preferensi       | Memory Bank                                   | Hanya preferensi manajer, bukan data proposal                                                                        |
 | Layanan HTTP             | Cloud Run + FastAPI                           | Satu layanan `aisa-api`                                                                                              |
 | Jadwal                   | Cloud Scheduler                               | Ringkasan 09.00 dan 17.00, retensi `aisa-retensi` 02.00; zona `Asia/Jakarta`; token OIDC                             |
 | Database                 | Firestore                                     | Proposal, penilaian, tanggapan, riwayat, log aktivitas, statistik harian                                             |
-| Konfigurasi penilaian    | Firestore + halaman Pengaturan di dashboard   | Kriteria, bobot, patokan nilai, aturan kecocokan, batas kategori; berversi, setiap perubahan tercatat dengan alasan  |
+| Konfigurasi penilaian    | Firestore + halaman Aturan penilaian          | Kriteria, bobot, patokan nilai, aturan kecocokan, batas kategori; berversi, setiap perubahan tercatat dengan alasan  |
 | Rahasia                  | Secret Manager                                | Kredensial GOWA, secret webhook, secret intake, kunci API internal                                                   |
 | WhatsApp                 | GOWA v9.3.1 (REST API + webhook)              | Kirim: `POST /send/message` dengan `X-Device-Id`; webhook bertanda `X-Hub-Signature-256` (HMAC-SHA256)               |
 | Dashboard                | Next.js di Cloud Run                          | Baca Firestore lewat Admin SDK; tulis lewat aisa-api; login Firebase Auth email/password (1 akun)                    |
@@ -137,7 +137,7 @@ Region: Cloud Run dan Firestore `asia-southeast2` (Jakarta); Agent Runtime `us-c
 
 - Bila kualitas penilaian kurang, Penilai boleh dinaikkan ke `gemini-3.1-pro-preview` (status preview).
 - Setelah sistem stabil, agent ringan (Ringkasan, Insight, Asisten) bisa dipindah ke `gemini-3.5-flash-lite` untuk efisiensi.
-- Nama model disimpan di aturan penilaian (`rules.models`) dan diubah di Pengaturan. `rules.models.asisten` hanya informasi: model Asisten ditetapkan saat deploy ke Agent Runtime.
+- Nama model disimpan di aturan penilaian (`rules.models`) dan diubah di halaman Aturan penilaian. `rules.models.asisten` hanya informasi: model Asisten ditetapkan saat deploy ke Agent Runtime.
 - Gemini dipanggil di lokasi `global`.
 
 ---
@@ -175,7 +175,7 @@ Region: Cloud Run dan Firestore `asia-southeast2` (Jakarta); Agent Runtime `us-c
 
 ### D. Dashboard
 
-Membaca Firestore langsung lewat Admin SDK; semua penulisan lewat aisa-api. Tombol tanggapan dan koreksi di dashboard memanggil **fungsi yang sama** dengan perintah WhatsApp, sehingga hasil dan catatannya identik.
+Membaca Firestore langsung lewat Admin SDK; semua penulisan lewat aisa-api. Tombol tanggapan dan koreksi di dashboard memanggil **fungsi yang sama** dengan perintah WhatsApp, sehingga hasil dan catatannya identik. Panel **Tanya AISA** mengirim pertanyaan ke Asisten yang sama lewat `POST /api/assistant/ask` (cek STOP dan job `asisten` sama dengan WhatsApp, tanpa pesan GOWA, perintah tidak diproses di sana).
 
 ### E. Penghapusan data dan retensi
 
@@ -193,7 +193,7 @@ Membaca Firestore langsung lewat Admin SDK; semua penulisan lewat aisa-api. Tomb
 | Log Aktivitas AI dan Riwayat (jejak audit)              | Firestore                                               |
 | Ringkasan yang terkirim                                 | Firestore                                               |
 | Statistik harian untuk tren dan token                   | Firestore                                               |
-| Rubrik, bobot, aturan kecocokan, batas kategori         | Firestore (berversi, diubah lewat halaman Pengaturan)   |
+| Rubrik, bobot, aturan kecocokan, batas kategori         | Firestore (berversi, diubah lewat Aturan penilaian)     |
 | Teks deck per halaman (`proposalTexts`)                 | Firestore (ikut dihapus saat penghapusan/retensi)       |
 | Pitch deck dari Form                                    | Google Drive (tidak disalin ke tempat lain)             |
 | Pitch deck unggahan dashboard                           | Bucket GCS deck (ikut dihapus saat penghapusan/retensi) |

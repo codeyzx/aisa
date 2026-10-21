@@ -30,7 +30,8 @@ sampai di WhatsApp.
   penerimaan di produksi tidak memakai Playwright terhadap URL produksi; ia memakai rute
   `aisa-api` (tabel rute di `services/api/README.md`) dan browser yang dikendalikan sendiri.
 - **Tombol tulis di dashboard** (tanggapan, koreksi, tanggapan massal, Hapus data, simpan
-  Pengaturan, STOP/LANJUT, Unggah pitch deck) memanggil `aisa-api` lewat
+  aturan di Aturan penilaian, simpan retensi dan STOP/LANJUT di Pengaturan, Unggah pitch deck)
+  dan pertanyaan **Tanya AISA** memanggil `aisa-api` lewat
   `AISA_API_URL` (`features/aisa/aisa.action.ts`). Di E2E, `scripts/e2e-fast.ts` memberi
   setiap shard alamatnya sendiri (`127.0.0.1:8791` ke atas) dan `e2e/acceptance/fixtures.ts`
   menjalankan tiruan `aisa-api` (`e2e/acceptance/mock-aisa-api.ts`) di sana. Tiruan itu
@@ -56,7 +57,7 @@ Setelah aksi yang mengubah data, periksa:
    (koreksi tidak menyentuh `category` maupun skor).
 2. **Jejak audit** — baris `history`, pekerjaan `jobs/{id}` beserta `steps` (model, token,
    status), dan `dailyStats/{tanggal WIB}`.
-3. **Setiap pembaca data itu** — Hari ini, daftar dan detail Proposal, Riwayat, Aktivitas AI,
+3. **Setiap pembaca data itu** — Dashboard, daftar dan detail Proposal, Riwayat, Aktivitas AI,
    Tren, teks ringkasan berikutnya (pratinjau `uv run aisa digest 09.00`, tidak mengirim), dan
    jawaban Asisten. Angka yang sama harus sama di semua tempat.
 4. **Layar asal setelah muat ulang**, bukan state browser.

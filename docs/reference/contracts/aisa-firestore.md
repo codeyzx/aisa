@@ -129,6 +129,11 @@ updated with `Increment`.
   delivery fails and is ignored.
 - `pendingConfirmations/{phone}` — `{command, proposalIds, expiresAt}` for bulk responses
   awaiting `YA`.
+- `assistantSessions/{key}` — `{date, sessionId}`: the Agent Runtime session the Asisten
+  reuses for that key during one WIB `date`; a new day creates a new session. The key is a
+  manager phone for WhatsApp, or `dashboard-<uid>-<conversationId>` for the dashboard's
+  Tanya AISA (`POST /api/assistant/ask`), so a dashboard conversation never shares a
+  session with a phone or with another user.
 
 ## Deleting a proposal
 

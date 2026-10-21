@@ -32,7 +32,7 @@ What is listed: every directory the repository intends to contain, plus one leve
   - `api/` — HTTP route handlers — session and health.
   - `login/` — Sign-in: Firebase email/password, then a session cookie.
 - `components/` — Shared presentation. Nothing here reaches for a feature.
-  - `shell/` — The application shell: sidebar, navigation, topbar.
+  - `shell/` — The application shell: sidebar, header, command menu, notifications, and user menu.
   - `ui/` — The primitive component set the rest of the UI is built from.
 - `docs/` — The documentation surface. Its own index maps it.
 - `e2e/` — Browser specs driven against a running app.

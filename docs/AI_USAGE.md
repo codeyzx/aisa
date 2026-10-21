@@ -16,22 +16,22 @@ berkas yang boleh diubah dan kriteria selesai yang bisa diperiksa.
 
 ### Pembagian kerja
 
-| Area                                 | Peran AI                                                                                                                                      | Keluaran di repo                                                                                                                |
-| ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| Penggalian kebutuhan                 | Mencecar rancangan (`overview-project.md`, `tech.md`) dengan pertanyaan sampai istilah, alur, dan batasannya tegas                            | Keputusan yang tercatat di dokumen; daftar butir **[VERIFIKASI]** di `tech.md`                                                  |
-| Glosarium dan kontrak data           | Menyusun istilah tunggal untuk setiap konsep beserta istilah yang dihindari, lalu kontrak koleksi Firestore                                   | `GLOSSARY.md`, `docs/reference/contracts/aisa-firestore.md`, `services/api/aisa/models.py` sebagai sumber kebenaran bentuk data |
-| Penyediaan infrastruktur             | Menjalankan `gcloud` untuk Firestore, Artifact Registry, bucket GCS, Secret Manager, Cloud Run, Cloud Scheduler; mencatat yang terblokir izin | Layanan `aisa-api` dan `aisa-dashboard` di Cloud Run `asia-southeast2`, job `aisa-ringkasan-pagi`/`-sore`                       |
-| Layanan `aisa-api` (Python, FastAPI) | Menulis intake, Penilai, skor dan kategori, ringkasan, webhook GOWA, Orchestrator, API dashboard, beserta unit test                           | `services/api/aisa/*.py`, `services/api/tests/`                                                                                 |
-| Asisten (Google ADK)                 | Menulis agent, tools baca Firestore, dan skrip deploy ke Agent Runtime                                                                        | `services/api/aisa/assistant/`, `services/api/deploy_assistant.py`                                                              |
-| Adaptasi dashboard                   | Mengubah starter Next.js internal Aixel menjadi halaman AISA: Hari ini, Proposal, Tren, Aktivitas AI, Riwayat, Pengaturan                     | `app/(app)/*`, `features/aisa/*`, `lib/aisa-api/*`                                                                              |
-| Pengujian                            | Membuat deck sintetis untuk startup fiktif, menjalankan T01–T11 di produksi, mencatat hasil dari Firestore dan log                            | `docs/TESTING.md`                                                                                                               |
+| Area                                 | Peran AI                                                                                                                                                           | Keluaran di repo                                                                                                                |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Penggalian kebutuhan                 | Mencecar rancangan (`overview-project.md`, `tech.md`) dengan pertanyaan sampai istilah, alur, dan batasannya tegas                                                 | Keputusan yang tercatat di dokumen; daftar butir **[VERIFIKASI]** di `tech.md`                                                  |
+| Glosarium dan kontrak data           | Menyusun istilah tunggal untuk setiap konsep beserta istilah yang dihindari, lalu kontrak koleksi Firestore                                                        | `GLOSSARY.md`, `docs/reference/contracts/aisa-firestore.md`, `services/api/aisa/models.py` sebagai sumber kebenaran bentuk data |
+| Penyediaan infrastruktur             | Menjalankan `gcloud` untuk Firestore, Artifact Registry, bucket GCS, Secret Manager, Cloud Run, Cloud Scheduler; mencatat yang terblokir izin                      | Layanan `aisa-api` dan `aisa-dashboard` di Cloud Run `asia-southeast2`, job `aisa-ringkasan-pagi`/`-sore`                       |
+| Layanan `aisa-api` (Python, FastAPI) | Menulis intake, Penilai, skor dan kategori, ringkasan, webhook GOWA, Orchestrator, API dashboard, beserta unit test                                                | `services/api/aisa/*.py`, `services/api/tests/`                                                                                 |
+| Asisten (Google ADK)                 | Menulis agent, tools baca Firestore, dan skrip deploy ke Agent Runtime                                                                                             | `services/api/aisa/assistant/`, `services/api/deploy_assistant.py`                                                              |
+| Adaptasi dashboard                   | Mengubah starter Next.js internal Aixel menjadi halaman AISA: Dashboard, Proposal, Tren, Aktivitas AI, Riwayat, Aturan penilaian, Pengaturan, dan panel Tanya AISA | `app/(app)/*`, `features/aisa/*`, `lib/aisa-api/*`                                                                              |
+| Pengujian                            | Membuat deck sintetis untuk startup fiktif, menjalankan T01–T11 di produksi, mencatat hasil dari Firestore dan log                                                 | `docs/TESTING.md`                                                                                                               |
 
 ### Yang diputuskan manusia
 
 AI mengusulkan dan menulis, tetapi aturan produk berikut adalah keputusan tim. Semuanya
 tertulis di `GLOSSARY.md`, `tech.md`, dan kontrak Firestore, lalu ditegakkan oleh kode:
 
-- **Aturan penilaian disimpan di Firestore dan diubah lewat halaman Pengaturan**, bukan
+- **Aturan penilaian disimpan di Firestore dan diubah lewat halaman Aturan penilaian**, bukan
   Google Sheets. Aturan berversi: setiap perubahan wajib beralasan, menyimpan salinan di
   `rulesVersions/{v}`, dan tercatat di Riwayat. Bobot harus mencakup kelima kriteria dan
   berjumlah 1.

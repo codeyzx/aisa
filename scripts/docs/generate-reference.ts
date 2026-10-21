@@ -1050,7 +1050,8 @@ const LAYOUT_NOTES: Record<string, string> = {
   'app/login': 'Sign-in: Firebase email/password, then a session cookie.',
   'e2e/acceptance':
     'Acceptance specs for the AISA screens and write buttons, with a mock `aisa-api` the container calls.',
-  'components/shell': 'The application shell: sidebar, navigation, topbar.',
+  'components/shell':
+    'The application shell: sidebar, header, command menu, notifications, and user menu.',
   'components/ui':
     'The primitive component set the rest of the UI is built from.',
   'features/aisa':

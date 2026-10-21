@@ -13,8 +13,9 @@
   Python secara langsung.
 - **Untuk** — manajer program (akun Firebase dengan klaim `role`), developer yang
   merawat dashboard ini, dan coding agent yang bekerja di dalamnya.
-- **Outcome** — halaman Hari ini, Proposal, Tren, Aktivitas, Riwayat, dan Pengaturan
-  yang membaca Firestore di server; setiap tombol yang mengubah data memanggil
+- **Outcome** — halaman Dashboard, Proposal, Tren, Aktivitas AI, Riwayat, Aturan
+  penilaian, dan Pengaturan yang membaca Firestore di server, plus panel **Tanya AISA**
+  yang bertanya ke Asisten lewat `aisa-api`; setiap tombol yang mengubah data memanggil
   `aisa-api` lewat server action dengan header `X-AISA-Key`, jadi Next tidak pernah
   menulis data AISA ke Firestore.
 - **Workflow utama** — jalan lokal sampai masuk ke dashboard
@@ -72,7 +73,7 @@ mematikan emulator? Jalankan `pnpm emulators` di satu terminal, lalu `pnpm dev:n
 
 **Berhasil kalau**: <http://localhost:3000> membawa kamu ke `/login`, kamu masuk sebagai
 `manager@aisa.test` dengan kata sandi `password123` (akun emulator yang dibuat
-`pnpm seed` dan dicetak oleh `pnpm setup:local`), dan kamu sampai di `/hari-ini`.
+`pnpm seed` dan dicetak oleh `pnpm setup:local`), dan kamu sampai di `/dashboard`.
 Akun ini hanya ada di Auth emulator.
 
 `pnpm setup:local` tidak menghapus apa pun, jadi aman diulang kapan saja. Rincian apa

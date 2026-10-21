@@ -108,7 +108,7 @@ covered in [deploy](../how-to/deploy.md).
 
 ## Looking around
 
-The signed-in app lands on `/hari-ini`. The seed writes fake AISA data — proposals in
+The signed-in app lands on `/dashboard`. The seed writes fake AISA data — proposals in
 every category, jobs with steps, history, fourteen days of stats, a digest and the
 scoring rules — so every page has something to show.
 

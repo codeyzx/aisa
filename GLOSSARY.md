@@ -25,7 +25,7 @@ Pencocokan sektor, tahap pendanaan, dan besar dana proposal dengan tesis dana; b
 _Avoid_: filter, screening
 
 **Aturan penilaian**:
-Kumpulan bobot, patokan nilai, aturan kecocokan, dan batas kategori yang berlaku; berversi dan diubah manajer di halaman Pengaturan.
+Kumpulan bobot, patokan nilai, aturan kecocokan, dan batas kategori yang berlaku; berversi dan diubah manajer di halaman Aturan penilaian (`/aturan`).
 _Avoid_: rubrik (untuk keseluruhan), config, Sheets
 
 **Kategori**:
@@ -68,7 +68,7 @@ Penghapusan proposal beserta teks dan deck-nya atas permintaan founder, dengan a
 _Avoid_: arsipkan (arsip adalah tanggapan, bukan penghapusan)
 
 **Retensi**:
-Periode berapa lama proposal yang diarsipkan disimpan sebelum dihapus otomatis; diatur di Pengaturan.
+Periode berapa lama proposal yang diarsipkan disimpan sebelum dihapus otomatis; diatur di Pengaturan, tab Privasi.
 _Avoid_: kedaluwarsa, pembersihan
 
 ## Keluaran

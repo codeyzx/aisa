@@ -50,7 +50,7 @@ Teks diambil di server **per halaman** dengan penanda `[hal. n]`. Hanya teks yan
 
 Informasi yang tidak ada diberi nilai 1 dan ditandai **"tidak disebut"**. Skor dihitung dengan kode: `skor = Σ bobot × (nilai − 1) / 4`. Bila tidak ada satu pun kutipan sebuah kriteria yang bisa ditemukan di halaman yang disebut, nilainya dibatasi paling tinggi 2 dan dashboard menampilkan tanda **kutipan tidak terverifikasi**.
 
-**Tahap 2 — Cek kecocokan (kode, tanpa AI dan tanpa token).** Sektor, tahap pendanaan, dan besar dana dicocokkan dengan aturan yang diatur manajer di halaman **Pengaturan** dashboard (disimpan di Firestore). Keputusan: butir yang **tidak disebut** di deck dianggap **gagal** cek, karena kecocokan yang tidak bisa dibuktikan tidak boleh dianggap cocok.
+**Tahap 2 — Cek kecocokan (kode, tanpa AI dan tanpa token).** Sektor, tahap pendanaan, dan besar dana dicocokkan dengan aturan yang diatur manajer di halaman **Aturan penilaian** dashboard (disimpan di Firestore). Keputusan: butir yang **tidak disebut** di deck dianggap **gagal** cek, karena kecocokan yang tidak bisa dibuktikan tidak boleh dianggap cocok.
 
 **Kategori:**
 
@@ -70,7 +70,7 @@ Ringkasan berisi proposal **yang belum ditanggapi**, dikelompokkan per kategori,
 
 Salam pembuka mengikuti jam kirim (Selamat pagi/siang/sore/malam), dengan nama manajer bila diatur. Setiap ringkasan memuat tepat satu insight, 1–2 kalimat, diawali label "Yang menarik:". Faktanya dipilih dan dihitung kode: tren sektor minggu ini dibanding minggu lalu bila ada sektor dengan minimal 3 proposal; bila tidak, fakta pertama yang berlaku dari urutan tetap: berapa proposal baru yang masuk Sangat cocok/Cocok, rata-rata skor kualitas minggu ini dibanding minggu lalu, jumlah "Berkualitas, di luar fokus" atau Perlu dicek manual yang belum ditanggapi, proposal belum ditanggapi dengan skor tertinggi, lalu berapa proposal yang sudah ditanggapi. Insight hanya kosong bila belum ada proposal sama sekali.
 
-> _Selamat pagi, Bu Rina. Sejak Senin pukul 17.00 masuk 100 proposal baru. Ada 100 proposal yang belum Ibu tanggapi._
+> _Selamat pagi, Pak Budi. Sejak Senin pukul 17.00 masuk 100 proposal baru. Ada 100 proposal yang belum Pak tanggapi._
 >
 > _**Sangat cocok (4)**_
 > _1. Tani Maju (agritech, Rp5 M) · 93. Pendapatannya tumbuh tiap kuartal dan timnya berpengalaman._
@@ -102,7 +102,7 @@ Contoh: "Fintech yang sangat cocok", "Yang berkualitas tapi di luar fokus", "Ken
 
 ### 7. Dashboard
 
-**Hari ini** · **Proposal** (filter, detail Tahap 1 dan Tahap 2, kutipan halaman, token per proposal) · **Tren** · **Aktivitas AI** · **Riwayat** · **Pengaturan** (lihat dan ubah aturan penilaian: bobot, dasar baseline, patokan nilai, cek kecocokan, kategori, model, retensi, kalibrasi). Tombol **Unggah pitch deck** (PDF) memasukkan proposal lewat alur penilaian yang sama dengan Form. Tombol **Hapus data** di detail proposal menghapusnya atas permintaan founder, dengan alasan wajib.
+**Dashboard** · **Proposal** (filter, detail Tahap 1 dan Tahap 2, kutipan halaman, token per proposal) · **Tren** · **Aktivitas AI** · **Riwayat** · **Aturan penilaian** (lihat dan ubah bobot, patokan nilai, cek kecocokan, batas kategori, dan model, dengan pratinjau dampak sebelum disimpan; dasar baseline; kalibrasi) · **Pengaturan** (profil, tampilan, ringkasan WhatsApp, integrasi dengan STOP/LANJUT, privasi dan retensi). Panel **Tanya AISA** di setiap halaman bertanya ke Asisten yang sama dengan WhatsApp, dengan tools baca saja. Tombol **Unggah pitch deck** (PDF) memasukkan proposal lewat alur penilaian yang sama dengan Form. Tombol **Hapus data** di detail proposal menghapusnya atas permintaan founder, dengan alasan wajib.
 
 ---
 
@@ -144,8 +144,8 @@ Bobot berasal dari **rata-rata dua benchmark**, dengan rujukan tambahan dari sur
 | Traksi                  | Kanal penjualan & kemitraan 10 | Traksi 10 + go-to-market 5                    | **12,5%** |
 | Model bisnis & keuangan | Kebutuhan dana 5 + lainnya 5   | Unit economics 5 + kesiapan dana 3 + risiko 2 | **10%**   |
 
-- **Penyesuaian:** manajer bisa mengubah bobot di halaman **Pengaturan** dashboard sesuai tesis dananya; setiap perubahan dicatat dengan alasan dan versinya di Riwayat.
-- **Kalibrasi dari koreksi manajer:** proposal dihitung "ditinjau manajer" setelah diberi tanggapan atau koreksi kategori. AI "sepakat" bila manajer membiarkan kategori AI. Pengaturan menampilkan tingkat kesepakatan ("AI sepakat dengan manajer pada X dari Y proposal yang ditinjau") dan daftar koreksi beserta arahnya (naik/turun) dan alasannya, sebagai bahan untuk menyesuaikan bobot dan patokan. Koreksi tidak pernah mengubah kategori atau skor AI yang tersimpan.
+- **Penyesuaian:** manajer bisa mengubah bobot di halaman **Aturan penilaian** dashboard sesuai tesis dananya; setiap perubahan dicatat dengan alasan dan versinya di Riwayat.
+- **Kalibrasi dari koreksi manajer:** proposal dihitung "ditinjau manajer" setelah diberi tanggapan atau koreksi kategori. AI "sepakat" bila manajer membiarkan kategori AI. Halaman Aturan penilaian menampilkan tingkat kesepakatan ("AI sepakat dengan manajer pada X dari Y proposal yang ditinjau") dan daftar koreksi beserta arahnya (naik/turun) dan alasannya, sebagai bahan untuk menyesuaikan bobot dan patokan. Koreksi tidak pernah mengubah kategori atau skor AI yang tersimpan.
 - **Kalibrasi analis:** 10–20 deck lama dinilai 2–3 analis dengan matriks yang sama, lalu dashboard menampilkan tingkat kesepakatan AI dengan analis. Bagian ini masih kosong karena datanya belum ada.
 - **Keterbatasan:** kedua sumber adalah metode angel dan investor tahap awal, bukan standar resmi VC, dan pemetaan ke 5 kriteria AISA adalah interpretasi tim.
 
@@ -166,7 +166,7 @@ Bobot berasal dari **rata-rata dua benchmark**, dengan rujukan tambahan dari sur
 
 ## Teknologi
 
-Google Forms dan Drive (dipicu Apps Script) · ekstraksi teks di Cloud Run · Google ADK + Gemini · Agent Runtime, Sessions, dan Memory Bank untuk asisten · Cloud Scheduler 09.00 dan 17.00 WIB serta retensi 02.00 WIB · Firestore · aturan penilaian di Firestore (diatur lewat halaman Pengaturan) · Secret Manager · GOWA di VPS · dashboard di Cloud Run.
+Google Forms dan Drive (dipicu Apps Script) · ekstraksi teks di Cloud Run · Google ADK + Gemini · Agent Runtime, Sessions, dan Memory Bank untuk asisten · Cloud Scheduler 09.00 dan 17.00 WIB serta retensi 02.00 WIB · Firestore · aturan penilaian di Firestore (diatur lewat halaman Aturan penilaian) · Secret Manager · GOWA di VPS · dashboard di Cloud Run.
 
 ## Batasan hackathon
 

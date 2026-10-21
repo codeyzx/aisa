@@ -33,7 +33,7 @@ test('DSB-20 a scored, fitting proposal shows both stages, quotes and tokens', a
   await expect(
     top.getByText('Platform pembiayaan dan input pertanian untuk petani padi.'),
   ).toBeVisible()
-  await expect(top.getByText('agritech', { exact: true })).toBeVisible()
+  await expect(top.getByText('Agritech', { exact: true })).toBeVisible()
   await expect(top.getByText('seed', { exact: true })).toBeVisible()
   await expect(top.getByText(/^Cari Rp\s5\.000\.000\.000$/u)).toBeVisible()
   await expect(top.getByText('Sangat cocok', { exact: true })).toBeVisible()

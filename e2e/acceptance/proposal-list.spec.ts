@@ -155,13 +155,14 @@ test('DSB-13 sektor lists the seeded sectors and filters on them', async ({
 }) => {
   await page.goto('/proposal')
   await page.getByRole('combobox', { name: 'Sektor', exact: true }).click()
+  // One display label per sector, the same one the table and detail show.
   for (const sector of [
-    'agritech',
-    'edtech',
+    'Agritech',
+    'Edtech',
     'F&B',
-    'fashion',
-    'fintech',
-    'healthtech',
+    'Fashion',
+    'Fintech',
+    'Healthtech',
   ]) {
     await expect(
       page.getByRole('option', { name: sector, exact: true }),

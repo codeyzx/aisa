@@ -29,7 +29,7 @@ import {
 import {
   CATEGORY_LABEL,
   QUALITY_OUTSIDE_FOCUS_LABEL,
-  RESPONSE_LABEL,
+  sectorLabel,
   STATUS_LABEL,
 } from '@/features/aisa/aisa.labels'
 import {
@@ -103,7 +103,9 @@ function matchesFilters(row: ProposalRow, f: ProposalListParams) {
         : row.category === f.kategori)) &&
     (!f.luarFokus || row.outsideFocus) &&
     (!f.status || row.status === f.status) &&
-    (!f.sektor || row.sector === f.sektor) &&
+    (!f.sektor ||
+      (row.sector !== null &&
+        sectorLabel(row.sector) === sectorLabel(f.sektor))) &&
     (!needle ||
       [row.name, row.founderName, row.oneLiner, row.sector].some((text) =>
         text?.toLowerCase().includes(needle),
@@ -228,11 +230,13 @@ export function ProposalsList({
     ? filters.arah === 'turun'
     : naturalDescending(sortKey)
 
+  // Sectors are compared and listed by their display label, so "f&b" and
+  // "F&B" from two decks are one option, named as the table names it.
   const sectors = useMemo(
     () =>
       [
         ...new Set(
-          all.map((row) => row.sector).filter((s): s is string => !!s),
+          all.flatMap((row) => (row.sector ? [sectorLabel(row.sector)] : [])),
         ),
       ].toSorted((a, b) => a.localeCompare(b, 'id')),
     [all],
@@ -240,12 +244,13 @@ export function ProposalsList({
 
   // A sector in the URL that no loaded proposal has is still a real filter
   // (with nothing in it), so it stays selectable and named on the trigger.
+  const sectorValue = filters.sektor ? sectorLabel(filters.sektor) : 'semua'
   const sectorItems = useMemo(() => {
     const items: Record<string, string> = { semua: 'Semua sektor' }
     for (const sector of sectors) items[sector] = sector
-    if (filters.sektor) items[filters.sektor] = filters.sektor
+    if (sectorValue !== 'semua') items[sectorValue] = sectorValue
     return items
-  }, [sectors, filters.sektor])
+  }, [sectors, sectorValue])
 
   // Every filter except the tab: the tab counts are counted over this.
   const base = useMemo(
@@ -360,12 +365,12 @@ export function ProposalsList({
       ],
       ...target.map((row) => [
         row.name,
-        row.sector ?? '',
+        row.sector ? sectorLabel(row.sector) : '',
         row.stage ?? '',
         row.score ?? '',
         row.category ? CATEGORY_LABEL[row.category] : '',
         STATUS_LABEL[row.status],
-        row.response ? RESPONSE_LABEL[row.response] : 'Belum ditanggapi',
+        DECISION_LABEL[row.response ?? 'baru'],
         row.fundingAskIdr ?? '',
         csvDay.format(row.createdAt),
       ]),
@@ -499,7 +504,7 @@ export function ProposalsList({
         </Select>
         <Select
           items={sectorItems}
-          value={filters.sektor ?? 'semua'}
+          value={sectorValue}
           onValueChange={(value) =>
             value !== null &&
             void setFilters({
@@ -708,7 +713,7 @@ export function ProposalsList({
                     </td>
                     <td className="px-3 py-3">
                       {row.sector ? (
-                        <p className={capitalized}>{row.sector}</p>
+                        <p>{sectorLabel(row.sector)}</p>
                       ) : (
                         <p className="text-muted-foreground">—</p>
                       )}

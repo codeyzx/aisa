@@ -124,3 +124,14 @@ describe('csvCell', () => {
     expect(csvCell('plain')).toBe('plain')
   })
 })
+
+describe('toEvents display words', () => {
+  it('shows an old raw intake detail with the score and category labels', () => {
+    const [e] = toEvents(
+      [row({ detail: 'Proposal Tani masuk: skor 63.1, tidak_cocok' })],
+      [],
+      [],
+    )
+    expect(e!.detail).toBe('Proposal Tani masuk: skor 63,1, Tidak cocok')
+  })
+})

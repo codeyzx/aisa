@@ -3,6 +3,7 @@
 // from a record the row points at (its proposal, the digest it announced); a
 // field with nothing behind it stays undefined and the row renders without it.
 
+import { historyDetailText, sectorLabel } from '@/features/aisa/aisa.labels'
 import {
   type Category,
   CATEGORIES,
@@ -65,7 +66,10 @@ export interface RiwayatEvent {
   at: Date
   via: Via
   actor: ActorType
-  /** The server-written sentence describing the change. */
+  /**
+   * The server-written sentence describing the change, through
+   * `historyDetailText` so an older raw score/category reads in display words.
+   */
   detail: string
   reason?: string
   proposal?: EventProposal
@@ -178,7 +182,9 @@ export function toEvents(
             ? DELETED_PROPOSAL_NAME
             : (row.proposalName ?? p?.name ?? row.proposalId),
           linkable: !deleted,
-          sector: p?.profile?.sector ?? undefined,
+          sector: p?.profile?.sector
+            ? sectorLabel(p.profile.sector)
+            : undefined,
           source: p?.source.kind,
           score: p?.assessment?.score,
           qualityOutsideFocus: p?.qualityOutsideFocus,
@@ -197,7 +203,7 @@ export function toEvents(
       at: row.at,
       via: row.via,
       actor: actorOf(row, kind),
-      detail: row.detail,
+      detail: historyDetailText(row.detail),
       reason: row.reason?.trim() || undefined,
       proposal,
       decision:

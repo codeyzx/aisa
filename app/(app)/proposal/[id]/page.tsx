@@ -41,6 +41,7 @@ import {
   HISTORY_ACTION_LABEL,
   labelOf,
   QUALITY_OUTSIDE_FOCUS_LABEL,
+  sectorLabel,
   STATUS_LABEL,
   VIA_LABEL,
 } from '@/features/aisa/aisa.labels'
@@ -202,7 +203,7 @@ export default async function ProposalDetailPage({
                 <div className="flex flex-wrap gap-x-4 gap-y-1">
                   <Meta icon={TagIcon}>
                     {profile?.sector ? (
-                      <span className={capitalized}>{profile.sector}</span>
+                      <span>{sectorLabel(profile.sector)}</span>
                     ) : (
                       'Sektor tidak disebut'
                     )}

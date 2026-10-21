@@ -57,8 +57,11 @@ category; `perlu_dicek_manual` never carries a score or category.
 | `createdAt`, `updatedAt`, `assessedAt?` | timestamp                                                       |                                                                     |
 
 `Assessment`: `{criteria: {<Criterion>: {value: 1..5, reason, notMentioned: bool,
-citations: [{page: int, quote}]}}, score: 0..100 (float, 1 decimal), rulesVersion: int,
+citations: [{page: int, quote}], citationsUnverified: bool}}, score: 0..100 (float, 1 decimal), rulesVersion: int,
 model}`.
+
+`citationsUnverified` is true when none of the criterion's quotes could be found on the
+page it cites; the code then caps `value` at 2 and the dashboard shows a badge.
 
 Page text lives in `proposalTexts/{proposalId}`: `{pages: [string], charCount}` (index 0 =
 page 1). Kept apart so list queries never load deck text.
@@ -71,12 +74,18 @@ page 1). Kept apart so list queries never load deck text.
 `Rules`: `{version: int, weights: {<Criterion>: float}` (sum 1.0), `anchors: {<Criterion>:
 {1, 3, 5: string}}`, `fit: {sectors: [string], stages: [string], fundingMinIdr,
 fundingMaxIdr}`, `thresholds: {sangatCocok: 80, cocok: 65, kurangCocok: 45,
-qualityOutsideFocus: 65}`, `models: {penilai, ringkasan, insight, asisten, orchestrator}`,
-`minCharsPerPage: int, changedAt, reason}`.
+qualityOutsideFocus: 65}`, `models: {penilai, ringkasan, insight, asisten}`,
+`minCharsPerPage: int, retentionDays: int, changedAt, reason}`. `retentionDays` defaults
+to 90.
+
+There is no Orchestrator model: commands are recognised by code. `models.asisten` is
+informational only; the Asisten's model is fixed when it is deployed to Agent Runtime.
 
 ## `settings/runtime`
 
-`{paused: bool, pausedAt?, pausedVia?}` — STOP sets `paused`, LANJUT clears it.
+`{paused: bool, pausedAt?, pausedVia?}` — STOP sets `paused`, LANJUT clears it. While
+paused, a WhatsApp message that is not a command gets "AISA sedang dijeda" instead of
+reaching the Asisten.
 
 ## `jobs/{jobId}` and `jobs/{jobId}/steps/{stepId}`
 
@@ -86,18 +95,22 @@ startedAt, endedAt?, durationMs?, stepCount, tokensIn, tokensOut}`.
 Step: `{seq: int, at, action, tool, actor: StepActor, model?, read?, wrote?, tokensIn,
 tokensOut, durationMs, status: "ok" | "gagal" | "dihentikan", error?}`. Code steps have
 `actor: "kode"` and zero tokens. Tokens come from the model response `usage_metadata`.
+An `asisten` job writes one step per tool call. The daily retention run is a job of kind
+`perintah` with agent "Retensi".
 
 ## `history/{id}`
 
 Audit trail (Riwayat): `{at, via: Via, action, proposalId?, proposalName?, before?, after?,
 reason?, detail}` where `action` ∈ `tanggapan`, `tanggapan_massal`, `koreksi`,
-`aturan_diubah`, `stop`, `lanjut`, `ringkasan_terkirim`, `proposal_masuk`.
+`aturan_diubah`, `stop`, `lanjut`, `ringkasan_terkirim`, `proposal_masuk`, `proposal_dihapus`.
 
 ## `digests/{digestId}`
 
-`{slot: "09.00" | "17.00", windowStart?, sentAt, text, counts: {<Category>, kualitasLuarFokus,
+`{slot: "09.00" | "17.00", windowStart?, sentAt, text, insight: string | null, counts: {<Category>, kualitasLuarFokus,
 perluDicekManual, belumDitanggapi, baruMasuk}, proposalIds, usedTemplate: bool, jobId,
 gowaMessageIds: [string]}`. `windowStart` is null for the first digest ever sent.
+`insight` is the 1–2 sentence insight used in the message, stored without its "Yang
+menarik:" label (the message always prints it with the label), or null when there was none.
 
 ## `dailyStats/{YYYY-MM-DD}` (WIB date)
 
@@ -111,3 +124,13 @@ updated with `Increment`.
   delivery fails and is ignored.
 - `pendingConfirmations/{phone}` — `{command, proposalIds, expiresAt}` for bulk responses
   awaiting `YA`.
+
+## Deleting a proposal
+
+A proposal is deleted on a founder's request (`DELETE /api/proposals/{id}` with a reason,
+or `aisa delete-proposal`) or by the daily retention run, which deletes proposals archived
+(`response.kind` `arsipkan`) more than `rules.retentionDays` days ago.
+Either path deletes `proposals/{id}`, `proposalTexts/{id}`, the uploaded deck in GCS, the
+proposal's jobs with their steps, and any `pendingConfirmations` naming it. `history` rows
+for the proposal are kept but scrubbed: `proposalName` becomes "(dihapus)" and `before` /
+`after` are removed. One `proposal_dihapus` row records the deletion and its reason.

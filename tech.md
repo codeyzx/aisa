@@ -15,7 +15,7 @@
 4. **Tidak mengarang.** Informasi yang tidak ada ditandai "tidak disebut"; deck yang tidak terbaca menjadi "Perlu dicek manual".
 5. **Keputusan di tangan manusia.** AI tidak mengundang, mengarsipkan, atau mengirim pesan ke founder. Semua tanggapan berasal dari perintah manajer.
 6. **Semua langkah tercatat** dalam log Aktivitas AI dengan format seragam.
-7. Bagian bertanda **[VERIFIKASI]** bisa berubah (nama model, API, endpoint). Cek dokumentasi resmi terbaru sebelum implementasi.
+7. Nama model, API, dan endpoint di dokumen ini mengikuti kode di `services/api`; bila berbeda, kode yang benar.
 8. Catat penggunaan AI coding assistant di `docs/AI_USAGE.md` (TOR 6.3). Jangan commit secret, nomor WA asli, atau isi pitch deck.
 
 ---
@@ -27,9 +27,10 @@
 - Intake proposal lewat Google Form → Drive, atau unggah PDF di dashboard (fungsi intake yang sama)
 - Ekstraksi teks per halaman dan penilaian saat masuk (kualitas → cek kecocokan → kategori)
 - Ringkasan WhatsApp pukul **09.00 dan 17.00** berisi proposal yang belum ditanggapi, dikelompokkan per kategori
-- Perintah manajer di WhatsApp: tanggapi proposal, koreksi kategori, STOP
+- Perintah manajer di WhatsApp: tanggapi proposal, koreksi kategori, STOP/LANJUT
 - Asisten tanya data dan saran
-- Dashboard: Hari ini, Proposal + detail, Tren, Aktivitas AI, Riwayat, Pengaturan (ubah aturan penilaian), unggah PDF
+- Dashboard: Hari ini, Proposal + detail, Tren, Aktivitas AI, Riwayat, Pengaturan (ubah aturan penilaian dan retensi), unggah PDF, hapus data atas permintaan founder
+- Retensi harian: proposal yang diarsipkan lebih lama dari periode retensi dihapus
 
 **Tidak masuk:** saran tindak lanjut otomatis, audio/voice note, OCR, analisis mendalam/memo, banyak pengguna (hanya 1 manajer), pengiriman pesan ke founder, masking dokumen (dikerjakan terpisah), pencarian internet.
 
@@ -39,66 +40,67 @@
 
 ```
  Founder ──▶ Google Form ──▶ Google Drive (pitch deck)
-                  │ onFormSubmit (Apps Script)
+                  │ onFormSubmit (Apps Script, HMAC)
                   ▼
- ┌──────────────────────────────────────────────┐      ┌────────────────┐
- │ Cloud Run · aisa-worker                       │      │ Cloud Scheduler│
- │  • intake: ekstrak teks → Penilai → simpan    │◀─────│ 09.00 & 17.00  │
- │  • digest: hitung → Insight → Ringkasan → kirim│      └────────────────┘
- └──────┬──────────────────────────┬────────────┘
-        │ Gemini (Agent Platform)  │ kirim pesan
-        ▼                          ▼
- ┌──────────────┐           ┌──────────────┐         ┌──────────────┐
- │  Firestore   │◀──────────│ Cloud Run ·  │◀───────▶│ GOWA (VPS)   │◀──▶ WhatsApp
- │ data & log   │           │ aisa-gateway │ webhook │              │     manajer
- └──────▲───────┘           │ perintah, API│         └──────────────┘
-        │                   └──────┬───────┘
-        │                          │ pertanyaan
- ┌──────┴───────┐           ┌──────▼─────────────────────────────┐
- │ Cloud Run ·  │           │ Agent Runtime · Asisten             │
- │ dashboard    │           │  + Sessions + Memory Bank           │
- └──────────────┘           │  + tools baca data                  │
-                            └─────────────────────────────────────┘
- Firestore: aturan penilaian (rubrik, bobot, aturan kecocokan, batas kategori), diatur di halaman Pengaturan
+ ┌─────────────────────────────────────────────┐     ┌──────────────────┐
+ │ Cloud Run · aisa-api (asia-southeast2)      │◀────│ Cloud Scheduler  │
+ │  • intake: ekstrak teks → Penilai → simpan  │OIDC │ 09.00 & 17.00    │
+ │  • digest: hitung → Insight → Ringkasan     │     │ retensi 02.00    │
+ │  • webhook GOWA: perintah (kode) / Asisten  │     └──────────────────┘
+ │  • API tulis dashboard, hapus data, retensi │◀───────▶ GOWA (VPS) ◀──▶ WhatsApp
+ └───┬──────────────┬───────────────┬──────────┘ webhook            manajer
+     │ Gemini       │ tulis         │ pertanyaan
+     │ (global)     ▼               ▼
+     │       ┌──────────────┐  ┌─────────────────────────────────┐
+     │       │ Firestore    │  │ Agent Runtime · Asisten         │
+     │       │ data, aturan,│  │ (us-central1) Sessions,         │
+     │       │ log          │  │ Memory Bank, tools baca data    │
+     │       └──────▲───────┘  └─────────────────────────────────┘
+     │              │ baca (Admin SDK)
+     │       ┌──────┴───────────────────┐
+     │       │ Cloud Run · dashboard    │── tulis lewat aisa-api
+     │       │ (Next.js, Firebase Auth) │
+     │       └──────────────────────────┘
+     ▼
+ GCS: deck unggahan
 ```
 
 ### Unit yang dibangun
 
-| Unit             | Tempat jalan             | Tanggung jawab                                                                                             |
-| ---------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------- |
-| **aisa-worker**  | Cloud Run                | Intake & penilaian proposal, ringkasan terjadwal                                                           |
-| **aisa-gateway** | Cloud Run                | Menerima webhook GOWA, menjalankan perintah manajer, meneruskan pertanyaan ke Asisten, API untuk dashboard |
-| **Asisten**      | Agent Runtime            | Agent percakapan dengan Sessions, Memory Bank, dan tools baca data                                         |
-| **Dashboard**    | Cloud Run                | Web app untuk manajer                                                                                      |
-| **Pemicu form**  | Google Apps Script       | Memberi tahu worker saat ada proposal baru                                                                 |
-| **GOWA**         | VPS tim (sudah berjalan) | Koneksi WhatsApp                                                                                           |
+| Unit            | Tempat jalan             | Tanggung jawab                                                                                                                     |
+| --------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **aisa-api**    | Cloud Run                | Intake & penilaian, ringkasan terjadwal, webhook GOWA (perintah + meneruskan ke Asisten), API tulis dashboard, hapus data, retensi |
+| **Asisten**     | Agent Runtime            | Agent percakapan dengan Sessions, Memory Bank, dan tools baca data                                                                 |
+| **Dashboard**   | Cloud Run (Next.js)      | Web app manajer; membaca Firestore langsung lewat Admin SDK, semua penulisan lewat aisa-api                                        |
+| **Pemicu form** | Google Apps Script       | Memberi tahu aisa-api saat ada proposal baru                                                                                       |
+| **GOWA**        | VPS tim (sudah berjalan) | Koneksi WhatsApp                                                                                                                   |
 
 ---
 
 ## 4. Tools dan layanan
 
-| Kebutuhan                | Tool / layanan                                                               | Catatan                                                                                                             |
-| ------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Form proposal            | Google Forms                                                                 | Field minimal + pemberitahuan tujuan + persetujuan                                                                  |
-| Penyimpanan pitch deck   | Google Drive                                                                 | Dibagikan ke service account                                                                                        |
-| Pemicu proposal baru     | Google Apps Script (`onFormSubmit`)                                          | Panggilan ke worker diamankan dengan tanda tangan rahasia                                                           |
-| Ekstraksi teks PDF       | Library Python ekstraksi teks PDF (mis. pypdf / pdfplumber) **[VERIFIKASI]** | Per halaman dengan penanda `[hal. n]`; tanpa OCR                                                                    |
-| Framework agent          | Google Agent Development Kit (ADK), Python                                   | Pin versi stabil terbaru **[VERIFIKASI]**                                                                           |
-| Model                    | Gemini lewat Gemini Enterprise Agent Platform                                | Lihat Bagian 6                                                                                                      |
-| Hosting agent percakapan | Agent Runtime (dulu Agent Engine)                                            | **[VERIFIKASI]** cara deploy dan pemanggilan                                                                        |
-| Konteks percakapan       | Sessions                                                                     | Satu session per hari untuk manajer                                                                                 |
-| Ingatan preferensi       | Memory Bank                                                                  | Hanya preferensi manajer, bukan data proposal                                                                       |
-| Layanan HTTP             | Cloud Run + FastAPI                                                          | Worker, gateway, dashboard                                                                                          |
-| Jadwal                   | Cloud Scheduler                                                              | 09.00 dan 17.00, zona `Asia/Jakarta`                                                                                |
-| Database                 | Firestore                                                                    | Proposal, penilaian, tanggapan, riwayat, log aktivitas, statistik harian                                            |
-| Konfigurasi penilaian    | Firestore + halaman Pengaturan di dashboard                                  | Kriteria, bobot, patokan nilai, aturan kecocokan, batas kategori; berversi, setiap perubahan tercatat dengan alasan |
-| Rahasia                  | Secret Manager                                                               | Kredensial GOWA, secret webhook, password dashboard                                                                 |
-| WhatsApp                 | GOWA (REST API + webhook)                                                    | **[VERIFIKASI]** endpoint kirim pesan dan format webhook                                                            |
-| Dashboard                | React + Vite (atau halaman server-rendered sederhana)                        | Data lewat API gateway                                                                                              |
-| Logging & tracing        | Cloud Logging + Observability Agent Platform                                 | Pelengkap log Aktivitas AI di Firestore                                                                             |
-| Testing                  | pytest                                                                       | Unit test logika penilaian dan perintah                                                                             |
+| Kebutuhan                | Tool / layanan                                | Catatan                                                                                                              |
+| ------------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Form proposal            | Google Forms                                  | Field minimal + pemberitahuan tujuan + persetujuan                                                                   |
+| Penyimpanan pitch deck   | Google Drive                                  | Dibagikan ke service account                                                                                         |
+| Pemicu proposal baru     | Google Apps Script (`onFormSubmit`)           | Panggilan ke aisa-api ditandatangani HMAC (`X-AISA-Signature`)                                                       |
+| Ekstraksi teks PDF       | pypdf                                         | Per halaman dengan penanda `[hal. n]`; tanpa OCR                                                                     |
+| Framework agent          | Google Agent Development Kit (ADK), Python    | `google-adk>=2.12.0`                                                                                                 |
+| Model                    | Gemini lewat Gemini Enterprise Agent Platform | Lokasi `global`; lihat Bagian 6                                                                                      |
+| Hosting agent percakapan | Agent Runtime (dulu Agent Engine)             | Deploy dengan `deploy_assistant.py` lewat `vertexai` Client `agent_engines` (create/update); dipanggil dari aisa-api |
+| Konteks percakapan       | Sessions                                      | Satu session per hari untuk manajer                                                                                  |
+| Ingatan preferensi       | Memory Bank                                   | Hanya preferensi manajer, bukan data proposal                                                                        |
+| Layanan HTTP             | Cloud Run + FastAPI                           | Satu layanan `aisa-api`                                                                                              |
+| Jadwal                   | Cloud Scheduler                               | Ringkasan 09.00 dan 17.00, retensi `aisa-retensi` 02.00; zona `Asia/Jakarta`; token OIDC                             |
+| Database                 | Firestore                                     | Proposal, penilaian, tanggapan, riwayat, log aktivitas, statistik harian                                             |
+| Konfigurasi penilaian    | Firestore + halaman Pengaturan di dashboard   | Kriteria, bobot, patokan nilai, aturan kecocokan, batas kategori; berversi, setiap perubahan tercatat dengan alasan  |
+| Rahasia                  | Secret Manager                                | Kredensial GOWA, secret webhook, secret intake, kunci API internal                                                   |
+| WhatsApp                 | GOWA v9.3.1 (REST API + webhook)              | Kirim: `POST /send/message` dengan `X-Device-Id`; webhook bertanda `X-Hub-Signature-256` (HMAC-SHA256)               |
+| Dashboard                | Next.js di Cloud Run                          | Baca Firestore lewat Admin SDK; tulis lewat aisa-api; login Firebase Auth email/password (1 akun)                    |
+| Logging & tracing        | Cloud Logging + Observability Agent Platform  | Pelengkap log Aktivitas AI di Firestore                                                                              |
+| Testing                  | pytest                                        | Unit test logika penilaian dan perintah                                                                              |
 
-Region Cloud Run dan Firestore: `asia-southeast2` (Jakarta). Model dan Agent Runtime di region yang tersedia **[VERIFIKASI]**.
+Region: Cloud Run dan Firestore `asia-southeast2` (Jakarta); Agent Runtime `us-central1`; Gemini di lokasi `global`, satu-satunya lokasi yang melayani Gemini 3.x untuk project ini.
 
 ---
 
@@ -106,17 +108,19 @@ Region Cloud Run dan Firestore: `asia-southeast2` (Jakarta). Model dan Agent Run
 
 | Agent                 | Tempat jalan  | Tugas                                                                    | Input → Output                                                                        |
 | --------------------- | ------------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| **Penilai**           | aisa-worker   | Menilai 5 kriteria kualitas dan mengekstrak profil (sektor, tahap, dana) | Teks per halaman + rubrik → nilai 1–5, kutipan halaman, tanda "tidak disebut", profil |
-| **Insight**           | aisa-worker   | Menuliskan insight dari angka yang sudah dihitung                        | Kandidat insight (angka) → 3–4 kalimat                                                |
-| **Pembuat ringkasan** | aisa-worker   | Merangkai teks ringkasan WhatsApp                                        | Data ringkasan (angka, daftar per kategori, insight) → teks pesan                     |
+| **Penilai**           | aisa-api      | Menilai 5 kriteria kualitas dan mengekstrak profil (sektor, tahap, dana) | Teks per halaman + rubrik → nilai 1–5, kutipan halaman, tanda "tidak disebut", profil |
+| **Insight**           | aisa-api      | Menuliskan insight dari angka yang sudah dihitung                        | Kandidat insight (angka) → 1–2 kalimat berlabel "Yang menarik:"                       |
+| **Pembuat ringkasan** | aisa-api      | Merangkai teks ringkasan WhatsApp                                        | Data ringkasan (angka, daftar per kategori, insight) → teks pesan                     |
 | **Asisten**           | Agent Runtime | Menjawab pertanyaan dan memberi saran                                    | Pesan + session + memory → jawaban, memakai tools baca                                |
-| **Orchestrator**      | aisa-gateway  | Membedakan perintah dan pertanyaan                                       | Pesan → aksi (kode) atau diteruskan ke Asisten                                        |
+| **Orchestrator**      | aisa-api      | Kode, tanpa model: mengenali perintah                                    | Pesan → aksi (kode) atau diteruskan ke Asisten                                        |
 
 **Aturan penting:**
 
 - Penilai memakai **output terstruktur** (schema JSON) dan divalidasi kode; gagal validasi → coba ulang sekali → bila tetap gagal, status _Perlu dicek manual_.
 - Pembuat ringkasan tidak boleh mengubah angka. Kode mengecek bahwa setiap angka di teks cocok dengan data; bila tidak, pakai template tanpa AI.
-- Perintah penting (undang/pantau/arsipkan, koreksi kategori, STOP) **dikenali dengan kode**, tidak bergantung pada model.
+- Perintah (undang/pantau/arsipkan, koreksi kategori, STOP, LANJUT) **dikenali dengan kode**; tidak ada model Orchestrator. Pesan lain diteruskan ke Asisten, kecuali saat dijeda: dibalas "AISA sedang dijeda".
+- Kode memeriksa setiap kutipan Penilai di halaman yang disebut; bila tidak ada kutipan sebuah kriteria yang terverifikasi, nilainya dibatasi 2 dan kriteria ditandai `citationsUnverified`.
+- Insight dibatasi 1–2 kalimat dan label "Yang menarik:" dipastikan oleh kode.
 - Asisten **hanya punya tools baca**: cari proposal dengan filter, hitung, detail proposal, bandingkan, riwayat, tren. Tidak ada tool tulis.
 - Saran Asisten yang tidak berasal dari data proposal diberi label sebagai saran AI.
 
@@ -126,14 +130,15 @@ Region Cloud Run dan Firestore: `asia-southeast2` (Jakarta). Model dan Agent Run
 
 **Tahap awal (hackathon): stabil dulu.** Semua agent memakai model stabil yang sama:
 
-| Agent                                                      | Model awal         |
-| ---------------------------------------------------------- | ------------------ |
-| Penilai, Insight, Pembuat ringkasan, Asisten, Orchestrator | `gemini-3.8-flash` |
+| Agent                                        | Model awal          |
+| -------------------------------------------- | ------------------- |
+| Penilai, Insight, Pembuat ringkasan, Asisten | `gemini-3.8-flash`  |
+| Orchestrator                                 | (kode), tanpa model |
 
 - Bila kualitas penilaian kurang, Penilai boleh dinaikkan ke `gemini-3.1-pro-preview` (status preview).
-- Setelah sistem stabil, agent ringan (Orchestrator, Ringkasan, Insight, Asisten) bisa dipindah ke `gemini-3.5-flash-lite` untuk efisiensi.
-- Nama model disimpan sebagai konfigurasi, bukan ditulis di kode.
-- **[VERIFIKASI]** ketersediaan nama model di Agent Platform dan region yang dipakai.
+- Setelah sistem stabil, agent ringan (Ringkasan, Insight, Asisten) bisa dipindah ke `gemini-3.5-flash-lite` untuk efisiensi.
+- Nama model disimpan di aturan penilaian (`rules.models`) dan diubah di Pengaturan. `rules.models.asisten` hanya informasi: model Asisten ditetapkan saat deploy ke Agent Runtime.
+- Gemini dipanggil di lokasi `global`.
 
 ---
 
@@ -141,53 +146,61 @@ Region Cloud Run dan Firestore: `asia-southeast2` (Jakarta). Model dan Agent Run
 
 ### A. Proposal masuk dan dinilai
 
-1. Founder mengirim Form → Apps Script memanggil worker.
-2. Worker mencatat proposal (idempoten berdasarkan ID file Drive).
+1. Founder mengirim Form → Apps Script memanggil aisa-api (atau manajer mengunggah PDF di dashboard; deck disimpan di GCS).
+2. aisa-api mencatat proposal (idempoten berdasarkan ID file Drive).
 3. Teks diekstrak per halaman. Teks terlalu sedikit → _Perlu dicek manual_, selesai.
-4. **Penilai** menilai 5 kriteria dengan kutipan halaman.
+4. **Penilai** menilai 5 kriteria dengan kutipan halaman; kode memverifikasi kutipan.
 5. Kode menghitung skor 0–100 dengan bobot dari aturan penilaian aktif (Firestore); versi aturan disimpan bersama hasil penilaian.
-6. Kode menjalankan cek kecocokan (sektor, tahap, dana) dari aturan penilaian aktif.
+6. Kode menjalankan cek kecocokan (sektor, tahap, dana) dari aturan penilaian aktif; butir yang tidak disebut gagal.
 7. Kode menentukan kategori dan tanda "Berkualitas, di luar fokus".
 8. Hasil dan log aktivitas disimpan; statistik harian diperbarui.
 
 ### B. Ringkasan 09.00 dan 17.00
 
-1. Cloud Scheduler memanggil worker.
+1. Cloud Scheduler memanggil aisa-api (token OIDC).
 2. Kode mengambil proposal yang **belum ditanggapi**, menghitung jumlah per kategori, dan mengurutkan berdasarkan skor.
 3. Kode menghitung kandidat insight → **Insight** menuliskannya.
 4. **Pembuat ringkasan** merangkai teks per kategori (Sangat cocok, Cocok, Kurang cocok, Tidak cocok, Berkualitas di luar fokus, Perlu dicek manual) → kode mengecek angka.
-5. Pesan dikirim lewat GOWA. Tidak ada saran tindak lanjut.
+5. Pesan dikirim lewat GOWA, dibuka dengan salam sesuai jam kirim (Selamat pagi/siang/sore/malam) dan nama manajer bila `MANAGER_NAME` diatur. Tidak ada saran tindak lanjut.
 
 ### C. Pesan dari manajer
 
-1. GOWA meneruskan pesan ke gateway (webhook terverifikasi; hanya nomor manajer yang dilayani; pesan ganda diabaikan).
-2. **Orchestrator** mengenali perintah:
+1. GOWA meneruskan pesan ke aisa-api (webhook terverifikasi; hanya nomor manajer yang dilayani; pesan ganda diabaikan).
+2. Kode mengenali perintah:
    - `undang / pantau / arsipkan <nama>` atau `... semua <kategori>` → ubah status tanggapan
    - `pindahkan <nama> ke <kategori> karena ...` → koreksi kategori (skor AI tetap disimpan)
-   - `STOP` → hentikan pekerjaan yang sedang berjalan
-3. Selain perintah → diteruskan ke **Asisten** (session hari ini + Memory Bank + tools baca).
+   - `STOP` → jeda: berhenti di antara langkah; panggilan model yang sedang berjalan diselesaikan lalu hasilnya dibuang. `LANJUT` → lanjutkan
+3. Selain perintah → diteruskan ke **Asisten** (session hari ini + Memory Bank + tools baca). Saat dijeda, Asisten tidak dipanggil; balasannya "AISA sedang dijeda".
 4. Balasan dikirim lewat GOWA. Semua aksi tercatat di Riwayat.
 
 ### D. Dashboard
 
-Membaca data lewat API gateway. Tombol tanggapan dan koreksi di dashboard memanggil **fungsi yang sama** dengan perintah WhatsApp, sehingga hasil dan catatannya identik.
+Membaca Firestore langsung lewat Admin SDK; semua penulisan lewat aisa-api. Tombol tanggapan dan koreksi di dashboard memanggil **fungsi yang sama** dengan perintah WhatsApp, sehingga hasil dan catatannya identik.
+
+### E. Penghapusan data dan retensi
+
+1. **Atas permintaan founder:** tombol "Hapus data" di dashboard (`DELETE /api/proposals/{id}`, alasan wajib) atau CLI `aisa delete-proposal`.
+2. **Retensi:** Cloud Scheduler `aisa-retensi` setiap hari pukul 02.00 WIB memanggil `POST /retention/run`, yang menghapus proposal bertanggapan arsipkan lebih lama dari `rules.retentionDays` (default 90).
+3. Yang dihapus: dokumen proposal, `proposalTexts`, deck di GCS, pekerjaan penilaiannya beserta langkahnya, dan konfirmasi tertunda yang menyebutnya. Baris Riwayat dipertahankan tetapi disamarkan (nama menjadi "(dihapus)", sebelum/sesudah dibuang), dan satu baris `proposal_dihapus` dicatat.
 
 ---
 
 ## 8. Data yang disimpan (garis besar)
 
-| Data                                                    | Disimpan di                                           |
-| ------------------------------------------------------- | ----------------------------------------------------- |
-| Proposal, hasil penilaian, kategori, tanggapan, koreksi | Firestore                                             |
-| Log Aktivitas AI dan Riwayat (jejak audit)              | Firestore                                             |
-| Ringkasan yang terkirim                                 | Firestore                                             |
-| Statistik harian untuk tren dan token                   | Firestore                                             |
-| Rubrik, bobot, aturan kecocokan, batas kategori         | Firestore (berversi, diubah lewat halaman Pengaturan) |
-| Pitch deck asli                                         | Google Drive (tidak disalin ke tempat lain)           |
-| Konteks percakapan                                      | Sessions                                              |
-| Preferensi manajer                                      | Memory Bank                                           |
+| Data                                                    | Disimpan di                                             |
+| ------------------------------------------------------- | ------------------------------------------------------- |
+| Proposal, hasil penilaian, kategori, tanggapan, koreksi | Firestore                                               |
+| Log Aktivitas AI dan Riwayat (jejak audit)              | Firestore                                               |
+| Ringkasan yang terkirim                                 | Firestore                                               |
+| Statistik harian untuk tren dan token                   | Firestore                                               |
+| Rubrik, bobot, aturan kecocokan, batas kategori         | Firestore (berversi, diubah lewat halaman Pengaturan)   |
+| Teks deck per halaman (`proposalTexts`)                 | Firestore (ikut dihapus saat penghapusan/retensi)       |
+| Pitch deck dari Form                                    | Google Drive (tidak disalin ke tempat lain)             |
+| Pitch deck unggahan dashboard                           | Bucket GCS deck (ikut dihapus saat penghapusan/retensi) |
+| Konteks percakapan                                      | Sessions                                                |
+| Preferensi manajer                                      | Memory Bank                                             |
 
-Skema rinci ditentukan saat implementasi.
+Skema rinci: `docs/reference/contracts/aisa-firestore.md`.
 
 ---
 
@@ -201,18 +214,21 @@ Semua agent menulis log dengan format seragam:
 - **Nama model ditampilkan**. Langkah yang dikerjakan kode diberi label "kode" dengan token 0.
 - Token diambil dari `usage_metadata` setiap respons model.
 - Dashboard menampilkan total token **per proposal, per ringkasan, dan per hari**.
+- Pekerjaan Asisten mencatat satu langkah untuk setiap pemanggilan tool.
 
 ---
 
 ## 10. Keamanan dan pelindungan data
 
 - Secret hanya di Secret Manager; tidak ada nilai rahasia di repo.
-- Gateway hanya melayani nomor manajer; webhook GOWA dan panggilan dari Apps Script wajib terverifikasi; endpoint terjadwal hanya menerima panggilan dari Cloud Scheduler.
+- aisa-api hanya melayani nomor manajer; webhook GOWA dan panggilan dari Apps Script wajib terverifikasi (HMAC).
+- Endpoint terjadwal (ringkasan, retensi) menerima token OIDC dari service account runtime, diverifikasi email dan audience-nya; tidak ada kunci yang disimpan di Cloud Scheduler. `X-AISA-Key` tetap diterima untuk panggilan manual dan dashboard.
 - Hanya **teks** pitch deck yang dikirim ke model; gambar dan file PDF tidak.
 - Data founder (kontak) tidak dikirim ke WhatsApp dan tidak masuk prompt.
 - Data tidak dipakai untuk melatih model.
-- Proposal yang diarsipkan dihapus setelah periode retensi atau atas permintaan founder (mekanisme penghapusan bisa sederhana untuk hackathon).
-- Dashboard dilindungi password sederhana (1 pengguna).
+- Proposal yang diarsipkan dihapus setelah periode retensi atau atas permintaan founder (Bagian 7E).
+- Dashboard dilindungi login Firebase Auth email/password (1 akun).
+- **Keterbatasan:** Asisten di Agent Runtime berjalan sebagai service account runtime (`hackathon-runtime`), yang punya IAM baca-tulis Firestore. Jaminan baca-saja Asisten ada di kode (tidak ada tool tulis), bukan di IAM. Service account khusus `aisa-assistant@hackathon-primestep-09.iam.gserviceaccount.com` sudah dibuat tetapi belum dipakai: pemberian `roles/datastore.viewer` (dan `roles/aiplatform.user`) membutuhkan admin IAM project, lalu Asisten dideploy ulang dengan `ASSISTANT_SERVICE_ACCOUNT` diisi akun itu.
 
 Pemetaan ke UU 27/2022 Pasal 16 ayat 2 ada di dokumen overview.
 

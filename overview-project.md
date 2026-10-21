@@ -48,9 +48,9 @@ Teks diambil di server **per halaman** dengan penanda `[hal. n]`. Hanya teks yan
 | 3     | Ada bukti sebagian                                     |
 | 5     | Bukti kuat: data, perilaku pelanggan, atau rekam jejak |
 
-Informasi yang tidak ada diberi nilai 1 dan ditandai **"tidak disebut"**. Skor dihitung dengan kode: `skor = Σ bobot × (nilai − 1) / 4`.
+Informasi yang tidak ada diberi nilai 1 dan ditandai **"tidak disebut"**. Skor dihitung dengan kode: `skor = Σ bobot × (nilai − 1) / 4`. Bila tidak ada satu pun kutipan sebuah kriteria yang bisa ditemukan di halaman yang disebut, nilainya dibatasi paling tinggi 2 dan dashboard menampilkan tanda **kutipan belum terverifikasi**.
 
-**Tahap 2 — Cek kecocokan (kode, tanpa AI dan tanpa token).** Sektor, tahap pendanaan, dan besar dana dicocokkan dengan aturan yang diatur manajer di halaman **Pengaturan** dashboard (disimpan di Firestore).
+**Tahap 2 — Cek kecocokan (kode, tanpa AI dan tanpa token).** Sektor, tahap pendanaan, dan besar dana dicocokkan dengan aturan yang diatur manajer di halaman **Pengaturan** dashboard (disimpan di Firestore). Keputusan: butir yang **tidak disebut** di deck dianggap **gagal** cek, karena kecocokan yang tidak bisa dibuktikan tidak boleh dianggap cocok.
 
 **Kategori:**
 
@@ -67,6 +67,8 @@ Informasi yang tidak ada diberi nilai 1 dan ditandai **"tidak disebut"**. Skor d
 ### 4. Ringkasan pukul 09.00 dan 17.00
 
 Ringkasan berisi proposal **yang belum ditanggapi**, dikelompokkan per kategori, **tanpa saran tindak lanjut**:
+
+Salam pembuka mengikuti jam kirim (Selamat pagi/siang/sore/malam), dengan nama manajer bila diatur. Insight ditulis 1–2 kalimat dan selalu diawali label "Yang menarik:".
 
 > _Selamat pagi, Bu Rina. Sejak Senin pukul 17.00 masuk 100 proposal baru. Ada 100 proposal yang belum Ibu tanggapi._
 >
@@ -85,12 +87,14 @@ Ringkasan berisi proposal **yang belum ditanggapi**, dikelompokkan per kategori,
 
 Manajer menandai proposal lewat WhatsApp atau dashboard:
 
-| Perintah                                              | Hasil                                          |
-| ----------------------------------------------------- | ---------------------------------------------- |
-| `undang <nama>` · `pantau <nama>` · `arsipkan <nama>` | Status proposal berubah                        |
-| `arsipkan semua tidak cocok`                          | Tanggapan massal per kategori                  |
-| `pindahkan <nama> ke cocok karena …`                  | Koreksi kategori; skor AI tetap tersimpan      |
-| `STOP`                                                | Menghentikan pekerjaan AI yang sedang berjalan |
+| Perintah                                              | Hasil                                     |
+| ----------------------------------------------------- | ----------------------------------------- |
+| `undang <nama>` · `pantau <nama>` · `arsipkan <nama>` | Status proposal berubah                   |
+| `arsipkan semua tidak cocok`                          | Tanggapan massal per kategori             |
+| `pindahkan <nama> ke cocok karena …`                  | Koreksi kategori; skor AI tetap tersimpan |
+| `STOP` · `LANJUT`                                     | Menjeda dan melanjutkan pekerjaan AI      |
+
+**STOP** berhenti di antara langkah: panggilan model yang sedang berjalan diselesaikan, lalu hasilnya dibuang. Proposal baru menunggu sampai `LANJUT`, dan selama dijeda Asisten tidak menjawab; pesan selain perintah dibalas "AISA sedang dijeda".
 
 ### 6. Asisten
 
@@ -98,7 +102,7 @@ Contoh: "Fintech yang sangat cocok", "Yang berkualitas tapi di luar fokus", "Ken
 
 ### 7. Dashboard
 
-**Hari ini** · **Proposal** (filter, detail Tahap 1 dan Tahap 2, kutipan halaman, token per proposal) · **Tren** · **Aktivitas AI** · **Riwayat** · **Pengaturan** (lihat dan ubah aturan penilaian: bobot, dasar baseline, patokan nilai, cek kecocokan, kategori, model, kalibrasi). Tombol **Unggah pitch deck** (PDF) memasukkan proposal lewat alur penilaian yang sama dengan Form.
+**Hari ini** · **Proposal** (filter, detail Tahap 1 dan Tahap 2, kutipan halaman, token per proposal) · **Tren** · **Aktivitas AI** · **Riwayat** · **Pengaturan** (lihat dan ubah aturan penilaian: bobot, dasar baseline, patokan nilai, cek kecocokan, kategori, model, retensi, kalibrasi). Tombol **Unggah pitch deck** (PDF) memasukkan proposal lewat alur penilaian yang sama dengan Form. Tombol **Hapus data** di detail proposal menghapusnya atas permintaan founder, dengan alasan wajib.
 
 ---
 
@@ -114,7 +118,7 @@ Di bagian atas ada ringkasan pemakaian: total token, rata-rata token per proposa
 
 ## Model
 
-**Prioritas pertama: sistem berjalan lancar.** Untuk tahap awal, semua agent memakai model stabil yang sama, **`gemini-3.8-flash`**. Model ini tercantum sebagai rilis stabil di daftar model Gemini saat ini. Bila kualitas penilaian kurang, Penilai bisa dinaikkan ke `gemini-3.1-pro-preview`, tetapi model itu masih berstatus preview. Optimasi efisiensi, misalnya memindahkan agent ringan ke `gemini-3.5-flash-lite`, dilakukan setelah sistem stabil. Nama model perlu dicek ketersediaannya di Agent Platform region yang dipakai.
+**Prioritas pertama: sistem berjalan lancar.** Untuk tahap awal, semua agent AI memakai model stabil yang sama, **`gemini-3.8-flash`**. Model ini tercantum sebagai rilis stabil di daftar model Gemini saat ini. Bila kualitas penilaian kurang, Penilai bisa dinaikkan ke `gemini-3.1-pro-preview`, tetapi model itu masih berstatus preview. Optimasi efisiensi, misalnya memindahkan agent ringan ke `gemini-3.5-flash-lite`, dilakukan setelah sistem stabil. Gemini 3.x dipanggil di lokasi `global`, satu-satunya lokasi yang melayaninya untuk project ini. Model Penilai, Pembuat ringkasan, dan Insight diatur di Pengaturan; model Asisten ditetapkan saat deploy ke Agent Runtime.
 
 Prinsip yang tetap berlaku sejak awal: setiap deck dinilai sekali, dan semua angka dihitung dengan kode.
 
@@ -122,9 +126,9 @@ Prinsip yang tetap berlaku sejak awal: setiap deck dinilai sekali, dan semua ang
 | ----------------- | ------------------------------------------------------------ | ---------------- |
 | Penilai           | Menilai 5 kriteria kualitas dengan kutipan halaman           | gemini-3.8-flash |
 | Pembuat ringkasan | Menyusun teks ringkasan per kategori                         | gemini-3.8-flash |
-| Insight           | Menulis insight dari angka yang dihitung kode                | gemini-3.8-flash |
+| Insight           | Menulis insight 1–2 kalimat dari angka yang dihitung kode    | gemini-3.8-flash |
 | Asisten           | Menjawab pertanyaan dan memberi saran dengan tools baca data | gemini-3.8-flash |
-| Orchestrator      | Memahami pesan masuk; perintah tetap ditangani kode          | gemini-3.8-flash |
+| Orchestrator      | Perintah dikenali kode, tanpa model; pesan lain ke Asisten   | (kode)           |
 
 ---
 
@@ -148,20 +152,20 @@ Bobot berasal dari **rata-rata dua benchmark**, dengan rujukan tambahan dari sur
 
 ## Pelindungan data pribadi (UU 27/2022 Pasal 16 ayat 2)
 
-| Status           | Butir | Penerapan                                                                                |
-| ---------------- | ----- | ---------------------------------------------------------------------------------------- |
-| Sudah dirancang  | a     | Form minimal, pemberitahuan tujuan, dan persetujuan                                      |
-| Sudah dirancang  | b     | Data hanya untuk menyaring proposal, tidak untuk melatih model                           |
-| Sudah dirancang  | d     | Setiap nilai ada kutipan halaman; informasi yang tidak ada ditandai                      |
-| Sudah dirancang  | g     | Proposal yang diarsipkan dihapus setelah periode tertentu atau atas permintaan founder   |
-| Sudah dirancang  | h     | Log Aktivitas AI dan Riwayat sebagai jejak audit                                         |
-| Rencana lanjutan | c     | Hak akses, perbaikan, dan penghapusan data; keputusan akhir tetap manusia (Pasal 10)     |
-| Sebagian         | e     | Hanya teks yang dikirim ke model sudah berjalan; masking dan pembatasan akses berikutnya |
-| Rencana lanjutan | f     | Pemberitahuan privasi dan notifikasi kebocoran maksimal 3×24 jam (Pasal 46)              |
+| Status           | Butir | Penerapan                                                                                                                                                                                                                                                                                                                    |
+| ---------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sudah dirancang  | a     | Form minimal, pemberitahuan tujuan, dan persetujuan                                                                                                                                                                                                                                                                          |
+| Sudah dirancang  | b     | Data hanya untuk menyaring proposal, tidak untuk melatih model                                                                                                                                                                                                                                                               |
+| Sudah dirancang  | d     | Setiap nilai ada kutipan halaman; informasi yang tidak ada ditandai                                                                                                                                                                                                                                                          |
+| Sudah dirancang  | g     | Hapus atas permintaan founder (dashboard atau CLI, alasan wajib) dan retensi harian: proposal yang diarsipkan lebih lama dari periode retensi (default 90 hari) dihapus otomatis. Yang dihapus: proposal, teks deck, file deck, log pekerjaannya, dan konfirmasi tertunda; baris Riwayat disamarkan dan penghapusan tercatat |
+| Sudah dirancang  | h     | Log Aktivitas AI dan Riwayat sebagai jejak audit                                                                                                                                                                                                                                                                             |
+| Rencana lanjutan | c     | Hak akses, perbaikan, dan penghapusan data; keputusan akhir tetap manusia (Pasal 10)                                                                                                                                                                                                                                         |
+| Sebagian         | e     | Hanya teks yang dikirim ke model sudah berjalan; masking dan pembatasan akses berikutnya                                                                                                                                                                                                                                     |
+| Rencana lanjutan | f     | Pemberitahuan privasi dan notifikasi kebocoran maksimal 3×24 jam (Pasal 46)                                                                                                                                                                                                                                                  |
 
 ## Teknologi
 
-Google Forms dan Drive (dipicu Apps Script) · ekstraksi teks di Cloud Run · Google ADK + Gemini · Agent Runtime, Sessions, dan Memory Bank untuk asisten · Cloud Scheduler 09.00 dan 17.00 WIB · Firestore · aturan penilaian di Firestore (diatur lewat halaman Pengaturan) · Secret Manager · GOWA di VPS · dashboard di Cloud Run.
+Google Forms dan Drive (dipicu Apps Script) · ekstraksi teks di Cloud Run · Google ADK + Gemini · Agent Runtime, Sessions, dan Memory Bank untuk asisten · Cloud Scheduler 09.00 dan 17.00 WIB serta retensi 02.00 WIB · Firestore · aturan penilaian di Firestore (diatur lewat halaman Pengaturan) · Secret Manager · GOWA di VPS · dashboard di Cloud Run.
 
 ## Batasan hackathon
 

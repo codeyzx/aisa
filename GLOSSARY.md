@@ -58,8 +58,18 @@ _Avoid_: override, ubah skor
 Kategori hasil koreksi bila ada, selain itu kategori dari kode; inilah yang dipakai ringkasan dan dashboard.
 
 **Dijeda**:
-Keadaan setelah perintah STOP: pekerjaan AI berhenti dan proposal baru menunggu sebagai Antre sampai perintah LANJUT.
+Keadaan setelah perintah STOP: pekerjaan AI berhenti di antara langkah, proposal baru menunggu sebagai Antre, dan Asisten tidak menjawab sampai perintah LANJUT.
 _Avoid_: dimatikan, dibatalkan
+
+## Data pribadi
+
+**Penghapusan data**:
+Penghapusan proposal beserta teks dan deck-nya atas permintaan founder, dengan alasan; Riwayat tetap ada tetapi tanpa nama dan isi proposal.
+_Avoid_: arsipkan (arsip adalah tanggapan, bukan penghapusan)
+
+**Retensi**:
+Periode berapa lama proposal yang diarsipkan disimpan sebelum dihapus otomatis; diatur di Pengaturan.
+_Avoid_: kedaluwarsa, pembersihan
 
 ## Keluaran
 

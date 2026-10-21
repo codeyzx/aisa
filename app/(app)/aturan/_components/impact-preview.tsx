@@ -29,9 +29,19 @@ function Delta({ value }: { value: number }) {
   )
 }
 
+/** "3 di antaranya …", or nothing when no move is held by a koreksi. */
+function heldNote(sim: Simulation): string | null {
+  if (!sim.held) return null
+  return sim.held === sim.moves.length
+    ? 'Semuanya tetap pada kategori koreksi manajer.'
+    : `${sim.held} di antaranya tetap pada kategori koreksi manajer.`
+}
+
 /**
- * The draft rules simulated on the proposals already scored. A preview only:
- * saving does not re-score them.
+ * The draft rules simulated on the proposals already scored. It compares the
+ * AI's kategori under both rule sets; a manager koreksi is never rewritten by
+ * a rule change, so a move it holds is marked rather than counted as visible.
+ * A preview only: saving does not re-score them.
  */
 export function ImpactPreview({
   sim,
@@ -68,11 +78,12 @@ export function ImpactPreview({
             <SparklesIcon className="size-4 shrink-0 text-primary" />
             <span>
               <span className="font-semibold">{sim.moves.length} proposal</span>{' '}
-              pindah kategori
+              pindah kategori AI
               {sim.moves.length > 0 && (
                 <span className="text-muted-foreground">
                   {' '}
                   · {sim.up} naik, {sim.down} turun
+                  {sim.held ? `, ${sim.held} tetap pada koreksi manajer` : ''}
                 </span>
               )}
             </span>
@@ -90,8 +101,8 @@ export function ImpactPreview({
           Dampak perubahan
         </p>
         <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-          Simulasi pada {sim?.total ?? 0} proposal yang sudah dinilai. Hanya
-          pratinjau, skor lama tidak diubah.
+          Simulasi kategori AI pada {sim?.total ?? 0} proposal yang sudah
+          dinilai. Hanya pratinjau, skor lama tidak diubah.
         </p>
       </div>
 
@@ -118,9 +129,14 @@ export function ImpactPreview({
                 </p>
                 <p className="mt-1 text-[13px]">
                   {sim.moves.length
-                    ? 'proposal akan pindah kategori'
-                    : 'Tidak ada proposal yang pindah kategori'}
+                    ? 'proposal akan pindah kategori AI'
+                    : 'Tidak ada proposal yang pindah kategori AI'}
                 </p>
+                {heldNote(sim) && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {heldNote(sim)}
+                  </p>
+                )}
                 {sim.moves.length > 0 && (
                   <div className="mt-2 flex gap-3 text-xs">
                     <span className="flex items-center gap-1 text-success">
@@ -138,11 +154,16 @@ export function ImpactPreview({
           </div>
 
           <table className="w-full text-[13px]">
+            <caption className="pb-2 text-left text-xs leading-relaxed text-muted-foreground">
+              Kategori dari AI, dihitung ulang dengan aturan sekarang dan aturan
+              baru. Koreksi manajer tidak ikut berubah, jadi angka ini bisa
+              berbeda dari kartu Batas kategori.
+            </caption>
             <thead className="text-[11px] text-muted-foreground">
               <tr>
                 <th className="pb-1.5 text-left font-medium">Kategori</th>
-                <th className="pb-1.5 text-right font-medium">Sekarang</th>
-                <th className="pb-1.5 text-right font-medium">Baru</th>
+                <th className="pb-1.5 text-right font-medium">AI sekarang</th>
+                <th className="pb-1.5 text-right font-medium">Aturan baru</th>
                 <th className="w-8 pb-1.5">
                   <span className="sr-only">Selisih</span>
                 </th>
@@ -180,7 +201,7 @@ export function ImpactPreview({
           {sim.moves.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <p className="text-[11px] font-medium text-muted-foreground">
-                Contoh yang pindah
+                Contoh yang pindah kategori AI
               </p>
               <ul className="flex flex-col gap-1">
                 {sim.moves.slice(0, 5).map((move) => (
@@ -188,8 +209,16 @@ export function ImpactPreview({
                     key={move.proposal.id}
                     className="flex items-center justify-between gap-2 text-xs"
                   >
-                    <span className="truncate font-medium">
-                      {move.proposal.name}
+                    <span className="flex min-w-0 flex-col">
+                      <span className="truncate font-medium">
+                        {move.proposal.name}
+                      </span>
+                      {move.proposal.corrected && (
+                        <span className="text-[11px] text-muted-foreground">
+                          Tetap {CATEGORY_LABEL[move.proposal.category]}{' '}
+                          (koreksi manajer)
+                        </span>
+                      )}
                     </span>
                     <span className="flex shrink-0 items-center gap-1 text-muted-foreground">
                       {CATEGORY_LABEL[move.from]}

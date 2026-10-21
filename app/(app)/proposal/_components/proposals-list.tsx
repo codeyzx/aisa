@@ -275,8 +275,19 @@ export function ProposalsList({
     filters.q?.trim(),
   )
 
+  // The API answers a whole category, so the box is offered only when the
+  // category is the one narrowing filter: with a sector, status, search or the
+  // luar-fokus mark on top, its count and its action would reach proposals the
+  // table hides.
   const bulkCategory: Category | null =
-    filters.kategori && filters.kategori !== 'atas' ? filters.kategori : null
+    filters.kategori &&
+    filters.kategori !== 'atas' &&
+    !filters.luarFokus &&
+    !filters.sektor &&
+    !filters.status &&
+    !filters.q?.trim()
+      ? filters.kategori
+      : null
   const bulkCount = bulkCategory
     ? all.filter((row) => !row.responded && row.category === bulkCategory)
         .length

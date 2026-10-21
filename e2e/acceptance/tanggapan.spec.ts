@@ -216,6 +216,21 @@ test('DSB-78 Tanggapi semua asks first, then sends the category and the response
   ])
 })
 
+test('DSB-78b Tanggapi semua is not offered while another filter narrows the table', async ({
+  page,
+}) => {
+  // The API answers the whole category; with a sector on top, the box's count
+  // and action would reach proposals the table hides.
+  await page.goto('/proposal?kategori=cocok&sektor=agritech')
+  await expect(page.getByText(/^Tanggapi semua/u)).toHaveCount(0)
+  await page.goto('/proposal?kategori=cocok&q=a')
+  await expect(page.getByText(/^Tanggapi semua/u)).toHaveCount(0)
+  await page.goto('/proposal?kategori=cocok')
+  await expect(
+    page.getByText(/^Tanggapi semua 4 proposal Cocok/u),
+  ).toBeVisible()
+})
+
 test('DSB-79 a refused Tanggapi semua shows the API message verbatim', async ({
   page,
   aisaApi,

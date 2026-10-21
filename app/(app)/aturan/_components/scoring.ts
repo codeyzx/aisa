@@ -33,6 +33,11 @@ export interface ScoredProposal {
   fundingAskIdr: number | null
   /** The kategori the manager sees (a koreksi wins over the AI's). */
   category: Category
+  /**
+   * Whether a manager koreksi holds `category`. A rule change only moves the
+   * AI's kategori, so a corrected proposal keeps the kategori the manager sees.
+   */
+  corrected: boolean
   qualityOutsideFocus: boolean
   rulesVersion: number
 }
@@ -146,17 +151,22 @@ export interface CategoryMove {
 export interface Simulation {
   /** How many proposals could be re-scored (all five values present). */
   total: number
+  /** The AI kategori under the current rules — not the kategori a koreksi set. */
   before: CategoryCounts
+  /** The AI kategori under the draft rules. */
   after: CategoryCounts
   moves: CategoryMove[]
   up: number
   down: number
+  /** Moves whose proposal a koreksi holds: the manager still sees the corrected kategori. */
+  held: number
 }
 
 /**
- * Re-score every proposal under the current and the draft rules and compare.
- * Both sides are recomputed, so a proposal scored under an older version is
- * compared like for like rather than against its stored kategori.
+ * Re-score every proposal under the current and the draft rules and compare
+ * the AI's kategori. Both sides are recomputed, so a proposal scored under an
+ * older version is compared like for like rather than against its stored
+ * kategori, and a koreksi is left out of both sides: rules never rewrite it.
  */
 const rank = (c: Category) => CATEGORIES.indexOf(c)
 
@@ -185,6 +195,7 @@ export function simulate(
     moves,
     up: moves.filter((m) => rank(m.to) < rank(m.from)).length,
     down: moves.filter((m) => rank(m.to) > rank(m.from)).length,
+    held: moves.filter((m) => m.proposal.corrected).length,
   }
 }
 
@@ -207,6 +218,7 @@ export function toScored(p: Proposal): ScoredProposal | null {
     stage: p.profile?.stage ?? null,
     fundingAskIdr: p.profile?.fundingAskIdr ?? null,
     category,
+    corrected: p.correction != null,
     qualityOutsideFocus: showsQualityOutsideFocus(p),
     rulesVersion: a.rulesVersion,
   }

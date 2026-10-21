@@ -6,6 +6,7 @@ import {
   fitCheck,
   normalizeToken,
   simulate,
+  toScored,
   type ScoredProposal,
   type ScoringRules,
 } from './scoring'
@@ -35,6 +36,7 @@ const proposal = (over: Partial<ScoredProposal>): ScoredProposal => ({
   stage: 'seed',
   fundingAskIdr: 5_000_000_000,
   category: 'sangat_cocok',
+  corrected: false,
   qualityOutsideFocus: false,
   rulesVersion: 1,
   ...over,
@@ -115,5 +117,76 @@ describe('simulate', () => {
 
   it('skips a proposal missing a criterion', () => {
     expect(simulate([proposal({ values: null })], RULES, RULES).total).toBe(0)
+  })
+
+  it('compares AI kategori on both sides, never the kategori a koreksi set', () => {
+    // The AI puts it in Sangat cocok; a manager corrected it to Tidak cocok.
+    const corrected = proposal({ category: 'tidak_cocok', corrected: true })
+    const unchanged = simulate([corrected], RULES, RULES)
+    expect(unchanged.before.sangat_cocok).toBe(1)
+    expect(unchanged.before.tidak_cocok).toBe(0)
+    expect(unchanged).toMatchObject({ moves: [], held: 0 })
+  })
+
+  it('counts a move a koreksi holds as held', () => {
+    const draft = {
+      ...RULES,
+      thresholds: { ...RULES.thresholds, sangatCocok: 95 },
+    }
+    const sim = simulate(
+      [proposal({ id: 'a' }), proposal({ id: 'b', corrected: true })],
+      RULES,
+      draft,
+    )
+    expect(sim).toMatchObject({ total: 2, down: 2, held: 1 })
+    expect(sim.moves.map((m) => [m.proposal.id, m.proposal.corrected])).toEqual(
+      [
+        ['a', false],
+        ['b', true],
+      ],
+    )
+  })
+})
+
+const criterion = (value: number) => ({ value, reason: 'r' })
+
+describe('toScored', () => {
+  const stored = (over: object) =>
+    ({
+      id: 'p',
+      name: 'P',
+      status: 'dinilai',
+      category: 'sangat_cocok',
+      effectiveCategory: 'sangat_cocok',
+      correction: null,
+      qualityOutsideFocus: false,
+      profile: { sector: 'agritech', stage: 'seed', fundingAskIdr: 5e9 },
+      assessment: {
+        score: 92.5,
+        rulesVersion: 1,
+        criteria: {
+          tim: criterion(5),
+          pasar: criterion(5),
+          produk: criterion(4),
+          traksi: criterion(5),
+          bisnis: criterion(4),
+        },
+      },
+      ...over,
+    }) as unknown as Parameters<typeof toScored>[0]
+
+  it('marks a proposal a koreksi holds and shows its effective kategori', () => {
+    expect(
+      toScored(
+        stored({
+          effectiveCategory: 'cocok',
+          correction: { category: 'cocok', reason: 'x' },
+        }),
+      ),
+    ).toMatchObject({ category: 'cocok', corrected: true })
+    expect(toScored(stored({}))).toMatchObject({
+      category: 'sangat_cocok',
+      corrected: false,
+    })
   })
 })

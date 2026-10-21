@@ -101,8 +101,9 @@ export function ImpactPreview({
           Dampak perubahan
         </p>
         <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-          Simulasi kategori AI pada {sim?.total ?? 0} proposal yang sudah
-          dinilai. Hanya pratinjau, skor lama tidak diubah.
+          {sim
+            ? `Simulasi kategori AI pada ${sim.total} proposal yang sudah dinilai. Hanya pratinjau, skor lama tidak diubah.`
+            : 'Simulasi menunggu semua isian benar.'}
         </p>
       </div>
 

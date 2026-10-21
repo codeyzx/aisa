@@ -7,6 +7,8 @@ AISA workspace styles in `app/artifact.css`. `--criterion-*` paints the five sco
 criteria (one hue each, read through `CRITERION_COLOR` in `app/(app)/_components/badges.tsx`).
 Each kategori has `--category-N` for text (≥ 4.5:1 on its `-soft` background and on the
 card) and `--category-N-fill` for dots, bars and chart fills (≥ 3:1 on the card).
+Decision badges (`DecisionBadge`) carry no hue: icon and word tell them apart, and
+"Belum ditanggapi" alone has a dashed outline and bold text.
 Vendored primitives relax a few extra-strict a11y lint rules (`.oxlintrc.json`
 override); app/shell code keeps them on. Non-shadcn shared components may live
 here too — list them under "Custom".

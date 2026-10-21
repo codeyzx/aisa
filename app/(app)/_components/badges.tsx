@@ -95,6 +95,13 @@ export function CategoryBadge({
 /** A response, or `null` for a proposal nobody has answered yet. */
 export type Decision = ResponseKind | null
 
+// Decision badges carry no hue at all: green, blue and amber already mean a
+// kategori in the column beside them, so a decision tells itself apart by its
+// icon and its word. "Belum ditanggapi" — the one that needs the manager — is
+// the only one drawn with a dashed outline and bold text.
+const DECIDED =
+  'border-border bg-muted text-foreground [&>svg]:text-muted-foreground'
+
 const DECISION: Record<
   ResponseKind | 'baru',
   { icon: LucideIcon; label: string; className: string }
@@ -102,22 +109,15 @@ const DECISION: Record<
   baru: {
     icon: Clock3Icon,
     label: 'Belum ditanggapi',
-    className: 'border-warning/40 bg-warning-soft text-warning',
+    className:
+      'border-dashed border-muted-foreground bg-transparent font-semibold text-foreground',
   },
-  undang: {
-    icon: MailIcon,
-    label: 'Diundang',
-    className: 'border-success/40 bg-success-soft text-success',
-  },
-  pantau: {
-    icon: EyeIcon,
-    label: 'Dipantau',
-    className: 'border-primary/30 bg-primary/10 text-primary',
-  },
+  undang: { icon: MailIcon, label: 'Diundang', className: DECIDED },
+  pantau: { icon: EyeIcon, label: 'Dipantau', className: DECIDED },
   arsipkan: {
     icon: ArchiveIcon,
     label: 'Diarsipkan',
-    className: 'border-border bg-muted/60 text-muted-foreground',
+    className: 'border-border bg-transparent text-muted-foreground',
   },
 }
 

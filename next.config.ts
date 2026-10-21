@@ -46,10 +46,11 @@ const securityHeaders = [
   // link of an uploaded deck (served inline as a PDF from
   // storage.googleapis.com) and Drive's `/preview` viewer for a Form deck. Any
   // other frame is refused. Like `frame-ancestors` it needs no nonce. Firebase
-  // Auth's own helper iframe (`<authDomain>/__/auth/iframe`, which the SDK may
-  // load ahead of time on mobile) is refused too, and is not needed: sign-in is
-  // `signInWithEmailAndPassword`. The fork that adds `signInWithPopup` (see
-  // Cross-Origin-Opener-Policy below) must also add its auth domain here.
+  // Auth's helper iframe (`<authDomain>/__/auth/iframe`) would be refused too;
+  // `lib/firebase/client-auth.ts` initializes Auth without the popup/redirect
+  // resolver that loads it, since sign-in is `signInWithEmailAndPassword`. The
+  // fork that adds `signInWithPopup` (see Cross-Origin-Opener-Policy below)
+  // must restore the resolver and add its auth domain here.
   {
     key: 'Content-Security-Policy',
     value:

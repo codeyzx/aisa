@@ -1,0 +1,144 @@
+# Pengujian AISA
+
+Dokumen ini mencatat **hasil aktual** pengujian AISA: unit test dan skenario T01–T11 dari
+`tech.md` §12. Setiap hasil skenario diambil dari respons API, dokumen Firestore, log Cloud
+Run, dan pesan yang benar-benar terkirim lewat GOWA — bukan karangan. ID bukti (proposal,
+pekerjaan, ringkasan, riwayat) bisa dicari langsung di Firestore project
+`hackathon-primestep-09`.
+
+- **Tanggal uji:** Rabu, 21 Oktober 2026, sekitar 18.39–18.47 WIB (11.39–11.47 UTC).
+- **Lingkungan:** produksi. `aisa-api` revisi `aisa-api-00003-8cl` (image
+  `aisa-api:20261021-181415`, Cloud Run `asia-southeast2`), Asisten di Agent Runtime
+  `projects/441293875661/locations/us-central1/reasoningEngines/7155459220723204096`,
+  aturan penilaian versi 1 (semua agent `gemini-3.8-flash`).
+- **Data uji:** pitch deck sintetis untuk startup **fiktif** (Sawah Pintar Nusantara, Kopi
+  Teras Senja, Lumbung Ikan Pesisir, Kelas Kode Rakyat, Klinik Desa Sehat), dibuat dengan
+  fpdf2: 9–10 halaman teks (tim, pasar, produk, traksi, bisnis, keuangan), kecuali deck
+  "scan" yang setiap halamannya hanya gambar tanpa lapisan teks. Balkan Gourmet adalah
+  proposal yang sudah ada di produksi sebelum pengujian.
+- **Jalur WhatsApp:** pesan manajer disimulasikan dengan `POST /webhook/gowa` bertanda tangan
+  HMAC yang sah (bentuk event GOWA asli). Balasan bot adalah pesan WhatsApp sungguhan ke
+  nomor manajer dan dibaca kembali dari riwayat chat GOWA.
+
+## Unit test
+
+| Bagian                 | Perintah                              | Hasil aktual                                              |
+| ---------------------- | ------------------------------------- | --------------------------------------------------------- |
+| `aisa-api` (Python)    | `cd services/api && uv run pytest -q` | **62 lulus**, 0 gagal (0,59 dtk)                          |
+| Dashboard (TypeScript) | `pnpm test`                           | 465 lulus, **1 gagal**, 16 dilewati (482 test, 55 berkas) |
+
+Sebaran 62 test Python: `test_commands.py` 27 (pengenalan perintah dan pencocokan nama),
+`test_scoring.py` 19 (perhitungan skor, semua cabang kategori termasuk "berkualitas di luar
+fokus", cek kecocokan), `test_digest.py` 10 (pengecekan angka, nama, dan saran di
+ringkasan; kandidat insight), `test_penilai.py` 6 (validasi output Penilai). Kelima area
+unit test wajib di `tech.md` §12 tercakup.
+
+Satu kegagalan `pnpm test` ada di `scripts/docs/check.test.ts` ("real docs tree › evaluates
+clean"): pemeriksa dokumen menolak direktori root `integrations/` yang belum punya entri di
+`scripts/docs/generate-reference.ts`. Ini soal pemetaan dokumentasi, bukan perilaku
+aplikasi.
+
+## Skenario T01–T11
+
+| ID  | Skenario                                                                    | Langkah                                                                                                                                                                                                                                                                                | Hasil aktual                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | Status   |
+| --- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| T01 | Proposal sesuai fokus → dinilai → kategori benar                            | Unggah `sawah-pintar-nusantara.pdf` (agritech, seed, minta Rp5 miliar, bukti kuat) lewat `POST /intake/upload`                                                                                                                                                                         | 202, lalu `dinilai` dalam 15,0 dtk. Profil: agritech · seed · Rp5.000.000.000. Kelima kriteria bernilai 5, masing-masing dengan kutipan halaman (mis. tim hal. 7, traksi hal. 5). Skor **100,0**. Cek kecocokan lulus ketiganya ("Rp5 M dalam rentang"). Kategori **Sangat cocok**, `qualityOutsideFocus` false. Token 3.114 masuk / 1.788 keluar. Pekerjaan 7 langkah: 1 langkah model, 6 langkah kode dengan token 0. Bukti: `upload-154300b1dccd0967`, pekerjaan `penilaian-20261021113912-2e2348`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Lulus    |
+| T02 | Proposal di luar fokus berkualitas tinggi → Tidak cocok + tanda berkualitas | Unggah `kopi-teras-senja.pdf` (F&B, seri-a, minta Rp15 miliar, traksi kuat)                                                                                                                                                                                                            | Skor **100,0** (semua kriteria 5). Cek kecocokan: sektor gagal ("f&b di luar sektor fokus"), tahap dan dana lulus. Kategori **Tidak cocok**, `qualityOutsideFocus` **true**. Token 2.767 / 1.608. Bukti: `upload-9c721028b7267b5f`, `penilaian-20261021113913-19a52d`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   | Lulus    |
+| T03 | Deck hasil scan → Perlu dicek manual tanpa skor                             | Unggah `lumbung-ikan-pesisir-scan.pdf` (10 halaman, hanya gambar)                                                                                                                                                                                                                      | Status **`perlu_dicek_manual`**, alasan "teks terlalu sedikit (0 karakter di 10 halaman)". `assessment`, `category`, `effectiveCategory`, `fit` kosong. Token 0 / 0: pekerjaan berhenti setelah 2 langkah kode (187 ms) tanpa memanggil model. Bukti: `upload-d367496d09be128c`, `penilaian-20261021113914-0df399`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      | Lulus    |
+| T04 | Ringkasan terkirim otomatis, angka cocok dengan data                        | (a) Baca `digests/2026-10-21-1700` yang terkirim hari ini. (b) Jalankan pratinjau `MANAGER_SALUTATION=Pak uv run aisa digest 09.00` (tidak mengirim) setelah T01–T03, lalu hitung ulang dari Firestore secara terpisah. (c) Periksa Cloud Scheduler                                    | (a) Ringkasan 17.00 terkirim 18.10 WIB, `gowaMessageIds` `3EB0399B4633584D8934DE`, teks dari model (`usedTemplate` false) dan lolos cek angka. Counts: belum ditanggapi 1, Tidak cocok 1, baru masuk 1 — sesuai data saat itu (hanya Balkan Gourmet). Pekerjaan `ringkasan-20261021111023-f39f2e`: 5 langkah, insight 99/437 token, teks 230/1.171 token. **Ringkasan ini dipicu manual** (log Cloud Run: `POST /digest/run?slot=17.00` dengan user-agent `curl`), bukan oleh Scheduler. (b) Pratinjau: Sangat cocok 1, Cocok 0, Kurang cocok 0, Tidak cocok 2, Berkualitas di luar fokus 1, Perlu dicek manual 1, belum ditanggapi 4, baru masuk 3. Hitungan langsung dari Firestore: `{sangat_cocok: 1, tidak_cocok: 2}`, luar fokus 1, manual 1, total 4, dan 3 proposal dibuat sejak ringkasan terakhir — **identik**. (c) `aisa-ringkasan-pagi` (`0 9 * * *`) dan `aisa-ringkasan-sore` (`0 17 * * *`), zona `Asia/Jakarta`, ENABLED, target `POST /digest/run?slot=…`, belum pernah berjalan (tanpa `lastAttemptTime`; terakhir diubah 18.04 WIB) | Sebagian |
+| T05 | `undang <nama>` dan `arsipkan semua tidak cocok` → status berubah           | WA: `undang Sawah Pintar Nusantara`; `arsipkan semua tidak cocok`; `YA`                                                                                                                                                                                                                | `undang`: `response.kind` = undang, `via` wa, `responded` true. Balasan "Tercatat: Sawah Pintar Nusantara → undang." Riwayat `H912VoAnbFDGt6Yf4YZD`. `arsipkan semua tidak cocok`: dibuat `pendingConfirmations/<nomor manajer>` berisi 1 ID (Balkan Gourmet), balasan "Ada 1 proposal Tidak cocok yang belum ditanggapi: Balkan Gourmet / Balas YA dalam 10 menit…". Kopi Teras Senja tidak ikut karena kategori efektifnya sudah dikoreksi di T06. `YA`: Balkan Gourmet `response.kind` = arsipkan, konfirmasi terhapus, balasan "Selesai: 1 proposal ditandai arsipkan.", riwayat `tanggapan_massal` `4CZ1nvMvhQYZnHfGKzkS`. Pekerjaan `perintah-20261021114035-e6057a`, `…114042-6df035`, `…114053-4f0bf9` (token 0)                                                                                                                                                                                                                                                                                                                                | Lulus    |
+| T06 | Koreksi kategori lewat WA dan dashboard → skor AI tetap, tercatat           | WA: `pindahkan Kopi Teras Senja ke cocok karena tim kuat`. API dashboard: `POST /api/proposals/upload-9c721028b7267b5f/correction` `{category: sangat_cocok, reason: "traksi dan unit ekonomi sudah terbukti"}`. Uji negatif: alasan kosong, dan koreksi proposal `perlu_dicek_manual` | WA: `correction` = {cocok, "tim kuat", wa}, `effectiveCategory` cocok, `category` tetap **tidak_cocok**, `assessment.score` tetap **100,0**. Riwayat `pMhREECHLzrRQpnNBxbF` (sebelum tidak_cocok → sesudah cocok, alasan tersimpan). Balasan "Kategori Kopi Teras Senja dipindahkan ke Cocok. Skor AI tetap 100.0." Dashboard: 200, `effectiveCategory` sangat_cocok, `category` dan skor tidak berubah. Riwayat `ZLKxW8W78HqRdg20dtiU` (via dashboard, cocok → sangat_cocok). Alasan kosong → **422** "koreksi kategori wajib disertai alasan". Proposal manual → **409** "hanya proposal yang sudah dinilai yang punya kategori"                                                                                                                                                                                                                                                                                                                                                                                                                      | Lulus    |
+| T07 | Pertanyaan data → jawaban cocok dengan data                                 | (a) WA: "Berapa proposal yang belum saya tanggapi saat ini, dan apa saja kategorinya?" (b) Langsung ke engine Agent Runtime: total proposal per status dan skor Sawah Pintar Nusantara                                                                                                 | (a) Jawaban: 2 proposal — Kopi Teras Senja (Sangat cocok, skor 100) dan Lumbung Ikan Pesisir (perlu dicek manual). Firestore saat itu: tepat 2 proposal belum ditanggapi, Kopi Teras Senja (kategori efektif sangat_cocok) dan Lumbung Ikan Pesisir (`perlu_dicek_manual`) — **cocok**. Pekerjaan `asisten-20261021114116-cd5f00`, 5.838/510 token, 24,0 dtk. (b) Asisten memanggil `count_proposals(group_by=status)` dan `get_proposal_detail`. Jawaban: total 4 (Dinilai 3, Perlu dicek manual 1); Sawah Pintar Nusantara skor 100, Sangat cocok, rincian 5/5 per kriteria dengan halaman — sama dengan Firestore saat itu                                                                                                                                                                                                                                                                                                                                                                                                                           | Lulus    |
+| T08 | Pertanyaan di luar data → "tidak tersedia"                                  | Engine: "Berapa valuasi pre-money Sawah Pintar Nusantara dan siapa investor sebelumnya?"                                                                                                                                                                                               | Tanpa pemanggilan tool dan tanpa angka karangan: "Informasi mengenai valuasi pre-money dan investor sebelumnya … **tidak tersedia di data AISA**." Asisten hanya menyebut data yang memang tersimpan (dana diminta Rp5 miliar, tahap seed)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Lulus    |
+| T09 | Pertanyaan lanjutan dalam satu session                                      | (a) WA, setelah T07: "Yang nomor 1 tadi minta dana berapa dan tahapnya apa?" (b) Engine, setelah T08: "Lalu dibanding proposal itu, Kopi Teras Senja timnya lebih kuat atau tidak?"                                                                                                    | (a) "Yang nomor 1" dipahami sebagai Kopi Teras Senja: "meminta pendanaan sebesar Rp15 miliar … pada tahap Seri A" — sesuai profil (`fundingAskIdr` 15.000.000.000, `stage` seri-a). `assistantSessions/<nomor manajer>` tetap memakai session `7315699193496993792` untuk kedua pertanyaan. Pekerjaan `asisten-20261021114219-484c1f`, 5.954/292 token. (b) "Proposal itu" dipahami sebagai Sawah Pintar Nusantara, `compare_proposals` dipanggil, jawaban: sama kuat, keduanya tim 5/5 (hal. 7) — sesuai Firestore                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     | Lulus    |
+| T10 | STOP saat penilaian berjalan                                                | Unggah `kelas-kode-rakyat.pdf`, kirim `STOP` lewat WA 0,8 dtk kemudian. Saat dijeda, unggah `klinik-desa-sehat.pdf`. Lalu kirim `LANJUT`                                                                                                                                               | `settings/runtime` paused (via wa) pukul 11.43.53 UTC; balasan "Pekerjaan AI dijeda…". Pekerjaan `penilaian-20261021114352-c8ec2a` berstatus **dihentikan**: panggilan Penilai yang sudah berjalan selesai (2.251/1.639 token), lalu langkah "Dihentikan oleh STOP"; proposal `upload-ffca58ee99d0b8a3` berstatus **`dihentikan`** ("dihentikan oleh STOP") tanpa skor. Unggahan saat dijeda (`upload-7436553c442b73cb`) tetap **`antre`** tanpa pekerjaan. `LANJUT`: paused false, balasan "Pekerjaan AI dilanjutkan…"; Klinik Desa Sehat dinilai 78,1 **Cocok** (`penilaian-20261021114536-e6bead`), Kelas Kode Rakyat dinilai 85,6 **Sangat cocok** (`penilaian-20261021114554-8d38c8`, 8 langkah, deck diambil ulang dari GCS). Riwayat `stop` `igLRykDmmWCVTETmNvrh`, `lanjut` `BjDnIZcDlUwHplmMDpGQ`. Sistem berakhir **tidak dijeda**                                                                                                                                                                                                            | Lulus    |
+| T11 | Webhook ganda → diproses sekali                                             | Kirim body webhook yang sama persis (ID pesan `TEST6EF08D9783A949FE`, pertanyaan T07) dua kali                                                                                                                                                                                         | Kiriman pertama `{"accepted": true}`, kedua `{"ignored": "duplikat"}`. Satu dokumen `webhookEvents/TEST6EF08D9783A949FE`, satu pekerjaan asisten, dan satu balasan di chat GOWA (`3EB00B02589F06D96D938B`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              | Lulus    |
+
+**Ringkasan:** 10 Lulus, 1 Sebagian (T04), 0 Gagal.
+
+T04 berstatus Sebagian karena angka ringkasan terbukti cocok dengan data, tetapi pengiriman
+**otomatis** oleh Cloud Scheduler belum pernah terjadi: job Scheduler terakhir diubah pukul 18.04
+WIB, setelah slot 17.00 lewat, dan belum pernah mencoba berjalan, dan satu-satunya ringkasan yang terkirim dipicu manual. Bukti
+pertama akan muncul sebagai `digests/2026-10-22-0900` dengan pekerjaan `ringkasan-…` pada
+22 Oktober 2026 pukul 09.00 WIB.
+
+### Log token
+
+Setiap pekerjaan di atas tercatat di `jobs/{id}` beserta langkahnya. Langkah model membawa
+token dari `usage_metadata`; langkah kode bertoken 0. `dailyStats/2026-10-21` setelah
+pengujian: 6 proposal masuk, 12 panggilan model, 35.012 token masuk / 15.789 keluar
+(penilaian 16.936/12.466, asisten 17.747/1.715, ringkasan 329/1.608). Total penilaian sama
+persis dengan jumlah token semua pekerjaan penilaian, termasuk yang dihentikan, dan total
+asisten sama dengan jumlah empat pekerjaan asisten hari itu.
+
+Pertanyaan T07(b)–T09(b) yang dikirim **langsung** ke engine Agent Runtime tidak membuat
+pekerjaan di `jobs`: log dan token Asisten ditulis oleh `aisa-api`
+(`aisa/assistant_client.py`), jadi hanya pertanyaan lewat WhatsApp yang tercatat.
+
+### Pesan WhatsApp selama pengujian
+
+9 webhook dikirim; 8 menghasilkan balasan sungguhan ke nomor manajer (koreksi, undang,
+arsipkan semua, YA, pertanyaan T07, lanjutan T09, STOP, LANJUT) dan 1 adalah duplikat T11
+yang diabaikan tanpa balasan.
+
+## Catatan dan masalah yang diketahui
+
+1. **Penilai tidak deterministik.** Pada pengembangan, deck yang sama pernah mendapat skor
+   62,5 dan 70,0 pada dua kali penilaian. Ini tidak diulang dalam pengujian ini (setiap
+   deck dinilai sekali), tetapi menjadi alasan aturan "setiap deck dinilai sekali" dan
+   skor asli disimpan apa adanya. (Diperketat di `aisa-api-00005`: temperature 0, seed tetap,
+   kutipan ditulis sebelum nilai. Evaluasi lokal tanpa Firestore, setiap deck dua kali: lima
+   deck memberi skor identik di kedua run, termasuk deck nyata 63,1/63,1; satu deck sintetis
+   masih bisa bergeser satu tingkat di satu kriteria, ±5 poin.)
+2. **Penilai cenderung memberi nilai maksimal pada deck yang rapi.** Dua deck sintetis
+   dengan bukti kuat (T01, T02) sama-sama mendapat 5/5 di semua kriteria (skor 100,0).
+   Skor 100 membuat proposal kuat sulit dibedakan; kalibrasi dengan deck nyata yang dinilai
+   analis belum dilakukan. (Diperketat di `aisa-api-00005`: nilai 5 hanya untuk bukti keras
+   yang dapat diverifikasi, klaim/rencana/proyeksi tanpa data paling tinggi 3, dan kode
+   menurunkan nilai bila kutipannya tidak ditemukan di halaman yang disebut. Evaluasi lokal:
+   Sawah Pintar Nusantara dan Kopi Teras Senja kini 75,0 (semua 4), deck berbukti lengkap
+   bernama dan bersumber tetap 100, deck berisi kata sifat saja 24,4. Proposal yang sudah
+   dinilai tidak dinilai ulang; kalibrasi dengan analis tetap belum dilakukan.)
+3. **Token per proposal tidak menghitung penilaian yang dihentikan** (diperbaiki di `aisa-api-00004`: token tiap run kini ditambahkan ke proposal, termasuk run yang dihentikan atau gagal; belum diuji ulang). Bila STOP datang
+   setelah panggilan Penilai selesai, cabang `_Stopped` di `services/api/aisa/intake.py:199`
+   tidak menyimpan token ke proposal, dan penilaian ulang setelah LANJUT memakai pekerjaan
+   baru. Pada T10, `proposals/upload-ffca58ee99d0b8a3.tokens` = 2.251/1.483 (hanya pekerjaan
+   kedua), padahal pekerjaan yang dihentikan juga memakai 2.251/1.639 token.
+   `dailyStats` menghitung keduanya, jadi total harian lebih besar daripada jumlah token per
+   proposal.
+4. **STOP tidak memotong panggilan model yang sedang berjalan.** STOP diperiksa di antara
+   langkah. Panggilan yang sudah dimulai tetap selesai dan tokennya terpakai, lalu hasilnya
+   dibuang (T10).
+5. **Ringkasan 17.00 dikirim oleh revisi lama.** Ringkasan itu (dipicu manual pukul
+   18.10 WIB) memakai jendela "Sejak Rabu pukul 09.00" dan insight "sektor f&b mencatatkan
+   angka 1", karena terkirim oleh `aisa-api-00001`, sebelum perbaikan pembuka ("Ini
+   ringkasan pertama…" / "Sejak ringkasan …") dan ambang `MIN_INSIGHT_COUNT = 3` dipasang di
+   `aisa-api-00002`. Revisi `00003` memakai image yang sama dengan `00002`; pratinjau 09.00
+   di T04 sudah menunjukkan pembuka baru.
+6. **Istilah di balasan koreksi** (diperbaiki di `aisa-api-00004`: kini "Skor kualitas tetap 100" dengan format koma; belum diuji ulang lewat WA). `services/api/aisa/orchestrator.py:72` membalas "Skor AI
+   tetap 100.0": memakai istilah yang dihindari glosarium ("skor AI", seharusnya "skor
+   kualitas") dan format angka bertitik, sedangkan ringkasan memakai koma.
+7. **Asisten menawarkan perintah tindak lanjut.** Jawaban T07 ditutup dengan "Anda bisa
+   menggunakan perintah seperti `undang Kopi Teras Senja`…". Larangan saran tindak lanjut
+   secara eksplisit hanya berlaku untuk ringkasan, tetapi gaya ini perlu diputuskan.
+   Diputuskan: Asisten tidak menawarkan perintah atau tanggapan tanpa diminta, dan hanya
+   menyebut perintah WA bila manajer bertanya cara mengubah status. Instruksi diperbarui dan
+   engine dipasang ulang; pada uji ulang langsung ke engine, tidak ada jawaban yang ditutup
+   dengan saran perintah (belum diuji ulang lewat WA).
+8. Pekerjaan penilaian yang berhenti di "Perlu dicek manual" (T03) tetap berlabel model
+   `gemini-3.8-flash` walaupun tidak ada panggilan model.
+9. Proposal uji dari pengujian ini masih ada di produksi: Kopi Teras Senja, Lumbung Ikan
+   Pesisir, Kelas Kode Rakyat, dan Klinik Desa Sehat belum ditanggapi, sehingga akan muncul di
+   ringkasan 09.00 berikutnya. Sawah Pintar Nusantara (undang) dan Balkan Gourmet (arsipkan)
+   sudah bertanggapan.
+
+## Cara mengulang
+
+Skrip uji ada di luar repo (scratchpad sesi): pembuat deck fiktif (fpdf2), driver HTTP yang
+mengambil `internal-api-key` dan `gowa-webhook-secret` dari Secret Manager saat dijalankan
+(nilainya tidak dicetak atau ditulis), dan pembaca Firestore. Untuk mengulang tanpa skrip
+itu, gunakan rute di `services/api/README.md`: `POST /intake/upload` (header `X-AISA-Key`),
+`POST /webhook/gowa` dengan `X-Hub-Signature-256: sha256=<HMAC-SHA256(body mentah)>`, dan
+`POST /api/proposals/{id}/correction`. Lalu periksa `proposals`, `jobs/*/steps`, `history`,
+`digests`, `webhookEvents`, dan `settings/runtime` di Firestore. Ingat: setiap webhook yang
+diterima mengirim balasan WhatsApp sungguhan ke manajer.

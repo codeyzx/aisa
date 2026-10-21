@@ -139,7 +139,11 @@ async def webhook_gowa(request: Request, bg: BackgroundTasks) -> dict:
         ev = json.loads(raw)
     except ValueError:
         return {"ignored": "bukan JSON"}
+    if not isinstance(ev, dict):
+        return {"ignored": "bukan objek JSON"}
     payload = ev.get("payload") or {}
+    if not isinstance(payload, dict):
+        return {"ignored": "payload bukan objek"}
     if ev.get("event") != "message" or payload.get("is_from_me"):
         return {"ignored": "bukan pesan masuk"}
     if str(payload.get("chat_id", "")).endswith("@g.us"):

@@ -91,8 +91,11 @@ LANJUT arrives before it finishes.
 
 ## `jobs/{jobId}` and `jobs/{jobId}/steps/{stepId}`
 
-Job: `{kind: JobKind, agent, title, model?, proposalId?, digestId?, status: JobStatus,
-startedAt, endedAt?, durationMs?, stepCount, tokensIn, tokensOut}`.
+Job: `{kind: JobKind, agent, title, model?, proposalId?, proposalIds?, digestId?, status: JobStatus,
+startedAt, endedAt?, durationMs?, stepCount, tokensIn, tokensOut}`. A WhatsApp command job
+gets `proposalId` once its name resolves to one proposal, and `proposalIds` when it lists or
+confirms a bulk response. Its title is "Perintah: <perintah> <nama>" built from the parsed
+command, never the message text, so a correction's reason is not in it.
 
 Step: `{seq: int, at, action, tool, actor: StepActor, model?, read?, wrote?, tokensIn,
 tokensOut, durationMs, status: "ok" | "gagal" | "dihentikan", error?}`. Code steps have
@@ -133,6 +136,10 @@ A proposal is deleted on a founder's request (`DELETE /api/proposals/{id}` with 
 or `aisa delete-proposal`) or by the daily retention run, which deletes proposals archived
 (`response.kind` `arsipkan`) more than `rules.retentionDays` days ago.
 Either path deletes `proposals/{id}`, `proposalTexts/{id}`, the uploaded deck in GCS, the
-proposal's jobs with their steps, and any `pendingConfirmations` naming it. `history` rows
+proposal's jobs with their steps (`proposalId` equal to it), and any `pendingConfirmations`
+naming it. A job listing it in `proposalIds` is kept for the other proposals with this one
+removed, and any job title or step text (`action`, `read`, `wrote`, `error`) that still names
+it as a whole word has the name replaced by "(dihapus)", except in jobs owned by another
+proposal. `history` rows
 for the proposal are kept but scrubbed: `proposalName` becomes "(dihapus)" and `before` /
 `after` are removed. One `proposal_dihapus` row records the deletion and its reason.

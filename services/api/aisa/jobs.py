@@ -28,6 +28,20 @@ class JobLog:
                        digestId=digest_id, status=JobStatus.berjalan, startedAt=db.now())
         self.ref.set(to_doc(self.job))
 
+    def link(self, *, title: str | None = None, proposal_id: str | None = None,
+             proposal_ids: list[str] | None = None) -> None:
+        """Record what a job turned out to act on, once that is known (a command resolves its
+        proposal only while running). Deleting a proposal finds its jobs by these fields."""
+        upd: dict = {}
+        if title is not None:
+            self.job.title = upd["title"] = title
+        if proposal_id is not None:
+            self.job.proposalId = upd["proposalId"] = proposal_id
+        if proposal_ids is not None:
+            self.job.proposalIds = upd["proposalIds"] = list(proposal_ids)
+        if upd:
+            self.ref.update(upd)
+
     def step(self, action: str, tool: str, actor: StepActor, *, model: str | None = None,
              read: str | None = None, wrote: str | None = None, tokens_in: int = 0,
              tokens_out: int = 0, duration_ms: int = 0, status: str = "ok",

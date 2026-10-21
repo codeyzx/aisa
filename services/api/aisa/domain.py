@@ -181,6 +181,43 @@ def _commit_in_batches(ops) -> int:
     return n
 
 
+_STEP_TEXT = ("action", "read", "wrote", "error")
+
+
+def _scrub_other_jobs(pid: str, name: str, deleted: set[str]):
+    """Jobs that are kept but may still carry the proposal: a confirmed bulk response lists
+    it in `proposalIds` (the job stays for the other proposals, minus this one), and any job
+    title or step text naming it loses the name. A job owned by another proposal is left
+    alone, since a second proposal with the same name is not this one."""
+    fs = db.client()
+    owned_by_other: set[str] = set()
+    for s in fs.collection("jobs").select(["title", "proposalId", "proposalIds"]).stream():
+        path = s.reference.path
+        if path in deleted:
+            continue
+        d = s.to_dict() or {}
+        if d.get("proposalId") not in (None, pid):
+            owned_by_other.add(path)
+            continue
+        upd: dict[str, Any] = {}
+        if pid in (d.get("proposalIds") or []):
+            upd["proposalIds"] = firestore.ArrayRemove([pid])
+        title = d.get("title") or ""
+        if (new := scrub_name(title, name)) != title:
+            upd["title"] = new
+        if upd:
+            yield "update", s.reference, upd
+    for st in fs.collection_group("steps").stream():
+        job_path = st.reference.path.rsplit("/steps/", 1)[0]
+        if not job_path.startswith("jobs/") or job_path in deleted or job_path in owned_by_other:
+            continue
+        d = st.to_dict() or {}
+        upd = {f: new for f in _STEP_TEXT
+               if isinstance(d.get(f), str) and (new := scrub_name(d[f], name)) != d[f]}
+        if upd:
+            yield "update", st.reference, upd
+
+
 def delete_proposal(pid: str, reason: str, via: Via) -> dict:
     """Delete a proposal and everything derived from it, for any status (a founder's
     request or retention). Kept: history rows, scrubbed of the name and details, plus one
@@ -205,6 +242,7 @@ def delete_proposal(pid: str, reason: str, via: Via) -> dict:
             for st in ref.collection("steps").stream():
                 yield "delete", st.reference, None
             yield "delete", ref, None
+        yield from _scrub_other_jobs(pid, p.name, set(job_refs))
         for s in fs.collection("pendingConfirmations").where(
                 filter=FieldFilter("proposalIds", "array_contains", pid)).stream():
             yield "delete", s.reference, None

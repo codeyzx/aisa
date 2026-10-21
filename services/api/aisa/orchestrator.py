@@ -42,11 +42,12 @@ def _all_names() -> list[tuple[str, str]]:
             for s in db.client().collection("proposals").select(["name"]).stream()]
 
 
-def _resolve(name: str) -> tuple[str | None, str | None]:
-    """(proposal id, None) or (None, reply listing candidates)."""
-    m = match_name(name, _all_names())
+def _resolve(name: str) -> tuple[str | None, str]:
+    """(proposal id, its stored name) or (None, reply listing candidates)."""
+    names = _all_names()
+    m = match_name(name, names)
     if m.id:
-        return m.id, None
+        return m.id, dict(names)[m.id]
     if not m.candidates:
         return None, f"Proposal \"{name}\" tidak ditemukan. Tidak ada yang diubah."
     lines = [f"Ada beberapa proposal yang mirip \"{name}\":"]
@@ -59,7 +60,30 @@ def _pending_ref(phone: str):
     return db.client().document(f"pendingConfirmations/{phone}")
 
 
-def _execute(phone: str, cmd) -> str:
+def command_title(cmd) -> str:
+    """The job title for a command: what was asked and of which proposal, never the free-text
+    reason of a correction (that lives in history, which deletion scrubs)."""
+    if isinstance(cmd, Stop):
+        return "Perintah: STOP"
+    if isinstance(cmd, Resume):
+        return "Perintah: LANJUT"
+    if isinstance(cmd, Confirm):
+        return "Perintah: YA"
+    if isinstance(cmd, Respond):
+        return f"Perintah: {cmd.kind.value} {cmd.name[:60]}"
+    if isinstance(cmd, Correct):
+        return f"Perintah: pindahkan {cmd.name[:60]}"
+    if isinstance(cmd, RespondBulk):
+        return f"Perintah: {cmd.kind.value} semua {CATEGORY_LABEL[cmd.category].lower()}"
+    raise AssertionError(cmd)
+
+
+def _execute(phone: str, cmd, job: JobLog | None = None) -> str:
+    """Run a command; `job`, when given, is linked to the proposals the command acts on."""
+    def link(**kw) -> None:
+        if job is not None:
+            job.link(**kw)
+
     if isinstance(cmd, Stop):
         # Any answer running now started before this STOP, so it will be cancelled.
         running = assistant_client.answer_in_progress()
@@ -71,18 +95,23 @@ def _execute(phone: str, cmd) -> str:
         threading.Thread(target=intake.process_queue, daemon=True).start()
         return resume_reply(cancelled)
     if isinstance(cmd, Respond):
-        pid, reply = _resolve(cmd.name)
+        pid, found = _resolve(cmd.name)
         if not pid:
-            return reply
+            return found
+        link(title=f"Perintah: {cmd.kind.value} {found}", proposal_id=pid)
         p = domain.respond(pid, cmd.kind, Via.wa)
         return f"Tercatat: {p.name} → {cmd.kind.value}."
     if isinstance(cmd, Correct):
+        # Resolved even when the reason is missing, so the job is linked to the proposal and
+        # goes with it on deletion.
+        pid, found = _resolve(cmd.name)
+        if pid:
+            link(title=f"Perintah: pindahkan {found}", proposal_id=pid)
         if not cmd.reason:
             return ("Koreksi kategori perlu alasan. Contoh: pindahkan "
                     f"{cmd.name} ke {CATEGORY_LABEL[cmd.category].lower()} karena <alasan>")
-        pid, reply = _resolve(cmd.name)
         if not pid:
-            return reply
+            return found
         p = domain.correct(pid, cmd.category, cmd.reason, Via.wa)
         score = p.assessment.score if p.assessment else None
         return (f"Kategori {p.name} dipindahkan ke {CATEGORY_LABEL[cmd.category]}."
@@ -92,6 +121,7 @@ def _execute(phone: str, cmd) -> str:
         label = CATEGORY_LABEL[cmd.category]
         if not found:
             return f"Tidak ada proposal {label} yang belum ditanggapi."
+        link(proposal_ids=[i for i, _ in found])
         command = f"{cmd.kind.value} semua {label.lower()}"
         pc = PendingConfirmation(command=command, proposalIds=[i for i, _ in found],
                                  expiresAt=db.now() + CONFIRM_TTL)
@@ -111,6 +141,7 @@ def _execute(phone: str, cmd) -> str:
         bulk = parse(pc.command)
         if not isinstance(bulk, RespondBulk):
             return "Perintah yang menunggu tidak dikenali. Tidak ada yang diubah."
+        link(proposal_ids=pc.proposalIds)
         n = domain.respond_bulk(bulk.category, bulk.kind, Via.wa, pc.proposalIds)
         return f"Selesai: {n} proposal ditandai {bulk.kind.value}."
     raise AssertionError(cmd)
@@ -123,11 +154,11 @@ def handle(phone: str, text: str) -> str | None:
         if db.is_paused():
             return PAUSED_REPLY
         return assistant_client.ask(phone, text, notify=True)
-    job = JobLog(JobKind.perintah, "Orchestrator", f"Perintah: {text.strip()[:60]}")
+    job = JobLog(JobKind.perintah, "Orchestrator", command_title(cmd))
     try:
         with job.code_step(f"Jalankan perintah {type(cmd).__name__.lower()}", "kode",
                            wrote="proposals/history"):
-            reply = _execute(phone, cmd)
+            reply = _execute(phone, cmd, job)
         job.finish(JobStatus.selesai)
         return reply
     except domain.DomainError as e:

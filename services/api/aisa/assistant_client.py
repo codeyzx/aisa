@@ -59,6 +59,7 @@ class StepRecorder:
     def __init__(self, job: Any, model: str, tool: str):
         self.job, self.model, self.tool = job, model, tool
         self.pending_in = self.pending_out = 0
+        self.tool_calls = 0
         self._t = time.monotonic()
 
     def _elapsed(self) -> int:
@@ -72,6 +73,7 @@ class StepRecorder:
             self.pending_out += tokens_out
             return
         ms = self._elapsed()
+        self.tool_calls += len(calls)
         for i, (name, args) in enumerate(calls):
             first = i == 0
             self.job.step(f"Memanggil {name}", name, StepActor.model, model=self.model,
@@ -89,7 +91,8 @@ class StepRecorder:
 
     def answer(self, status: str = "ok", error: str | None = None) -> None:
         self.job.step("Menjawab pertanyaan", self.tool, StepActor.model, model=self.model,
-                      read="data AISA (tools baca)" if status == "ok" else None,
+                      # Only claim a data read when a tool actually ran in this answer.
+                      read="data AISA (tools baca)" if status == "ok" and self.tool_calls else None,
                       tokens_in=self.pending_in, tokens_out=self.pending_out,
                       duration_ms=self._elapsed(), status=status, error=error)
 

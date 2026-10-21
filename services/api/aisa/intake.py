@@ -15,8 +15,10 @@ from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 from . import db, storage
+from .digest import fmt_score
 from .jobs import JobLog, write_history
 from .models import (
+    CATEGORY_LABEL,
     Assessment,
     Founder,
     JobKind,
@@ -122,8 +124,7 @@ def run_intake(pid: str, pdf: bytes | None = None) -> ProposalStatus | None:
         t = db.now()
         ref.update({"status": ProposalStatus.perlu_dicek_manual.value, "statusReason": reason,
                     "assessment": None, "category": None, "effectiveCategory": None,
-                    "fit": None, "tokens": {"in": job.tokens_in, "out": job.tokens_out},
-                    "updatedAt": t})
+                    "fit": None, "updatedAt": t, **_spent(job)})
         write_history(via=Via.sistem, action="proposal_masuk", proposalId=pid,
                       proposalName=p.name, after="perlu_dicek_manual",
                       detail=f"Proposal {p.name} masuk: perlu dicek manual ({reason})")
@@ -189,7 +190,7 @@ def run_intake(pid: str, pdf: bytes | None = None) -> ProposalStatus | None:
             })
         write_history(via=Via.sistem, action="proposal_masuk", proposalId=pid, proposalName=name,
                       after=category.value,
-                      detail=f"Proposal {name} masuk: skor {score}, {category.value}"
+                      detail=f"Proposal {name} masuk: skor {fmt_score(score)}, {CATEGORY_LABEL[category]}"
                              + (", berkualitas di luar fokus" if qof else ""))
         _bump_daily(category.value, attempt.profile.sector, manual=False)
         job.finish(JobStatus.selesai)

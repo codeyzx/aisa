@@ -282,6 +282,9 @@ class Job(_M):
     title: str
     model: str | None = None
     proposalId: str | None = None
+    # Every proposal a job acted on when it touched several (a confirmed bulk response), so
+    # deleting one of them can find the job.
+    proposalIds: list[str] | None = None
     digestId: str | None = None
     status: JobStatus
     startedAt: datetime

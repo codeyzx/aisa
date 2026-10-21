@@ -316,16 +316,21 @@ def run_digest(slot: str, send: bool = True) -> dict:
     now = db.now()
     digest_id = f"{db.wib_date(now)}-{slot.replace('.', '')}"
     ref = db.client().document(f"digests/{digest_id}")
-    if send and ref.get().exists:
+    already_sent = ref.get().exists
+    if send and already_sent:
         return {"digestId": digest_id, "skipped": "sudah terkirim"}
     rules = db.load_rules()
 
     if not send:
         data, cands, ids = collect(slot, now)
         data.insight = template_insight(cands)
-        return {"digestId": digest_id, "text": template(data), "usedTemplate": True,
-                "insight": data.insight,
-                "counts": to_doc(data.counts()), "insightCandidates": cands}
+        preview = {"digestId": digest_id, "text": template(data), "usedTemplate": True,
+                   "insight": data.insight,
+                   "counts": to_doc(data.counts()), "insightCandidates": cands,
+                   "wouldSkip": already_sent}
+        if already_sent:
+            preview["note"] = "slot ini sudah terkirim; pengiriman sungguhan akan dilewati"
+        return preview
 
     job = JobLog(JobKind.ringkasan, "Pembuat ringkasan", f"Ringkasan {slot}",
                  model=rules.models.ringkasan, digest_id=digest_id)

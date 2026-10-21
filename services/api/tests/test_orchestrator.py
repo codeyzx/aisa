@@ -81,6 +81,25 @@ def test_pwa_o04_correction_without_reason_asks_for_one(seeded, asked, text):
     assert unchanged(seeded, before) and seeded.all("history") == {}
 
 
+@pytest.mark.parametrize("text,reply", [
+    ("pindahkan Startup Fiktif Zzz ke cocok",
+     'Proposal "Startup Fiktif Zzz" tidak ditemukan. Tidak ada yang diubah.'),
+    ("pindahkan Tani ke cocok",
+     'Ada beberapa proposal yang mirip "Tani":\n1. Tani Maju\n2. Tani Makmur\n'
+     "Tidak ada yang diubah. Kirim ulang perintah dengan nama lengkap."),
+], ids=["tak-dikenal", "ambigu"])
+def test_correction_without_reason_reports_an_unresolved_name_first(seeded, asked, text, reply):
+    before = seeded.all("proposals")
+    assert handle(text) == reply
+    assert unchanged(seeded, before) and seeded.all("history") == {}
+
+
+def test_correction_without_reason_links_the_job_to_the_resolved_proposal(seeded, asked):
+    assert handle("pindahkan tani maju ke cocok").startswith("Koreksi kategori perlu alasan.")
+    (j,) = jobs(seeded)
+    assert j["proposalId"] == "p1"
+
+
 def test_pwa_o05_correction_keeps_category_and_score(seeded, asked):
     reply = handle("pindahkan Tani Maju ke sangat cocok karena tim pernah exit")
     assert reply == "Kategori Tani Maju dipindahkan ke Sangat cocok. Skor kualitas tetap 70."

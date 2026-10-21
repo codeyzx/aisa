@@ -102,16 +102,17 @@ def _execute(phone: str, cmd, job: JobLog | None = None) -> str:
         p = domain.respond(pid, cmd.kind, Via.wa)
         return f"Tercatat: {p.name} → {cmd.kind.value}."
     if isinstance(cmd, Correct):
-        # Resolved even when the reason is missing, so the job is linked to the proposal and
-        # goes with it on deletion.
+        # The name is resolved before the reason is checked: an unknown or ambiguous name is
+        # the reply that matters, and asking for a reason first would invite a retry that
+        # still fails. A resolved name links the job to the proposal even when the reason is
+        # missing, so the job goes with the proposal on deletion.
         pid, found = _resolve(cmd.name)
-        if pid:
-            link(title=f"Perintah: pindahkan {found}", proposal_id=pid)
+        if not pid:
+            return found
+        link(title=f"Perintah: pindahkan {found}", proposal_id=pid)
         if not cmd.reason:
             return ("Koreksi kategori perlu alasan. Contoh: pindahkan "
                     f"{cmd.name} ke {CATEGORY_LABEL[cmd.category].lower()} karena <alasan>")
-        if not pid:
-            return found
         p = domain.correct(pid, cmd.category, cmd.reason, Via.wa)
         score = p.assessment.score if p.assessment else None
         return (f"Kategori {p.name} dipindahkan ke {CATEGORY_LABEL[cmd.category]}."

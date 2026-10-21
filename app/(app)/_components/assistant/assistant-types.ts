@@ -13,4 +13,6 @@ export interface AssistantContext {
   unresponded: number
   topUnresponded: number
   paused: boolean
+  /** The two best-scored unanswered proposals, for the example questions. */
+  topNames: string[]
 }

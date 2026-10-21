@@ -33,6 +33,13 @@ export async function getAssistantContextAction(): Promise<
         (p) => p.effectiveCategory === 'sangat_cocok',
       ).length,
       paused: runtime?.paused ?? false,
+      topNames: unresponded
+        .filter((p) => p.assessment)
+        .toSorted(
+          (a, b) => (b.assessment?.score ?? 0) - (a.assessment?.score ?? 0),
+        )
+        .slice(0, 2)
+        .map((p) => p.name),
     }
   })
 }

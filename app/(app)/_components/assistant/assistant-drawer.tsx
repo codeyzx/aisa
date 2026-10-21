@@ -27,38 +27,63 @@ import { AssistantComposer } from './assistant-composer'
 import type { AssistantContext, ChatMessage } from './assistant-types'
 
 /** The Asisten's own examples (overview-project.md, "Asisten"). */
-const suggestions: { icon: LucideIcon; title: string; question: string }[] = [
-  {
-    icon: SparklesIcon,
-    title: 'Fintech sangat cocok',
-    question: 'Fintech yang sangat cocok',
-  },
-  {
-    icon: ArchiveIcon,
-    title: 'Berkualitas, di luar fokus',
-    question: 'Yang berkualitas tapi di luar fokus',
-  },
-  {
-    icon: GaugeIcon,
-    title: 'Alasan skor',
-    question: 'Kenapa skor Panen Kita segitu?',
-  },
-  {
-    icon: ScaleIcon,
-    title: 'Bandingkan proposal',
-    question: 'Bandingkan Tani Maju dan SawahKu',
-  },
-  {
-    icon: MessageSquareTextIcon,
-    title: 'Pertanyaan untuk founder',
-    question: 'Buatkan pertanyaan untuk founder Tani Maju',
-  },
-  {
-    icon: BanknoteIcon,
-    title: 'Dana di bawah Rp3 M',
-    question: 'Berapa yang minta di bawah Rp3 M?',
-  },
-]
+interface Suggestion {
+  icon: LucideIcon
+  title: string
+  question: string
+}
+
+/**
+ * The example questions from the product brief. The ones about a named
+ * proposal use real unanswered proposals, so a suggestion never asks about a
+ * startup this workspace does not have; without them, those are left out.
+ */
+function suggestionsFor([first, second]: string[]): Suggestion[] {
+  return [
+    {
+      icon: SparklesIcon,
+      title: 'Fintech sangat cocok',
+      question: 'Fintech yang sangat cocok',
+    },
+    {
+      icon: ArchiveIcon,
+      title: 'Berkualitas, di luar fokus',
+      question: 'Yang berkualitas tapi di luar fokus',
+    },
+    ...(first
+      ? [
+          {
+            icon: GaugeIcon,
+            title: 'Alasan skor',
+            question: `Kenapa skor ${first} segitu?`,
+          },
+        ]
+      : []),
+    ...(first && second
+      ? [
+          {
+            icon: ScaleIcon,
+            title: 'Bandingkan proposal',
+            question: `Bandingkan ${first} dan ${second}`,
+          },
+        ]
+      : []),
+    ...(first
+      ? [
+          {
+            icon: MessageSquareTextIcon,
+            title: 'Pertanyaan untuk founder',
+            question: `Buatkan pertanyaan untuk founder ${first}`,
+          },
+        ]
+      : []),
+    {
+      icon: BanknoteIcon,
+      title: 'Dana di bawah Rp3 M',
+      question: 'Berapa yang minta di bawah Rp3 M?',
+    },
+  ]
+}
 
 function IconButton({
   label,
@@ -157,6 +182,8 @@ export function AssistantDrawer({
     const node = scroller.current
     if (node) node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' })
   }, [messages, busy, expanded])
+
+  const suggestions = suggestionsFor(context?.topNames ?? [])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {

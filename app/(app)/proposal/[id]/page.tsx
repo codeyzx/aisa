@@ -39,9 +39,7 @@ import { isCorrected } from '@/features/aisa/aisa.calibration'
 import {
   CATEGORY_LABEL,
   CRITERION_LABEL,
-  QUALITY_OUTSIDE_FOCUS_LABEL,
   sectorLabel,
-  STATUS_LABEL,
   VIA_LABEL,
 } from '@/features/aisa/aisa.labels'
 import {
@@ -68,6 +66,8 @@ import {
   DecisionBadge,
   ScoreBar,
   scoreTone,
+  OutsideFocusBadge,
+  StatusBadge,
 } from '../../_components/badges'
 import { AskAisaCard } from '../_components/ask-aisa-card'
 import { AssessmentLogProvider, LogButton } from '../_components/assessment-log'
@@ -271,28 +271,14 @@ export default async function ProposalDetailPage({
                     <CategoryBadge category={proposal.effectiveCategory} />
                   ) : null}
                   {proposal.status !== 'dinilai' ? (
-                    <Badge
-                      variant="outline"
-                      className={
-                        proposal.status === 'perlu_dicek_manual'
-                          ? 'border-warning/40 bg-warning-soft text-warning'
-                          : undefined
-                      }
-                    >
-                      {STATUS_LABEL[proposal.status]}
-                    </Badge>
+                    <StatusBadge status={proposal.status} />
                   ) : null}
                   <DecisionBadge decision={decision} />
                   {isCorrected(proposal) ? (
                     <Badge variant="outline">dikoreksi</Badge>
                   ) : null}
                   {showsQualityOutsideFocus(proposal) ? (
-                    <Badge
-                      variant="outline"
-                      className="border-warning/40 bg-warning-soft text-warning"
-                    >
-                      {QUALITY_OUTSIDE_FOCUS_LABEL}
-                    </Badge>
+                    <OutsideFocusBadge />
                   ) : null}
                 </div>
                 {proposal.statusReason ? (

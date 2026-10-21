@@ -10,12 +10,12 @@ import {
   InboxIcon,
   SearchIcon,
   XIcon,
+  GemIcon,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useQueryStates } from 'nuqs'
 import { useId, useMemo, useState } from 'react'
 
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
@@ -48,6 +48,7 @@ import {
   DecisionBadge,
   ScoreBar,
   scoreTone,
+  StatusBadge,
 } from '../../_components/badges'
 import { UploadDeckButton } from '../../_components/upload-deck-button'
 import {
@@ -168,21 +169,6 @@ function SortHeader({
 }
 
 const capitalized = 'inline-block first-letter:uppercase'
-
-function StatusBadge({ row }: { row: ProposalRow }) {
-  return (
-    <Badge
-      variant="outline"
-      className={
-        row.status === 'perlu_dicek_manual'
-          ? 'border-warning/40 bg-warning-soft text-warning'
-          : undefined
-      }
-    >
-      {STATUS_LABEL[row.status]}
-    </Badge>
-  )
-}
 
 // A cell keeps its text plain for the CSV: no thousands dots in a number, an
 // ISO day for the date, and a quote around anything with a comma or newline.
@@ -733,7 +719,7 @@ export function ProposalsList({
                         {row.category ? (
                           <CategoryBadge category={row.category} />
                         ) : (
-                          <StatusBadge row={row} />
+                          <StatusBadge status={row.status} />
                         )}
                         {row.corrected ? (
                           <span className="text-[11px] font-medium whitespace-nowrap text-muted-foreground">
@@ -741,7 +727,8 @@ export function ProposalsList({
                           </span>
                         ) : null}
                         {row.outsideFocus ? (
-                          <span className="text-[11px] font-medium whitespace-nowrap text-warning">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-medium whitespace-nowrap text-foreground">
+                            <GemIcon aria-hidden className="size-3" />
                             {QUALITY_OUTSIDE_FOCUS_LABEL}
                           </span>
                         ) : null}

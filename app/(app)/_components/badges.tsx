@@ -1,5 +1,7 @@
 import {
   ArchiveIcon,
+  FileSearchIcon,
+  GemIcon,
   Clock3Icon,
   EyeIcon,
   MailIcon,
@@ -7,10 +9,15 @@ import {
 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
-import { CATEGORY_LABEL } from '@/features/aisa/aisa.labels'
+import {
+  CATEGORY_LABEL,
+  QUALITY_OUTSIDE_FOCUS_LABEL,
+  STATUS_LABEL,
+} from '@/features/aisa/aisa.labels'
 import {
   type Category,
   type Criterion,
+  type ProposalStatus,
   type ResponseKind,
   type Rules,
 } from '@/features/aisa/aisa.schema'
@@ -194,5 +201,39 @@ export function ScoreBar({
         style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
       />
     </div>
+  )
+}
+
+/**
+ * A proposal status that is not a verdict. "Perlu dicek manual" asks for the
+ * manager's eyes, so it gets an icon and bold text, never a kategori hue: amber
+ * there read as Kurang cocok.
+ */
+export function StatusBadge({
+  status,
+  className,
+}: {
+  status: ProposalStatus
+  className?: string
+}) {
+  const manual = status === 'perlu_dicek_manual'
+  return (
+    <Badge
+      variant="outline"
+      className={cn(manual && 'font-semibold text-foreground', className)}
+    >
+      {manual ? <FileSearchIcon /> : null}
+      {STATUS_LABEL[status]}
+    </Badge>
+  )
+}
+
+/** "Berkualitas, di luar fokus": a note about the proposal, not a kategori. */
+export function OutsideFocusBadge({ className }: { className?: string }) {
+  return (
+    <Badge variant="outline" className={cn('text-foreground', className)}>
+      <GemIcon />
+      {QUALITY_OUTSIDE_FOCUS_LABEL}
+    </Badge>
   )
 }

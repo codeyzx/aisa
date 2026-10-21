@@ -195,7 +195,8 @@ selain itu 09.00.
 **Langkah:**
 
 1. Buka **Dashboard** dari sidebar. Baca judul dan baris kecil di bawahnya.
-2. Klik **Proposal**, lalu **Tren**, lalu **Riwayat**. Baca judulnya setiap kali.
+2. Klik **Proposal**, lalu **Tren**, lalu **Biaya AI**, lalu **Riwayat**. Baca judulnya setiap
+   kali.
 3. Buka salah satu proposal dari daftar.
 
 **Yang seharusnya terlihat:**
@@ -205,6 +206,7 @@ selain itu 09.00.
   **sore** sesudahnya (termasuk malam).
 - Proposal: **Proposal** dengan **7 menunggu keputusan Anda** (angkanya sama dengan badge).
 - Tren: **Tren** dengan **14 hari terakhir**.
+- Biaya AI: **Biaya AI** dengan **Berapa biaya AI dan berapa yang dihemat dibanding cek manual**.
 - Riwayat: **Riwayat** dengan **Jejak audit: siapa melakukan apa, dan kapan**.
 - Detail proposal: **Proposal** dengan **Detail proposal**.
 - Menu yang sedang dibuka di sidebar tampak tersorot.
@@ -233,8 +235,8 @@ dilihat dulu.
 - **Disarankan untuk Anda** berisi jumlah yang kategorinya **Sangat cocok** atau **Cocok** (saat
   ditulis: 4).
 - **Paling cocok untuk Anda** berisi paling banyak 5 proposal dari kelompok itu, diurutkan dari
-  skor tertinggi. Setiap baris: inisial, nama, badge kategori, satu kalimat ringkasan · sektor ·
-  tahap, batang skor, dan angka skor (mis. Kopi Teras Senja 100,0, Kelas Kode Rakyat 85,6,
+  skor tertinggi. Setiap baris: inisial, nama, badge kategori, satu kalimat ringkasan · sektor
+  (berhuruf besar, mis. F&B) · tahap, batang skor, dan angka skor (mis. Kopi Teras Senja 100,0, Kelas Kode Rakyat 85,6,
   Klinik Desa Sehat 78,1, Rantai Dingin Bahari 68,1). Jumlah barisnya sama dengan kartu
   **Disarankan untuk Anda** kalau angka itu 5 atau kurang.
 - Langkah 5 membuka halaman proposal itu (`/proposal/<id>`), header **Detail proposal**.
@@ -259,15 +261,18 @@ ikut muncul, adalah bug.
 
 **Yang seharusnya terlihat:** sebelum mengetik, jendela hanya berisi grup **Halaman** dan
 **Perintah**. Begitu Anda mengetik, grup **Proposal** muncul. Tiap baris menampilkan nama dan,
-di kanan, sektor · kategori (mis. **f&b · Sangat cocok**). Setelah Enter, jendela menutup dan
+di kanan, sektor · kategori (mis. **F&B · Sangat cocok**; sektor ditulis berhuruf besar seperti di daftar proposal). Setelah Enter, jendela menutup dan
 halaman Kopi Teras Senja terbuka (alamat `/proposal/<id>`, header **Detail proposal**). Anda juga
 bisa mencari dengan nama founder, sektor (mis. `agritech` menampilkan **Sawah Pintar
-Nusantara**), atau kategori.
+Nusantara**), atau kategori. Huruf besar dan kecil tidak dibedakan.
 
-**Kalau berbeda:** pencarian memakai pencocokan longgar. Mengetik `kopi` saja juga menampilkan
-proposal lain yang hurufnya kebetulan cocok (saat diuji: **Saku Hukum** muncul di atas Kopi Teras
-Senja), jadi ketik nama lebih lengkap. Kalau proposal yang Anda tahu ada tidak muncul sama
-sekali, catat namanya.
+Pencarian menampilkan hanya baris yang memuat **setiap** kata yang Anda ketik, urutannya bebas.
+Jadi `kopi` saja menampilkan proposal yang namanya, founder, sektor, atau kategorinya memuat
+"kopi", bukan proposal lain yang hurufnya kebetulan tersebar k…o…p…i.
+`teras kopi` tetap menemukan Kopi Teras Senja.
+
+**Kalau berbeda:** kalau proposal tanpa kata `kopi` ikut muncul, atau proposal yang Anda tahu ada
+tidak muncul sama sekali, catat kata yang diketik dan namanya.
 
 ### UC-DSB-11 · Lompat ke halaman lain lewat pencarian
 
@@ -285,7 +290,7 @@ sekali, catat namanya.
 **Yang seharusnya terlihat:** di langkah 2 grup **Halaman** menyisakan **Riwayat**. Enter membawa
 ke `/riwayat`. Grup **Perintah** berisi **Atur aturan penilaian** (ke halaman **Aturan
 penilaian**), **Tanya asisten** (membuka panel Tanya AISA dengan pertanyaan **Ringkas peluang
-minggu ini**), dan **Pakai tema gelap** atau **Pakai tema terang**. Daftar **Halaman** sama
+minggu ini**), dan **Gunakan mode gelap** atau **Gunakan mode terang**. Daftar **Halaman** sama
 dengan menu sidebar.
 
 **Kalau berbeda:** catat kata yang diketik dan hasil yang muncul.
@@ -303,12 +308,10 @@ dengan menu sidebar.
 3. Tekan **⌘K** / **Ctrl+K** lagi.
 
 **Yang seharusnya terlihat:** di langkah 1 muncul **Tidak ada hasil.** Di langkah 3 kolom
-pencarian masih berisi `zzzzqq` dari tadi (perilaku saat ini). Hapus dulu teksnya sebelum
-mencari hal lain. Kalau Anda mengetik langsung, teks baru tersambung ke teks lama dan hasilnya
-kosong.
+pencarian kosong lagi dan jendela kembali menampilkan grup **Halaman** dan **Perintah**. Teks
+lama tidak terbawa, apa pun cara jendela ditutup (**Esc**, klik di luar, atau memilih hasil).
 
-**Kalau berbeda:** kalau kolom sudah kosong saat dibuka lagi, perilaku ini sudah diubah. Catat
-saja agar panduan diperbarui.
+**Kalau berbeda:** kalau kolom masih berisi `zzzzqq` saat dibuka lagi, catat sebagai bug.
 
 ### UC-DSB-13 · Melihat notifikasi terbaru
 
@@ -330,9 +333,13 @@ dan judulnya tebal. Mengklik baris proposal membuka halaman proposal itu. Kalau 
 sudah dihapus, klik membawa ke **Riwayat**. Baris yang diklik tidak lagi bertitik. Kalau belum
 ada kejadian sama sekali: **Belum ada notifikasi**.
 
-**Kalau berbeda:** catat judul baris dan tujuan kliknya. Catatan: untuk proposal yang sudah
-dihapus, lonceng menulis judul seperti **Proposal masuk · (dihapus)**, sedangkan kartu
-**Aktivitas terakhir** di Dashboard menulis **Proposal masuk** saja (lihat UC-DSB-22).
+Untuk proposal yang sudah dihapus, judulnya hanya nama kejadian (mis. **Proposal masuk**), sama
+seperti kartu **Aktivitas terakhir** di Dashboard (lihat UC-DSB-22). Keterangan lama yang
+tersimpan dengan skor dan kategori mentah (mis. "skor 63.1, tidak_cocok") ditampilkan dengan kata
+tampilan (mis. "skor 63,1, Tidak cocok"), seperti di **Riwayat**.
+
+**Kalau berbeda:** catat judul baris dan tujuan kliknya. Judul yang memuat **(dihapus)** adalah
+bug.
 
 ### UC-DSB-14 · Menandai semua notifikasi sudah dibaca
 
@@ -366,8 +373,8 @@ lonceng, yang dianggap baru adalah kejadian setelah ringkasan WhatsApp terakhir.
 2. Klik lagi ikon yang sekarang berupa matahari (tooltip **Gunakan mode terang**).
 
 **Yang seharusnya terlihat:** di langkah 1 seluruh aplikasi berubah gelap dan ikon menjadi
-matahari. Di langkah 2 kembali terang. Pilihan yang sama ada di jendela ⌘K sebagai **Pakai tema
-gelap** / **Pakai tema terang**.
+matahari. Di langkah 2 kembali terang. Pilihan yang sama ada di jendela ⌘K, grup **Perintah**,
+dengan kata yang sama: **Gunakan mode gelap** / **Gunakan mode terang**.
 
 **Kalau berbeda:** catat bagian yang tetap terang atau tulisan yang sulit dibaca di mode gelap,
 dengan tangkapan layar.
@@ -409,8 +416,8 @@ dari kira-kira 860 piksel).
 4. Gulir Dashboard sampai bawah.
 
 **Yang seharusnya terlihat:** sidebar berubah menjadi baris di atas: logo AISA, lalu deretan
-ikon tanpa tulisan (Dashboard, Proposal dengan badge angka, Tren, Aktivitas AI, Riwayat, Aturan
-penilaian, Pengaturan), lalu kotak **Ringkasan WhatsApp**. Di bawahnya judul **Dashboard** dan
+ikon tanpa tulisan (Dashboard, Proposal dengan badge angka, Tren, Aktivitas AI, Biaya AI,
+Riwayat, Aturan penilaian, Pengaturan), lalu kotak **Ringkasan WhatsApp**. Di bawahnya judul **Dashboard** dan
 sapaan, ikon lonceng, tema, dan inisial. Kolom **Cari proposal** memenuhi lebar layar, tanpa
 tanda ⌘K. Kartu-kartu tersusun satu kolom. Tombol bulat **Tanya AISA** tetap di kanan bawah.
 Tidak ada bagian yang harus digeser ke samping, kecuali deretan ikon kalau layar sangat sempit.
@@ -550,6 +557,8 @@ lalu paling banyak 5 kejadian terbaru. Masing-masing berisi judul (mis. **Propos
 Teras Senja**, **STOP**, **LANJUT**), keterangan, dan waktu (mis. **22 Okt, 01.06**). Urutannya
 sama dengan lima teratas di lonceng. Untuk proposal yang sudah dihapus, judulnya hanya nama
 kejadian (mis. **Proposal masuk**) dengan keterangan **Rincian dihapus bersama proposal**.
+Keterangan lama dengan skor dan kategori mentah ditampilkan dengan kata tampilan, sama seperti di
+lonceng (UC-DSB-13).
 **Semua** membuka `/riwayat`. Kalau kosong: **Belum ada aktivitas.**
 
 **Kalau berbeda:** baris di sini tidak bisa diklik, itu memang begitu. Catat kalau urutannya
@@ -588,14 +597,17 @@ Anda menekan **LANJUT** di akhir.
 **Langkah:**
 
 1. Di sidebar, grup **Lainnya**, klik **Pengaturan**, lalu tab **Integrasi**.
-2. Di kartu dengan status **Berjalan**, klik tombol merah **STOP**. Tunggu toast **AI dijeda
+2. Di kartu **Status AI** dengan status **Berjalan**, klik tombol merah **STOP**. Muncul jendela
+   konfirmasi **Jeda semua pekerjaan AI?** Klik **Ya, jeda AI**, lalu tunggu toast **AI dijeda
    (STOP).**
 3. Klik **Dashboard** di sidebar.
 4. Klik tautan **Pengaturan** di dalam banner merah.
-5. Klik **LANJUT**. Tunggu toast **AI dilanjutkan (LANJUT).**
+5. Klik **LANJUT** (langsung jalan, tanpa konfirmasi). Tunggu toast **AI dilanjutkan
+   (LANJUT).**
 6. Buka **Dashboard** lagi.
 
-**Yang seharusnya terlihat:** di langkah 3, di paling atas Dashboard ada banner merah: **AI
+**Yang seharusnya terlihat:** di langkah 2, klik **Batal** di jendela konfirmasi menutupnya tanpa
+menjeda apa pun (status tetap **Berjalan**). Di langkah 3, di paling atas Dashboard ada banner merah: **AI
 sedang dijeda (STOP). Proposal baru menunggu sebagai Antre sampai LANJUT di Pengaturan.**
 Langkah 4 membuka `/pengaturan?tab=integrasi`, status **Dijeda (STOP)**. Di langkah 6 banner
 sudah hilang. Di lonceng dan **Aktivitas terakhir** muncul baris **STOP** lalu **LANJUT**.
@@ -653,7 +665,8 @@ apakah kualitasnya membaik.
 
 **Yang seharusnya terlihat:** **Proposal per sektor** berketerangan **Minggu ini, dengan selisih
 dari minggu lalu** dan menampilkan paling banyak 7 sektor, masing-masing dengan batang, jumlah
-minggu ini, dan selisih dalam kurung (mis. **agritech 5 (+5)**). Kalau kosong: **Belum ada
+minggu ini, dan selisih dalam kurung (mis. **Agritech 5 (+5)**). Sektor ditulis berhuruf besar seperti di daftar proposal, dan
+sektor yang tersimpan dengan huruf berbeda (mis. `f&b` dan `F&B`) digabung menjadi satu baris. Kalau kosong: **Belum ada
 data.** **Rata-rata skor kualitas per hari** berskala 0 sampai 100, dengan keterangan seperti
 **7 hari terakhir 74,5**, atau **7 hari terakhir …, naik dari …** / **turun dari …** kalau
 minggu sebelumnya juga ada nilainya. Hari tanpa proposal yang dinilai tidak diberi titik.
@@ -674,7 +687,8 @@ minggu sebelumnya juga ada nilainya. Hari tanpa proposal yang dinilai tidak dibe
 **Yang seharusnya terlihat:** keterangan seperti **652.238 token dalam 14 hari · masuk 548 rb
 · keluar 104,3 rb**. Batang bertumpuk per hari dengan legenda **Token masuk** dan **Token
 keluar**. Arahkan mouse untuk melihat tanggal dan jumlah token persis, mis. **… token**.
-Rincian per pekerjaan AI ada di halaman **Aktivitas AI**.
+Rincian per pekerjaan AI ada di halaman **Aktivitas AI**, dan biaya rupiahnya di halaman **Biaya
+AI**.
 
 **Kalau berbeda:** kalau ada hari dengan proposal masuk (lihat UC-DSB-25) tapi token 0, catat
 tanggalnya.

@@ -317,6 +317,10 @@ tab punya angka jumlah. Angka tab **Semua** sama dengan jumlah angka tab lainnya
 setiap baris berjudul "Aturan penilaian diperbarui ke versi N", dengan catatan "Berlaku untuk
 proposal berikutnya. Skor lama tidak berubah." dan alasan dalam tanda kutip. Kejadian dikelompokkan
 per hari dengan judul **Hari ini**, **Kemarin**, atau nama hari dan tanggal, plus "N kejadian".
+Di tab **Proposal masuk**, catatan baris berbunyi seperti "Proposal <nama> masuk: skor 63,1, Tidak
+cocok": skor memakai koma desimal dan kategorinya kata tampilan, juga untuk baris lama yang dulu
+tersimpan sebagai `63.1, tidak_cocok`. Di tab **Penilaian AI**, sektor ditulis berhuruf besar
+seperti di daftar proposal (mis. **F&B**, bukan `f&b`).
 
 **Kalau berbeda:** kalau angka tab tidak cocok dengan jumlah baris, catat tabnya.
 
@@ -634,19 +638,30 @@ dengan **Batal**.
   investasi**, **Patokan nilai**, **Model**.
 - Sebelum ada perubahan, panel berbunyi "Belum ada perubahan. Geser bobot atau ubah batas, hasilnya
   langsung terlihat di sini." dan tombol **Simpan versi N+1** nonaktif.
+- Di bawah judul panel tertulis "Simulasi kategori AI pada N proposal yang sudah dinilai. Hanya
+  pratinjau, skor lama tidak diubah.".
 - Setelah batas Sangat cocok `90`, panel menunjukkan angka besar `1`, "proposal akan pindah
-  kategori", "0 naik", "1 turun". Tabel **Kategori / Sekarang / Baru** menunjukkan Sangat cocok
-  `2 → 1 (-1)` dan Cocok `2 → 3 (+1)`, dan bagian **Contoh yang pindah** menyebut Kelas Kode Rakyat
-  (Sangat cocok → Cocok). Angka bisa berbeda kalau datanya berubah.
+  kategori AI", "0 naik", "1 turun". Tabel dengan kolom **Kategori**, **AI sekarang**, **Aturan
+  baru** menunjukkan Sangat cocok `2 → 1 (-1)` dan Cocok `2 → 3 (+1)`, dan bagian **Contoh yang
+  pindah kategori AI** menyebut Kelas Kode Rakyat (Sangat cocok → Cocok). Angka bisa berbeda kalau
+  datanya berubah.
+- Kalau proposal yang pindah pernah dikoreksi manajer, contohnya diberi baris kecil "Tetap
+  <kategori> (koreksi manajer)", di bawah angka besar ada "N di antaranya tetap pada kategori koreksi
+  manajer." (atau "Semuanya tetap pada kategori koreksi manajer." kalau semua yang pindah dikoreksi),
+  dan ringkasan satu baris di layar sempit ditambah ", N tetap pada koreksi manajer".
 - Setelah Tim `40`, baris **Total** menjadi `112,5%` dengan "· lebih 12,5%" berwarna kuning, pesan
   "Total bobot lima kriteria harus tepat 100%." muncul, dan panel berbunyi "Ada isian yang belum
-  benar, misalnya total bobot belum 100%. Perbaiki dulu untuk melihat dampaknya.".
+  benar, misalnya total bobot belum 100%. Perbaiki dulu untuk melihat dampaknya." dan teks di bawah
+  judul panel menjadi "Simulasi menunggu semua isian benar.".
 - Setelah **Batal** lalu **Ubah aturan** lagi, semua isian kembali ke nilai tersimpan (Tim `27.5`,
   Sangat cocok `80`). Kartu atas halaman tetap "Aturan versi N" yang sama.
 
-Catatan: kolom **Sekarang** di panel menghitung ulang kategori dari nilai AI dengan aturan saat ini,
-tanpa koreksi manajer. Jadi angkanya bisa berbeda dari kotak **Batas kategori** di halaman (mis.
-Sangat cocok `2` di panel, `3` di halaman, karena Kopi Teras Senja dikoreksi manajer).
+Catatan: kedua kolom menghitung ulang kategori dari nilai AI, dengan aturan saat ini dan aturan
+baru. Koreksi manajer tidak ikut, dan keterangan di atas tabel mengatakannya: "Kategori dari AI,
+dihitung ulang dengan aturan sekarang dan aturan baru. Koreksi manajer tidak ikut berubah, jadi angka
+ini bisa berbeda dari kartu Batas kategori." Jadi angka **AI sekarang** bisa berbeda dari kotak
+**Batas kategori** di halaman (mis. Sangat cocok `2` di panel, `3` di halaman, karena Kopi Teras
+Senja dikoreksi manajer). Itu bukan temuan.
 
 **Kalau berbeda:** kalau versi aturan berubah atau ada toast "Aturan penilaian tersimpan sebagai
 versi baru." padahal Anda menekan **Batal**, itu temuan serius. Laporkan segera.
@@ -825,25 +840,33 @@ tidak bisa menghubungi aisa-api. Catat pesan dan jamnya, lalu hubungi tim.
 **Situasi:** Anda ingin menjeda AI sementara, mis. saat aturan sedang dibahas.
 
 **Sebelum mulai:** ⚠️ langkah ini menghentikan pekerjaan AI di produksi. Proposal yang masuk selama
-jeda menunggu sebagai **Antre**, dan Asisten tidak menjawab. Lakukan saat tidak ada proposal
-sungguhan yang ditunggu, dan langsung lanjutkan setelah selesai. Masuk sebagai admin.
+jeda menunggu sebagai **Antre**, dan Asisten hanya membalas "AISA sedang dijeda (STOP). …".
+Lakukan saat tidak ada proposal sungguhan yang ditunggu, dan langsung lanjutkan setelah selesai.
+Masuk sebagai admin.
 
 **Langkah:**
 
 1. Klik tab **Integrasi**. Di panel **Status AI**, pastikan labelnya **Berjalan**.
-2. Klik tombol merah **STOP**. Tombol langsung bekerja tanpa dialog konfirmasi.
-3. Di sidebar, klik **Dashboard**, lalu baca pita di atas.
-4. Kembali ke **Pengaturan** → **Integrasi**, lalu klik **LANJUT**.
-5. Buka **Riwayat**, tab **STOP/LANJUT**.
+2. Klik tombol merah **STOP**. Di dialog yang muncul, klik **Batal** dulu.
+3. Klik **STOP** lagi, lalu klik **Ya, jeda AI**.
+4. Di sidebar, klik **Dashboard**, lalu baca pita di atas.
+5. Kembali ke **Pengaturan** → **Integrasi**, lalu klik **LANJUT**.
+6. Buka **Riwayat**, tab **STOP/LANJUT**.
 
 **Yang seharusnya terlihat:**
 
-- Setelah **STOP**, muncul toast "AI dijeda (STOP).". Label berubah menjadi merah **Dijeda (STOP)**
-  dengan teks "Pekerjaan AI berhenti sejak <tanggal>, <jam> (lewat Dashboard). Proposal baru menunggu
-  sebagai Antre sampai LANJUT.". Tombol berubah menjadi **LANJUT**.
+- **STOP** membuka dialog **Jeda semua pekerjaan AI?** dengan teks "Selama dijeda, proposal baru
+  menunggu sebagai Antre, Asisten menjawab “AISA sedang dijeda”, dan pekerjaan yang sedang berjalan
+  dihentikan di antara langkah. Tekan LANJUT untuk menjalankannya lagi." serta tombol **Batal** dan
+  **Ya, jeda AI**. Setelah **Batal**, dialog tertutup dan label tetap **Berjalan**.
+- Setelah **Ya, jeda AI**, dialog tertutup dan muncul toast "AI dijeda (STOP).". Label berubah
+  menjadi merah **Dijeda (STOP)** dengan teks "Pekerjaan AI berhenti sejak <tanggal>, <jam> (lewat
+  Dashboard). Proposal baru menunggu sebagai Antre sampai LANJUT.". Tombol berubah menjadi
+  **LANJUT**.
 - Dashboard menampilkan pita "AI sedang dijeda (STOP). Proposal baru menunggu sebagai Antre sampai
   LANJUT di Pengaturan." dengan tautan ke **Pengaturan**.
-- Setelah **LANJUT**, muncul toast "AI dilanjutkan (LANJUT)." dan label kembali **Berjalan**.
+- **LANJUT** langsung bekerja tanpa dialog. Muncul toast "AI dilanjutkan (LANJUT)." dan label
+  kembali **Berjalan**.
 - Di **Riwayat**, ada baris "Pekerjaan AI dijeda (STOP)" dan "Pekerjaan AI dilanjutkan (LANJUT)"
   dengan pelaku **Manajer** dan kanal **via Dashboard**.
 

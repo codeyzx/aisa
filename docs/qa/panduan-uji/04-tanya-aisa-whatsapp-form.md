@@ -263,7 +263,8 @@ papan klip, muncul toast **Gagal menyalin**.
 
 ### UC-AST-12 · Jawaban gagal dan Coba lagi
 
-**Situasi:** jaringan putus atau layanan AISA sedang tidak bisa dihubungi saat Anda bertanya.
+**Situasi:** jaringan putus, layanan AISA sedang tidak bisa dihubungi, atau Asisten gagal menjawab
+saat Anda bertanya.
 **Sebelum mulai:** panel Tanya AISA terbuka. Cara paling mudah memicunya: matikan Wi-Fi sesaat
 setelah menekan Enter. Kondisi ini tidak selalu bisa dibuat; uji bila kebetulan terjadi.
 **Langkah:**
@@ -276,9 +277,9 @@ setelah menekan Enter. Kondisi ini tidak selalu bisa dibuat; uji bila kebetulan 
 berisi teks yang sama (mis. "aisa-api tidak dapat dihubungi. Coba lagi sebentar lagi." atau
 "aisa-api belum menjawab dalam batas waktu. Prosesnya mungkin masih berjalan; coba lagi sebentar
 lagi."). **Coba lagi** menghapus pertanyaan yang gagal beserta pesan merahnya, lalu mengirim
-ulang pertanyaan yang sama. Catatan: bila AISA sendiri gagal menjawab, yang muncul adalah
-gelembung jawaban biasa "Maaf, asisten sedang tidak bisa dihubungi. Coba lagi sebentar." tanpa
-tombol **Coba lagi**; kirim ulang pertanyaannya secara manual.
+ulang pertanyaan yang sama. Bila Asisten sendiri gagal menjawab, hasilnya juga pesan merah dengan
+tombol **Coba lagi** (dan toast merah), berisi "Maaf, asisten sedang tidak bisa dihubungi. Coba
+lagi sebentar.", bukan gelembung jawaban biasa.
 **Kalau berbeda:** catat teks pesan merahnya.
 
 ### UC-AST-13 · Bertanya saat AISA dijeda ⚠️
@@ -553,6 +554,9 @@ WhatsApp.
 
 **Yang seharusnya terlihat:** kedua pesan dibalas sama: `Koreksi kategori perlu alasan. Contoh:
 pindahkan UJI Dua ke sangat cocok karena <alasan>`. Kategori di dashboard tidak berubah.
+Nama dicek lebih dulu daripada alasan: `pindahkan Xyzabc ke cocok` (nama yang tidak ada, tanpa
+alasan) dibalas `Proposal "Xyzabc" tidak ditemukan. Tidak ada yang diubah.`, bukan permintaan
+alasan. Nama yang cocok dengan beberapa proposal dibalas daftar seperti UC-WA-14.
 **Kalau berbeda:** bila kategori berubah tanpa alasan, itu bug.
 
 ### UC-WA-13 · Memindahkan proposal yang perlu dicek manual
@@ -766,7 +770,9 @@ deck sintetis). AISA tidak dijeda.
 3. Klik **UJI Form Satu**.
 
 **Yang seharusnya terlihat:** proposal muncul mula-mula **Antre**, lalu **Sedang dinilai**, lalu
-**Dinilai** dalam sekitar satu menit, dengan skor kualitas dan kategori. Di detail, kartu founder
+**Dinilai** dalam sekitar satu menit, dengan skor kualitas dan kategori. Daftar **Proposal** perlu
+dimuat ulang, tetapi halaman detail yang dibuka selagi **Antre** atau **Sedang dinilai** memperbarui
+dirinya sendiri setiap beberapa detik (paling lama sekitar lima menit). Di detail, kartu founder
 menampilkan nama dan email, tombol **Email**, dan baris "Form · _nama berkas_ · _N_ halaman".
 Di **Riwayat** muncul "UJI Form Satu **mengirim proposal**" lalu "AISA selesai menilai UJI Form
 Satu". Proposal ini juga ikut dihitung di ringkasan berikutnya dan bisa ditanyakan ke Tanya AISA.
@@ -801,7 +807,8 @@ di Google.
 bukan dari isi PDF. Setiap respons form baru menyimpan berkas Drive baru, jadi kiriman kedua
 muncul sebagai proposal kedua bernama sama. Itu perilaku yang diharapkan; yang dicegah hanyalah
 satu respons yang terkirim dua kali. Bandingkan dengan **Unggah pitch deck** di dashboard: PDF
-yang isinya sama persis tidak membuat proposal baru, dan Anda dibawa ke proposal yang sudah ada.
+yang isinya sama persis tidak membuat proposal baru: muncul toast "Pitch deck ini sudah pernah
+diunggah. Membuka proposalnya." dan Anda dibawa ke proposal yang sudah ada.
 Hapus proposal kedua dengan **Hapus data**.
 **Kalau berbeda:** bila satu kali **Submit** menghasilkan dua proposal, catat.
 

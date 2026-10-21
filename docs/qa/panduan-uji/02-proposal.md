@@ -125,8 +125,10 @@ Senja.
 1. Klik kotak pilihan **Semua kategori**. Pilihannya: **Semua kategori**, **Sangat cocok**,
    **Cocok**, **Kurang cocok**, **Tidak cocok**, lalu (setelah garis pemisah) **Sangat cocok +
    cocok** dan **Berkualitas, di luar fokus**. Pilih **Cocok**.
-2. Klik kotak **Semua sektor**. Pilihannya diambil dari sektor proposal yang ada (mis. agritech,
-   climate, edtech, f&b, fashion, healthtech). Pilih **climate**.
+2. Klik kotak **Semua sektor**. Pilihannya diambil dari sektor proposal yang ada, ditulis dengan
+   huruf besar seperti di kolom **Sektor** (mis. **Agritech**, **Climate**, **Edtech**, **F&B**,
+   **Fashion**, **Healthtech**). Sektor yang tersimpan dengan huruf berbeda (mis. `f&b` dan
+   `F&B`) hanya muncul sekali. Pilih **Climate**.
 3. Klik kotak **Semua status**. Pilihannya: **Semua status**, **Antre**, **Sedang dinilai**,
    **Dinilai**, **Perlu dicek manual**, **Dihentikan**. Pilih **Dinilai**.
 4. Salin URL di browser, buka di tab baru.
@@ -135,10 +137,11 @@ Senja.
 **Yang seharusnya terlihat:**
 
 - Setiap pilihan langsung menyaring tabel dan tab menghitung ulang. Contoh saat panduan ditulis:
-  **Cocok** saja = 2 proposal (Klinik Desa Sehat, Rantai Dingin Bahari); ditambah **climate** = 1
+  **Cocok** saja = 2 proposal (Klinik Desa Sehat, Rantai Dingin Bahari); ditambah **Climate** = 1
   (Rantai Dingin Bahari).
-- URL menyimpan pilihan, mis. `?kategori=cocok&sektor=climate&status=dinilai`. Tab baru dari URL
-  yang sama menampilkan hasil yang sama.
+- URL menyimpan pilihan, mis. `?kategori=cocok&sektor=Climate&status=dinilai`. Tab baru dari URL
+  yang sama menampilkan hasil yang sama. Tautan lama yang menulis sektornya dengan huruf kecil
+  (mis. `sektor=climate`) tetap menyaring sektor yang sama.
 - **Sangat cocok + cocok** menampilkan gabungan dua kategori itu.
 - **Reset filter** mengosongkan kategori, sektor, status, dan kata kunci. Tab yang aktif dan
   urutan kolom **tidak** ikut direset (tab **Belum ditanggapi** tetap terpilih).
@@ -218,9 +221,10 @@ bawah nama startupnya (mis. Saku Hukum, founder Martio).
   "Martio" atau "@" di berkas: tidak ditemukan.
 - Satu baris per proposal yang sedang tampil di tabel (semua halaman, bukan hanya halaman yang
   terlihat). Dengan filter **Cocok**, berkas hanya berisi proposal Cocok.
-- Angka ditulis polos: skor `85.6` (titik), dana `3000000000`, tanggal `2026-10-21`. Tanggapan
-  ditulis **Undang**/**Pantau**/**Arsipkan** atau **Belum ditanggapi**.
-- Huruf Indonesia dan simbol (mis. "f&b") terbaca benar di Excel.
+- Angka ditulis polos: skor `85.6` (titik), dana `3000000000`, tanggal `2026-10-21`. Kolom
+  Tanggapan memakai kata yang sama dengan badge di tabel: **Diundang**, **Dipantau**,
+  **Diarsipkan**, atau **Belum ditanggapi**. Kolom Sektor juga sama dengan tabel (mis. **F&B**).
+- Huruf Indonesia dan simbol (mis. "F&B") terbaca benar di Excel.
 
 **Kalau berbeda:** nama atau email founder yang muncul di CSV adalah masalah data pribadi: catat
 dan laporkan segera.
@@ -281,10 +285,15 @@ selesai hanya bila semua proposal di kategori itu adalah proposal UJI.
 **Yang seharusnya terlihat:**
 
 - Kotak ini hanya muncul bila Anda memilih satu kategori (bukan **Semua kategori**, **Sangat
-  cocok + cocok**, atau **Berkualitas, di luar fokus**) dan masih ada proposal di kategori itu yang
-  belum ditanggapi.
+  cocok + cocok**, atau **Berkualitas, di luar fokus**), kategori itu satu-satunya penyaring, dan
+  masih ada proposal di kategori itu yang belum ditanggapi. Begitu Anda menambah sektor, status,
+  atau kata kunci (mis. buka `/proposal?kategori=cocok&sektor=agritech`), kotak hilang. Sebabnya,
+  tanggapan massal selalu berlaku untuk seluruh kategori, termasuk proposal yang disembunyikan
+  penyaring lain. Pindah tab (mis. **Belum ditanggapi**) tidak menghilangkan kotak.
 - Setelah **Ya, lanjutkan**: toast "Undang: 2 proposal Cocok.", kotak hilang, semua proposal itu
-  menjadi **Diundang**. Halaman **Riwayat** mendapat satu baris **Tanggapan massal**.
+  menjadi **Diundang**. Halaman **Riwayat** mendapat satu baris **Tanggapan massal**, dan kartu
+  **Riwayat** di detail tiap proposal itu juga menampilkan baris **Tanggapan massal** (lihat
+  UC-PRP-16).
 - Angka di toast adalah hitungan dari server; bisa lebih kecil dari angka di kotak bila sebagian
   sudah ditanggapi lewat WhatsApp sejak halaman dibuka.
 
@@ -305,7 +314,7 @@ MB, mis. deck rekaan startup "UJI Tani Cabai". AISA sedang tidak dijeda.
 2. Di dialog **Unggah pitch deck**, klik kolom **Berkas PDF** dan pilih berkasnya.
 3. Isi **Nama startup (opsional)** dengan `UJI Tani Cabai`.
 4. Klik **Unggah**.
-5. Tunggu sekitar setengah menit, lalu muat ulang halaman (F5).
+5. Tetap di halaman detail yang terbuka dan tunggu sekitar setengah menit, tanpa memuat ulang.
 
 **Yang seharusnya terlihat:**
 
@@ -314,15 +323,20 @@ MB, mis. deck rekaan startup "UJI Tani Cabai". AISA sedang tidak dijeda.
 - Saat mengirim, tombol berubah menjadi **Mengunggah…**.
 - Lalu toast "Pitch deck diterima dan sedang diproses.", dialog tertutup, dan Anda dibawa ke detail
   proposal baru itu dengan badge **Antre** atau **Sedang dinilai** dan skor "—".
-- Halaman tidak memperbarui diri sendiri. Setelah dimuat ulang, status menjadi dinilai: skor,
-  badge kategori, Ringkasan AI, dan nilai per kriteria muncul. Riwayat berisi **Proposal masuk**.
+- Selama statusnya **Antre** atau **Sedang dinilai**, halaman memperbarui diri setiap sekitar 4
+  detik. Begitu selesai, tanpa Anda memuat ulang, skor, badge kategori, Ringkasan AI, dan nilai per
+  kriteria muncul. Riwayat berisi **Proposal masuk**. Pembaruan otomatis berhenti setelah sekitar
+  5 menit; kalau penilaiannya selesai lebih lama dari itu, muat ulang sendiri (F5).
 - Kartu **Founder** bertuliskan "Data founder tidak disebut." karena unggahan tidak membawa data
   founder, dan baris sumbernya "Unggahan · <nama berkas> · <n> halaman".
 - Proposal baru juga muncul di daftar dan angka tab **Belum ditanggapi** bertambah 1.
 
+Mengunggah PDF yang persis sama untuk kedua kalinya tidak membuat proposal kedua: toast berbunyi
+"Pitch deck ini sudah pernah diunggah. Membuka proposalnya." dan Anda dibawa ke proposal yang sudah
+ada.
+
 **Kalau berbeda:** bila status tetap **Antre** lebih dari beberapa menit, cek apakah AISA dijeda
-(banner di atas halaman) dan halaman **Aktivitas AI**. Mengunggah PDF yang persis sama dua kali
-tidak membuat proposal kedua; Anda dibawa ke proposal yang sudah ada.
+(banner di atas halaman) dan halaman **Aktivitas AI**.
 
 ### UC-PRP-10 · Mengunggah berkas yang bukan PDF
 
@@ -340,9 +354,10 @@ satu berkas teks yang namanya diganti menjadi `palsu.pdf`.
 **Yang seharusnya terlihat:**
 
 - Jendela pilih berkas secara bawaan hanya menampilkan PDF.
-- Langkah 1: kotak merah di dialog dan toast bertuliskan "Berkas harus PDF."
-- Langkah 2: kotak merah dan toast bertuliskan "berkas bukan PDF" (isinya diperiksa, bukan hanya
-  namanya).
+- Langkah 1: kotak merah di dialog dan toast bertuliskan "Berkas bukan PDF." Pemeriksaan ini di
+  browser, jadi berkas tidak dikirim.
+- Langkah 2: kotak merah dan toast dengan kalimat yang sama, "Berkas bukan PDF." Kali ini yang
+  menolak adalah server AISA setelah memeriksa isinya, karena namanya berakhiran `.pdf`.
 - Dialog tetap terbuka, tidak ada proposal baru di daftar.
 
 **Kalau berbeda:** bila berkas bukan PDF ikut masuk ke daftar, catat nama dan jenis berkasnya.
@@ -360,8 +375,8 @@ satu berkas teks yang namanya diganti menjadi `palsu.pdf`.
 
 **Yang seharusnya terlihat:**
 
-- Langsung muncul kotak merah di dialog: "Berkas terlalu besar (maksimal 20 MB)." Pemeriksaan ini
-  di browser, jadi tidak ada toast dan berkas tidak dikirim.
+- Langsung muncul kotak merah di dialog dan toast: "PDF lebih dari 20 MB." Pemeriksaan ini di
+  browser, jadi berkas tidak dikirim.
 - Tidak ada proposal baru.
 
 **Kalau berbeda:** bila unggahan berjalan lama lalu gagal dengan pesan lain, catat pesannya.
@@ -511,10 +526,15 @@ penilaian**.
 - Tiap baris: judul tindakan, keterangan, alasan atau catatan setelah tanda "—", "via
   Dashboard/WhatsApp/Sistem", dan tanggal-jam.
 - Tanggapan dari WhatsApp juga tercatat di sini dengan "via WhatsApp".
+- Keputusan yang datang dari tanggapan massal per kategori (UC-PRP-08, atau "arsipkan semua …"
+  lewat WhatsApp) tampil sebagai baris **Tanggapan massal** dengan keterangan seperti
+  "Diarsipkan lewat tanggapan massal", catatannya (kalau ada), salurannya, dan waktunya. Hanya
+  keputusan terakhir proposal yang dibuat begini; tanggapan massal yang sudah ditimpa keputusan
+  lain tidak tampil di kartu ini, tetapi tetap ada di halaman **Riwayat**.
+- Keterangan lama yang tersimpan dengan skor dan kategori mentah (mis. "skor 63.1, tidak_cocok")
+  ditampilkan dengan kata yang sama seperti di layar lain: "skor 63,1, Tidak cocok".
 
-**Kalau berbeda:** catat tindakan yang Anda tahu terjadi tetapi tidak tercantum. Catatan:
-tanggapan massal per kategori (UC-PRP-08, atau "arsipkan semua …" lewat WhatsApp) tercatat di
-halaman **Riwayat**, tetapi tidak di kartu Riwayat proposal masing-masing.
+**Kalau berbeda:** catat tindakan yang Anda tahu terjadi tetapi tidak tercantum.
 
 ### UC-PRP-17 · Anda memutuskan mengundang founder A
 

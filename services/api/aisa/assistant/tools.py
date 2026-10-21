@@ -40,6 +40,8 @@ log = logging.getLogger(__name__)
 TEXT_MAX = 220
 QUOTE_MAX = 160
 LIMIT_MAX = 25
+# A list answer ("sebutkan semua yang ...") may need more rows than a history page.
+SEARCH_LIMIT_MAX = 50
 OVERVIEW_MAX = 50
 
 
@@ -145,6 +147,28 @@ def _filter(
     return out
 
 
+def _funding(p: dict) -> int | None:
+    return (p.get("profile") or {}).get("fundingAskIdr")
+
+
+def _by_funding(
+    proposals: list[dict], min_idr: int | None, max_idr: int | None
+) -> tuple[list[dict], dict]:
+    """Apply a funding range (both ends inclusive). A proposal whose deck names no amount
+    cannot be placed on either side of a bound, so it is left out of the result and its
+    count is returned as `danaTidakDisebut` rather than dropped silently."""
+    if min_idr is None and max_idr is None:
+        return proposals, {}
+    kept, unknown = [], 0
+    for p in proposals:
+        f = _funding(p)
+        if f is None:
+            unknown += 1
+        elif (min_idr is None or f >= min_idr) and (max_idr is None or f <= max_idr):
+            kept.append(p)
+    return kept, {"danaTidakDisebut": unknown}
+
+
 def _resolve(name_or_id: str, proposals: Optional[list[dict]] = None) -> dict:
     """Find one proposal by id, exact name, or unique name prefix (case-insensitive)."""
     q = (name_or_id or "").strip()
@@ -179,6 +203,7 @@ def _overview_row(p: dict) -> dict:
     row = {
         "nama": p.get("name"),
         "sektor": (p.get("profile") or {}).get("sector"),
+        "danaDiminta": _funding(p),
         "skor": _score(p),
         "kategori": CATEGORY_LABEL.get(eff, eff),
         "status": STATUS_LABEL.get(p.get("status"), p.get("status")),
@@ -191,8 +216,9 @@ def _overview_row(p: dict) -> dict:
 
 def get_overview() -> dict:
     """Gambaran ringkas SEMUA proposal dalam satu panggilan: jumlah per kategori efektif, jumlah
-    belum ditanggapi, dan satu baris per proposal (nama, sektor, skor kualitas, kategori efektif,
-    status, tanggapan, luarFokus = "Berkualitas, di luar fokus"), urut dari skor tertinggi,
+    belum ditanggapi, dan satu baris per proposal (nama, sektor, danaDiminta dalam rupiah bila
+    disebut, skor kualitas, kategori efektif, status, tanggapan, luarFokus = "Berkualitas, di
+    luar fokus"), urut dari skor tertinggi,
     maksimal 50 baris. Pakai ini untuk pertanyaan umum ("ringkas semua proposal", "bagaimana
     kondisi proposal", "mana yang menonjol")."""
     proposals = store.list_proposals()
@@ -218,6 +244,8 @@ def search_proposals(
     quality_outside_focus: Optional[bool] = None,
     status: Optional[str] = None,
     min_score: Optional[float] = None,
+    min_funding_idr: int | None = None,
+    max_funding_idr: int | None = None,
     limit: int = 10,
 ) -> dict:
     """Cari proposal di data AISA, diurutkan dari skor kualitas tertinggi.
@@ -231,7 +259,14 @@ def search_proposals(
         quality_outside_focus: true = hanya yang bertanda "Berkualitas, di luar fokus".
         status: antre, dinilai_proses, dinilai, perlu_dicek_manual, atau dihentikan.
         min_score: Skor kualitas minimal (0-100).
-        limit: Jumlah maksimal hasil (default 10, maks 25).
+        min_funding_idr: Dana diminta minimal, dalam rupiah penuh, termasuk nilai itu sendiri
+            (mis. 3000000000 untuk "minimal Rp3 M"; "lebih dari Rp10 M" = 10000000001).
+        max_funding_idr: Dana diminta maksimal, dalam rupiah penuh, termasuk nilai itu sendiri
+            (mis. "di bawah Rp3 M" = 2999999999; "paling banyak Rp3 M" = 3000000000).
+            Dengan filter dana, proposal yang tidak menyebut dana tidak ikut dan jumlahnya
+            dilaporkan di `danaTidakDisebut`.
+        limit: Jumlah maksimal hasil (default 10, maks 50). Untuk daftar lengkap, isi sebesar
+            totalCocok yang diharapkan.
     """
     try:
         rows = _filter(
@@ -246,10 +281,12 @@ def search_proposals(
         )
     except ValueError as e:
         return {"error": str(e)}
+    rows, unknown = _by_funding(rows, min_funding_idr, max_funding_idr)
     rows.sort(key=lambda p: (_score(p) is not None, _score(p) or 0), reverse=True)
-    limit = max(1, min(int(limit or 10), LIMIT_MAX))
+    limit = max(1, min(int(limit or 10), SEARCH_LIMIT_MAX))
     return {
         "totalCocok": len(rows),
+        **unknown,
         "ditampilkan": min(len(rows), limit),
         "proposal": [_summary(p) for p in rows[:limit]],
     }
@@ -261,6 +298,8 @@ def count_proposals(
     sector: Optional[str] = None,
     responded: Optional[bool] = None,
     status: Optional[str] = None,
+    min_funding_idr: int | None = None,
+    max_funding_idr: int | None = None,
 ) -> dict:
     """Hitung jumlah proposal, dikelompokkan menurut satu atribut.
 
@@ -271,6 +310,11 @@ def count_proposals(
         sector: Filter sektor sebelum dihitung (opsional).
         responded: Filter sudah (true) / belum (false) ditanggapi (opsional).
         status: Filter status proposal (opsional).
+        min_funding_idr: Dana diminta minimal dalam rupiah penuh, inklusif (opsional; lihat
+            search_proposals).
+        max_funding_idr: Dana diminta maksimal dalam rupiah penuh, inklusif (opsional). Dengan
+            filter dana, proposal tanpa dana tidak dihitung di `total` dan jumlahnya ada di
+            `danaTidakDisebut`.
     """
     if group_by not in GROUP_FIELDS:
         return {"error": f"group_by harus salah satu dari: {', '.join(GROUP_FIELDS)}"}
@@ -280,6 +324,7 @@ def count_proposals(
         )
     except ValueError as e:
         return {"error": str(e)}
+    rows, unknown = _by_funding(rows, min_funding_idr, max_funding_idr)
     counts: dict[str, int] = {}
     for p in rows:
         profile = p.get("profile") or {}
@@ -296,7 +341,8 @@ def count_proposals(
         else:
             k = "berkualitas di luar fokus" if _quality_outside_focus(p) else "lainnya"
         counts[k] = counts.get(k, 0) + 1
-    return {"total": len(rows), "per": group_by, "jumlah": dict(sorted(counts.items(), key=lambda kv: -kv[1]))}
+    return {"total": len(rows), **unknown, "per": group_by,
+            "jumlah": dict(sorted(counts.items(), key=lambda kv: -kv[1]))}
 
 
 def _detail(p: dict) -> dict:

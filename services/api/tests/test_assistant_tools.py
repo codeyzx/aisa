@@ -134,11 +134,13 @@ def test_ast11_search_quality_outside_focus_follows_effective_category(afs):
 
 
 def test_ast11_search_limit_clamped(afs, monkeypatch):
+    # The cap is 50 so a list answer ("sebutkan semua yang minta di bawah Rp3 M") fits one call.
     many = [{"id": f"m{i}", "name": f"M{i}", "status": "dinilai", "effectiveCategory": "cocok",
-             "assessment": {"score": float(i)}} for i in range(40)]
+             "assessment": {"score": float(i)}} for i in range(60)]
     monkeypatch.setattr(tools.store, "list_proposals", lambda: many)
     out = tools.search_proposals(limit=100)
-    assert out["totalCocok"] == 40 and out["ditampilkan"] == 25 and len(out["proposal"]) == 25
+    assert out["totalCocok"] == 60 and out["ditampilkan"] == 50 and len(out["proposal"]) == 50
+    assert tools.search_proposals(limit=40)["ditampilkan"] == 40
     assert tools.search_proposals(limit=0)["ditampilkan"] == 10  # 0 falls back to default
     assert tools.search_proposals(limit=-3)["ditampilkan"] == 1
 
@@ -147,6 +149,57 @@ def test_ast11_summary_trims_one_liner(afs):
     row = tools.search_proposals(category="sangat_cocok")["proposal"][0]
     assert len(row["ringkas"]) == 140 and row["ringkas"].endswith("…")
     assert row["tanggapan"] == "belum ditanggapi"
+
+
+# ---------- AST-11: funding filters ----------
+
+@pytest.fixture
+def funded(afs):
+    """SEED asks Rp2 M everywhere; give each proposal its own amount, one with none."""
+    asks = {"p1": 2_999_999_999, "p2": 3_000_000_000, "p3": 500_000_000,
+            "p4": 12_000_000_000, "p5": None, "p6": 10_000_000_000}
+    for pid, amount in asks.items():
+        afs.docs[f"proposals/{pid}"]["profile"]["fundingAskIdr"] = amount
+    return afs
+
+
+def test_ast11_search_funding_below_and_above(funded):
+    below = tools.search_proposals(max_funding_idr=2_999_999_999)
+    assert _names(below) == ["Kopi Teras Senja", "Kelas Kode Pro"]
+    assert below["totalCocok"] == 2 and below["danaTidakDisebut"] == 1
+    assert {r["danaDiminta"] for r in below["proposal"]} == {2_999_999_999, 500_000_000}
+    # both bounds are inclusive: exactly Rp10 M is in for min=10 M, out for "lebih dari"
+    assert _names(tools.search_proposals(min_funding_idr=10_000_000_000)) == [
+        "Tambak Cerdas", "Arsip Pindaian"]
+    assert _names(tools.search_proposals(min_funding_idr=10_000_000_001)) == ["Tambak Cerdas"]
+    rng = tools.search_proposals(min_funding_idr=1_000_000_000, max_funding_idr=3_000_000_000)
+    assert _names(rng) == ["Kopi Teras Senja", "Kelas Kode Rakyat"]
+
+
+def test_ast11_funding_combines_with_other_filters_and_unknown_is_counted_after_them(funded):
+    out = tools.search_proposals(category="cocok", max_funding_idr=5_000_000_000)
+    # Roti Lembah (Cocok, no amount) is the unknown one; Kelas Kode Rakyat asks Rp3 M
+    assert _names(out) == ["Kelas Kode Rakyat"] and out["danaTidakDisebut"] == 1
+    assert tools.search_proposals(category="sangat_cocok", max_funding_idr=1)["danaTidakDisebut"] == 0
+
+
+def test_ast11_no_funding_filter_no_unknown_field(funded):
+    assert "danaTidakDisebut" not in tools.search_proposals()
+    assert "danaTidakDisebut" not in tools.count_proposals()
+
+
+def test_ast11_count_by_funding(funded):
+    out = tools.count_proposals(group_by="category", max_funding_idr=2_999_999_999)
+    assert out["total"] == 2 and out["danaTidakDisebut"] == 1
+    assert out["jumlah"] == {"Sangat cocok": 1, "Kurang cocok": 1}
+    above = tools.count_proposals(min_funding_idr=10_000_000_001, responded=False)
+    assert above["total"] == 1 and above["danaTidakDisebut"] == 1
+
+
+def test_ast11_overview_rows_carry_funding(funded):
+    rows = {r["nama"]: r for r in tools.get_overview()["proposal"]}
+    assert rows["Tambak Cerdas"]["danaDiminta"] == 12_000_000_000
+    assert "danaDiminta" not in rows["Roti Lembah"]
 
 
 # ---------- AST-11: count_proposals ----------

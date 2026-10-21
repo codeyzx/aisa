@@ -1,94 +1,193 @@
 # Menyiapkan Google Form intake founder
 
-Alur: founder mengisi Google Form dan mengunggah pitch deck ke Drive → trigger
-`onFormSubmit` (Apps Script) mengirim data ke `POST /intake/form` di aisa-api dengan
-tanda tangan HMAC → aisa-api mengunduh deck dari Drive dengan service account runtime
-dan menilainya.
+Hasil akhir: founder mengisi Google Form dan mengunggah pitch deck (PDF) → Apps Script
+mengirim data ke `POST /intake/form` di aisa-api (bertanda tangan HMAC) → aisa-api
+mengunduh deck dari Drive dan menilainya → proposal muncul di dashboard.
 
-Kode: [`integrations/apps-script/Code.gs`](../../integrations/apps-script/Code.gs) dan
-[`appsscript.json`](../../integrations/apps-script/appsscript.json). Kontrak endpoint:
-[`services/api/README.md`](../../services/api/README.md).
+Semua langkah dikerjakan di browser dengan akun Google pemilik form. Kerjakan berurutan;
+setiap langkah punya tanda **✅ Berhasil bila** untuk mengecek sebelum lanjut. Waktu
+total sekitar 15 menit.
 
-Semua langkah di bawah dikerjakan manusia di UI Google; tidak ada yang otomatis.
-
-## 1. Buat form dan tempel script
-
-1. Buat Google Form **kosong** dengan akun pemilik (forms.google.com → Blank).
-2. Di form: **⋮ → Apps Script**. Ini membuat script yang terikat ke form tersebut.
-3. **Project Settings** → centang _Show "appsscript.json" manifest file in editor_.
-4. Ganti isi `Code.gs` dan `appsscript.json` di editor dengan isi file di repo.
-5. Di `Code.gs`, isi tiga konstanta yang muncul di pemberitahuan tujuan: `ORG_NAME`,
-   `RETENTION`, `CONTACT`. `setupForm()` menolak jalan selama masih berisi `[ISI …]`.
-   Catatan: aisa-api belum punya penghapusan otomatis; janji retensi di pemberitahuan
-   dipenuhi secara manual sampai mekanisme itu ada.
-6. Pilih fungsi `setupForm` → **Run** → izinkan akses. Form kini berisi judul,
-   pemberitahuan tujuan (UU 27/2022), _Nama startup_, _Nama founder_, _Email founder_,
-   dan kotak persetujuan wajib.
-
-## 2. Tambahkan pertanyaan unggah pitch deck (manual)
-
-FormApp tidak bisa membuat pertanyaan unggah file, jadi tambahkan di UI form:
-
-- Tipe **File upload**, judul bebas (mis. _Pitch deck (PDF)_), **Required**.
-- _Allow only specific file types_ → **PDF**; _Maximum number of files_ → **1**;
-  _Maximum file size_ → **10 MB** (aisa-api menolak deck > 20 MB).
-- Pertanyaan unggah file mewajibkan responden login dengan akun Google.
-- Script mengenali pertanyaan ini dari tipenya, bukan judulnya. Form hanya boleh punya
-  **satu** pertanyaan unggah file. Jangan ganti judul empat pertanyaan lain tanpa
-  mengganti `TITLES` di `Code.gs` juga.
-
-## 3. Isi script properties
-
-**Project Settings → Script properties**:
-
-| Properti        | Nilai                                                                      |
-| --------------- | -------------------------------------------------------------------------- |
-| `AISA_API_URL`  | `https://aisa-api-441293875661.asia-southeast2.run.app`                    |
-| `INTAKE_SECRET` | keluaran perintah di bawah (tempel langsung, jangan simpan di tempat lain) |
+Yang perlu disiapkan: nilai `INTAKE_SECRET`, diambil dengan perintah berikut:
 
 ```bash
 gcloud secrets versions access latest --secret=intake-secret --project hackathon-primestep-09
 ```
 
-Cek: jalankan `testSignedPing`. Fungsi ini mengirim body bertanda tangan dengan
-`consent: false`, sehingga tidak ada proposal yang dibuat. Log harus menunjukkan
-**422** (`OK: tanda tangan diterima`). **401** berarti `INTAKE_SECRET` tidak cocok.
+## Langkah 1 — Buat form kosong
 
-## 4. Pasang trigger
+1. Buka <https://forms.google.com>.
+2. Klik **Blank form** (Formulir kosong). Jangan isi apa pun di form.
+3. Klik judul "Untitled form" di kiri atas dan ganti menjadi `Pengajuan proposal startup`,
+   lalu klik di luar kotak judul.
 
-Jalankan `installTrigger` sekali. Ini memasang trigger _installable_ `onFormSubmit`
-(menghapus trigger lama dengan handler yang sama lebih dulu). Cek di **Triggers**:
-satu baris `onFormSubmit` / _From form_ / _On form submit_.
+✅ Berhasil bila: form kosong berjudul _Pengajuan proposal startup_ terbuka di editor.
 
-Bila aisa-api tidak membalas 202, eksekusi ditandai **Failed** di **Executions** dan
-Google mengirim email kegagalan trigger ke pemilik script (sesuai pengaturan trigger).
+## Langkah 2 — Buka editor Apps Script
 
-## 5. Bagikan folder unggahan ke service account
+1. Di editor form, klik ikon **⋮** (More / Lainnya) di kanan atas, sebelah tombol
+   **Send**.
+2. Pilih **Apps Script**. Tab baru terbuka berisi editor dengan file `Code.gs`.
+3. Klik judul proyek "Untitled project" di kiri atas, ganti menjadi `AISA intake`, klik
+   **Rename**.
 
-aisa-api mengunduh deck dengan service account runtime, jadi folder unggahan form
-harus bisa dibaca akun itu. Script **tidak** membagikan file satu per satu: itu butuh
-scope `drive` penuh, sedangkan script ini hanya meminta `drive.readonly` (untuk membaca
-nama file).
+✅ Berhasil bila: tab Apps Script terbuka dengan file `Code.gs` berisi
+`function myFunction() {}`.
 
-1. Di Drive pemilik form, cari folder **`<judul form> (File responses)`**. Folder ini
-   dibuat Google untuk pertanyaan unggah; bila belum ada, kirim satu respons uji dulu.
-2. **Share** folder itu ke
-   `hackathon-runtime@hackathon-primestep-09.iam.gserviceaccount.com` sebagai
-   **Viewer**. Abaikan peringatan notifikasi; email ke service account tidak berdampak.
-3. File di dalamnya (termasuk subfolder per pertanyaan) mewarisi akses folder.
+## Langkah 3 — Tampilkan file manifest
 
-Bila langkah ini terlewat, proposal tetap tercatat tetapi tertahan di status `antre`
-dengan `statusReason` berisi `404 Not Found` dari Drive.
+1. Di sidebar kiri Apps Script, klik ikon roda gigi **Project Settings**.
+2. Centang **Show "appsscript.json" manifest file in editor**.
+3. Klik ikon **< >** (**Editor**) di sidebar kiri untuk kembali ke editor.
 
-## 6. Uji ujung ke ujung
+✅ Berhasil bila: daftar file di kiri sekarang berisi `appsscript.json` dan `Code.gs`.
 
-1. Buka form (tombol **Send** / link responden), isi semua pertanyaan, unggah PDF
-   pitch deck yang berteks, centang persetujuan, kirim.
-2. Apps Script → **Executions**: `onFormSubmit` berstatus _Completed_, log berisi
-   `intake/form 202 … {"proposalId":"form-<driveFileId>","created":true}`.
-3. Dashboard → **Proposal**: proposal baru muncul dan berpindah dari _Antre_ ke
-   _Dinilai_ (atau _Perlu dicek manual_ bila teksnya terlalu sedikit). Bila tetap
-   _Antre_ dengan alasan `404 Not Found`, ulangi langkah 5.
+## Langkah 4 — Tempel `appsscript.json`
 
-Mengirim ulang trigger untuk file yang sama tidak menilai ulang: proposal idempoten
-berdasarkan ID file Drive (`created: false`).
+1. Klik `appsscript.json` di daftar file.
+2. Pilih semua isinya (Ctrl+A) dan hapus.
+3. Salin seluruh isi file
+   [`integrations/apps-script/appsscript.json`](../../integrations/apps-script/appsscript.json)
+   dan tempel.
+4. Simpan dengan **Ctrl+S**.
+
+## Langkah 5 — Tempel `Code.gs`
+
+1. Klik `Code.gs` di daftar file.
+2. Pilih semua isinya (Ctrl+A) dan hapus.
+3. Salin seluruh isi file
+   [`integrations/apps-script/Code.gs`](../../integrations/apps-script/Code.gs) dan
+   tempel. Tidak ada yang perlu diubah: nama organisasi, periode retensi (90 hari) dan
+   email kontak sudah terisi.
+4. Simpan dengan **Ctrl+S**.
+
+✅ Berhasil bila: menyimpan tidak memunculkan error merah, dan dropdown fungsi di
+toolbar atas berisi `setupForm`, `installTrigger`, `onFormSubmit`, `testSignedPing`.
+
+## Langkah 6 — Isi script properties
+
+1. Klik **Project Settings** (roda gigi) di sidebar kiri.
+2. Gulir ke bawah ke **Script Properties**, klik **Add script property**.
+3. Tambahkan dua properti berikut. Klik **Add script property** lagi untuk properti
+   kedua, lalu **Save script properties**.
+
+| Property        | Value                                                   |
+| --------------- | ------------------------------------------------------- |
+| `AISA_API_URL`  | `https://aisa-api-441293875661.asia-southeast2.run.app` |
+| `INTAKE_SECRET` | nilai `INTAKE_SECRET` yang disiapkan di awal            |
+
+Salin persis, tanpa spasi tambahan dan tanpa garis miring di akhir URL.
+
+✅ Berhasil bila: kedua properti tampil di bagian Script Properties.
+
+## Langkah 7 — Jalankan `setupForm` (mengisi pertanyaan form)
+
+1. Kembali ke **Editor** (< >).
+2. Di toolbar atas, pilih fungsi **`setupForm`** di dropdown, lalu klik **Run**.
+3. Muncul _Authorization required_ → **Review permissions** → pilih akun Anda.
+4. Muncul _Google hasn't verified this app_ → klik **Advanced** →
+   **Go to AISA intake (unsafe)**. Peringatan ini muncul karena script dibuat sendiri,
+   bukan karena berbahaya.
+5. Klik **Allow**.
+
+✅ Berhasil bila: _Execution log_ di bawah menampilkan **Execution completed**, dan di
+tab form (refresh) sekarang ada pemberitahuan tujuan beserta empat pertanyaan:
+_Nama startup_, _Nama founder_, _Email founder_, _Persetujuan_.
+
+Bila muncul error "Form sudah berisi pertanyaan", form tidak kosong. Hapus semua
+pertanyaan di form, lalu jalankan `setupForm` lagi.
+
+## Langkah 8 — Tambahkan pertanyaan unggah pitch deck (manual)
+
+Apps Script tidak bisa membuat pertanyaan unggah file, jadi yang ini dibuat di form:
+
+1. Di tab form, klik **⊕ Add question** (ikon tambah di panel kanan).
+2. Ketik judul: `Pitch deck (PDF)`.
+3. Ubah tipe pertanyaan (dropdown di kanan, default _Multiple choice_) menjadi
+   **File upload**. Bila muncul dialog tentang penyimpanan di Drive, klik **Continue**.
+4. Atur:
+   - **Allow only specific file types** → aktifkan, centang **PDF**.
+   - **Maximum number of files** → `1`.
+   - **Maximum file size** → `10 MB`.
+5. Aktifkan **Required** di kanan bawah pertanyaan.
+
+Form hanya boleh punya **satu** pertanyaan unggah file. Jangan ganti judul empat
+pertanyaan dari langkah 7, karena script membacanya berdasarkan judul.
+
+✅ Berhasil bila: form berisi lima pertanyaan, yang terakhir _Pitch deck (PDF)_ bertipe
+File upload dan wajib.
+
+## Langkah 9 — Uji koneksi ke aisa-api
+
+1. Di Apps Script, pilih fungsi **`testSignedPing`**, klik **Run**.
+2. Lihat _Execution log_.
+
+✅ Berhasil bila: log berisi **422** dan `OK: tanda tangan diterima`. Uji ini mengirim
+data tanpa persetujuan, jadi tidak ada proposal yang dibuat.
+
+Bila log berisi **401**, `INTAKE_SECRET` salah: ulangi langkah 6 dan pastikan tidak ada
+spasi. Bila berisi error URL, periksa `AISA_API_URL`.
+
+## Langkah 10 — Pasang trigger
+
+1. Pilih fungsi **`installTrigger`**, klik **Run**. Bila diminta izin lagi, ulangi
+   langkah 7 butir 3–5.
+2. Klik ikon jam **Triggers** di sidebar kiri untuk mengecek.
+
+✅ Berhasil bila: ada tepat satu baris trigger `onFormSubmit` dengan event
+_From form – On form submit_.
+
+## Langkah 11 — Kirim satu respons uji
+
+1. Di tab form, klik **Send** → ikon tautan → **Copy**, buka tautannya di tab baru.
+2. Isi semua pertanyaan, unggah PDF pitch deck berteks (boleh
+   `fixtures/decks/pitch-deck.pdf`), centang persetujuan, klik **Submit**.
+
+Pengiriman pertama ini membuat Google membuat folder unggahan di Drive, yang dibutuhkan
+langkah berikutnya.
+
+## Langkah 12 — Bagikan folder unggahan ke service account
+
+aisa-api mengunduh deck dengan service account-nya sendiri, jadi folder unggahan harus
+bisa dibacanya.
+
+1. Buka <https://drive.google.com> dengan akun pemilik form.
+2. Cari folder **`Pengajuan proposal startup (File responses)`**.
+3. Klik kanan folder → **Share** → **Share**.
+4. Tempel email berikut, pilih peran **Viewer**, hilangkan centang **Notify people**,
+   klik **Share** (atau **Share anyway** bila ada peringatan):
+
+```text
+hackathon-runtime@hackathon-primestep-09.iam.gserviceaccount.com
+```
+
+Semua file di dalam folder, termasuk subfolder per pertanyaan, ikut bisa dibaca.
+
+✅ Berhasil bila: email service account tampil sebagai Viewer di dialog Share folder.
+
+## Langkah 13 — Cek proposal uji di dashboard
+
+1. Apps Script → ikon **Executions** di sidebar kiri. Baris `onFormSubmit` terbaru
+   berstatus **Completed**, dan log-nya berisi `intake/form 202`.
+2. Buka dashboard → **Proposal**. Proposal dari langkah 11 muncul, mula-mula _Antre_,
+   lalu _Dinilai_ dalam sekitar satu menit (atau _Perlu dicek manual_ bila teks PDF-nya
+   terlalu sedikit).
+
+Respons uji di langkah 11 dikirim sebelum folder dibagikan, jadi proposal itu bisa
+tertahan di _Antre_ dengan alasan `404 Not Found`. Itu wajar: kirim satu respons uji
+lagi dengan PDF lain (file yang sama tidak dinilai ulang). Respons kedua ini harus
+sampai ke _Dinilai_. Proposal uji yang tertahan bisa dihapus dengan tombol
+**Hapus data** di halaman detailnya.
+
+## Bila ada masalah
+
+| Gejala                                             | Penyebab                                   | Perbaikan                                    |
+| -------------------------------------------------- | ------------------------------------------ | -------------------------------------------- |
+| `testSignedPing` → 401                             | `INTAKE_SECRET` salah atau berspasi        | Ulangi langkah 6                             |
+| Executions → `onFormSubmit` **Failed**             | aisa-api tidak membalas 202; lihat log-nya | Baca pesan di log; cek properti di langkah 6 |
+| Proposal tertahan _Antre_ dengan `404 Not Found`   | Folder unggahan belum dibagikan            | Ulangi langkah 12, lalu kirim respons baru   |
+| Tidak ada baris di Executions setelah Submit       | Trigger belum terpasang                    | Ulangi langkah 10                            |
+| Error "Pertanyaan … tidak ditemukan" di Executions | Judul pertanyaan diubah                    | Kembalikan judul seperti di langkah 7        |
+
+Mengirim ulang file yang sama tidak membuat proposal baru: proposal dari form
+diidentifikasi dengan ID file Drive-nya.

@@ -30,10 +30,11 @@ const TITLES = {
 const CONSENT_CHOICE =
   'Saya sudah membaca pemberitahuan di atas dan setuju data saya diproses untuk tujuan tersebut.'
 
-// Fill these before running setupForm(); it refuses to run while any still starts with "[".
-const ORG_NAME = '[ISI nama perusahaan]'
-const RETENTION = '[ISI periode retensi, mis. 12 bulan]'
-const CONTACT = '[ISI email kontak untuk permintaan penghapusan]'
+// Shown to founders in the purpose notice. RETENTION matches aisa-api's default
+// rules.retentionDays (90): archived proposals are deleted by the daily retention job.
+const ORG_NAME = 'Aixel'
+const RETENTION = '90 hari'
+const CONTACT = 'luthfi@aixel.id'
 
 const PURPOSE_NOTICE = () =>
   [
@@ -58,10 +59,6 @@ const PURPOSE_NOTICE = () =>
  * file-upload item, so the pitch-deck question is added by hand afterwards.
  */
 function setupForm() {
-  for (const v of [ORG_NAME, RETENTION, CONTACT]) {
-    if (v.startsWith('['))
-      throw new Error('Isi ORG_NAME, RETENTION, dan CONTACT di Code.gs dulu.')
-  }
   const form = FormApp.getActiveForm()
   if (form.getItems().length > 0) {
     throw new Error(

@@ -73,9 +73,12 @@ async function loadShellData(): Promise<ShellData> {
         row.proposalId && row.proposalName !== DELETED_PROPOSAL_NAME
       return {
         id: row.id,
-        title: row.proposalName
-          ? `${labelOf(HISTORY_ACTION_LABEL, row.action)} · ${row.proposalName}`
-          : labelOf(HISTORY_ACTION_LABEL, row.action),
+        // A deleted proposal's rows keep a placeholder name; the bell shows
+        // just the action, as the Dashboard's Aktivitas terakhir does.
+        title:
+          row.proposalName && row.proposalName !== DELETED_PROPOSAL_NAME
+            ? `${labelOf(HISTORY_ACTION_LABEL, row.action)} · ${row.proposalName}`
+            : labelOf(HISTORY_ACTION_LABEL, row.action),
         description: row.detail,
         at: row.at.toISOString(),
         href: linkable ? `/proposal/${row.proposalId}` : '/riwayat',

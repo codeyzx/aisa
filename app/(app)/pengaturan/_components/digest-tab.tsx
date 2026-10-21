@@ -2,7 +2,7 @@ import { ClockIcon, SunriseIcon, SunsetIcon } from 'lucide-react'
 
 import { nextDigestSlot } from '@/components/shell/shell-routes'
 import type { Digest, Proposal } from '@/features/aisa/aisa.schema'
-import { formatDate } from '@/lib/format/date'
+import { formatDate, formatTime } from '@/lib/format/date'
 import { LOCALE, TIME_ZONE } from '@/lib/format/locale'
 
 import {
@@ -157,8 +157,9 @@ export function DigestTab({
           </p>
           {latest ? (
             <p>
-              Terakhir terkirim {formatDate(latest.sentAt)} pukul {latest.slot}{' '}
-              · {latest.counts.belumDitanggapi} proposal belum ditanggapi.
+              Ringkasan {latest.slot} terakhir terkirim{' '}
+              {formatDate(latest.sentAt)} pukul {formatTime(latest.sentAt)} ·{' '}
+              {latest.counts.belumDitanggapi} proposal belum ditanggapi.
             </p>
           ) : (
             <p>Belum ada ringkasan yang terkirim.</p>

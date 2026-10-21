@@ -51,7 +51,10 @@ export const test = base.extend<
       await provide(server)
       await server.close()
     },
-    { scope: 'worker' },
+    // Auto: a spec that only reads (a deck preview asks aisa-api for its
+    // link) needs the mock listening too, not just the specs that assert on
+    // its calls — otherwise it passes or fails by which test ran first.
+    { scope: 'worker', auto: true },
   ],
   aisaApi: async ({ mockServer }, provide) => {
     mockServer.reset()

@@ -1,3 +1,4 @@
+import { sectorLabel } from '@/features/aisa/aisa.labels'
 import {
   CATEGORIES,
   type Category,
@@ -50,11 +51,17 @@ export interface TrendData {
 const mean = (values: number[]) =>
   values.length ? values.reduce((s, v) => s + v, 0) / values.length : null
 
+/**
+ * Counts per sector, keyed by its display label so "f&b" and "F&B" — two keys
+ * the API may have written for one sector — are one row, as in the list filter.
+ */
 const sectorSum = (slice: DailyWindowDay[]) => {
   const sums = new Map<string, number>()
   for (const d of slice)
-    for (const [sector, n] of Object.entries(d.stats?.bySector ?? {}))
+    for (const [raw, n] of Object.entries(d.stats?.bySector ?? {})) {
+      const sector = sectorLabel(raw)
       sums.set(sector, (sums.get(sector) ?? 0) + n)
+    }
   return sums
 }
 

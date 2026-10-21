@@ -11,6 +11,7 @@ import {
   DAILY_STATS_COLLECTION,
   HISTORY_COLLECTION,
 } from '../../features/aisa/aisa.path.ts'
+import { sectorLabel } from '../../features/aisa/aisa.labels.ts'
 import { emulatorDb, expect, signInAs, test } from './fixtures.ts'
 import { exactly } from './locators.ts'
 
@@ -46,12 +47,14 @@ async function dailyStats(): Promise<StatsRow[]> {
 const sum = (rows: StatsRow[], pick: (row: StatsRow) => number) =>
   rows.reduce((total, row) => total + pick(row), 0)
 
-/** Proposals per sector over `rows`. */
+/** Proposals per sector over `rows`, by the label the page shows. */
 function weekSum(rows: StatsRow[]) {
   const sums = new Map<string, number>()
   for (const row of rows)
-    for (const [name, n] of Object.entries(row.bySector))
+    for (const [raw, n] of Object.entries(row.bySector)) {
+      const name = sectorLabel(raw)
       sums.set(name, (sums.get(name) ?? 0) + n)
+    }
   return sums
 }
 

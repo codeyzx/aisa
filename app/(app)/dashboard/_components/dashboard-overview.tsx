@@ -26,8 +26,10 @@ import {
 import {
   CATEGORY_LABEL,
   HISTORY_ACTION_LABEL,
+  historyDetailText,
   labelOf,
   QUALITY_OUTSIDE_FOCUS_LABEL,
+  sectorLabel,
 } from '@/features/aisa/aisa.labels'
 import {
   CATEGORIES,
@@ -354,7 +356,8 @@ export function DashboardOverview({
                   const tone = scoreTone(score(proposal), thresholds)
                   const subtitle = [
                     proposal.profile?.oneLiner,
-                    proposal.profile?.sector,
+                    proposal.profile?.sector &&
+                      sectorLabel(proposal.profile.sector),
                     proposal.profile?.stage,
                   ]
                     .filter(Boolean)
@@ -565,7 +568,7 @@ export function DashboardOverview({
                     row.proposalName !== DELETED_PROPOSAL_NAME
                       ? `${labelOf(HISTORY_ACTION_LABEL, row.action)} · ${row.proposalName}`
                       : labelOf(HISTORY_ACTION_LABEL, row.action),
-                  description: row.detail,
+                  description: historyDetailText(row.detail),
                   time: `${shortDay.format(row.at)}, ${formatTime(row.at)}`,
                 }))}
               />

@@ -19,7 +19,9 @@ import { AISA_READ } from '@/features/aisa/aisa.capability'
 import {
   CATEGORY_LABEL,
   HISTORY_ACTION_LABEL,
+  historyDetailText,
   labelOf,
+  sectorLabel,
 } from '@/features/aisa/aisa.labels'
 import {
   getLatestDigest,
@@ -63,7 +65,7 @@ async function loadShellData(): Promise<ShellData> {
       id: p.id,
       name: p.name,
       founder: p.founder?.name ?? null,
-      sector: p.profile?.sector ?? null,
+      sector: p.profile?.sector ? sectorLabel(p.profile.sector) : null,
       categoryLabel: p.effectiveCategory
         ? CATEGORY_LABEL[p.effectiveCategory]
         : null,
@@ -79,7 +81,7 @@ async function loadShellData(): Promise<ShellData> {
           row.proposalName && row.proposalName !== DELETED_PROPOSAL_NAME
             ? `${labelOf(HISTORY_ACTION_LABEL, row.action)} · ${row.proposalName}`
             : labelOf(HISTORY_ACTION_LABEL, row.action),
-        description: row.detail,
+        description: historyDetailText(row.detail),
         at: row.at.toISOString(),
         href: linkable ? `/proposal/${row.proposalId}` : '/riwayat',
       }

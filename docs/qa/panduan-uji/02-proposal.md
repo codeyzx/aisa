@@ -323,10 +323,26 @@ MB, mis. deck rekaan startup "UJI Tani Cabai". AISA sedang tidak dijeda.
 - Saat mengirim, tombol berubah menjadi **Mengunggah…**.
 - Lalu toast "Pitch deck diterima dan sedang diproses.", dialog tertutup, dan Anda dibawa ke detail
   proposal baru itu dengan badge **Antre** atau **Sedang dinilai** dan skor "—".
-- Selama statusnya **Antre** atau **Sedang dinilai**, halaman memperbarui diri setiap sekitar 4
-  detik. Begitu selesai, tanpa Anda memuat ulang, skor, badge kategori, Ringkasan AI, dan nilai per
-  kriteria muncul. Riwayat berisi **Proposal masuk**. Pembaruan otomatis berhenti setelah sekitar
-  5 menit; kalau penilaiannya selesai lebih lama dari itu, muat ulang sendiri (F5).
+- Di bawah kartu nama muncul kartu **AISA sedang menilai proposal ini** (atau **Menunggu giliran
+  dinilai** selama masih antre) dengan pengukur **Sudah berjalan** (menit:detik). Di dalamnya
+  daftar langkah: **Membaca teks tiap halaman**, **Memeriksa deck bisa dibaca**, **AI menilai 5
+  kriteria** (bertanda **AI**), **Menghitung skor**, **Mencocokkan dengan fokus investasi**,
+  **Menentukan kategori**, **Menyimpan hasil**, masing-masing dengan satu kalimat penjelasan.
+  Langkah yang selesai bertanda centang hijau dan lamanya (mis. "1,6 dtk"); langkah yang sedang
+  dikerjakan berputar dengan pengukur detiknya sendiri; sisanya abu-abu bertulisan "menunggu".
+  Saat AI menilai tertulis "Langkah terlama, biasanya 15–25 detik."; lewat 25 detik berubah
+  menjadi "Lebih lama dari biasanya; masih menunggu jawaban AI." Di sela dua langkah, langkah
+  berikutnya bertulisan "berikutnya" (bukan berputar).
+- Kartu itu diperbarui sendiri tiap sekitar 1,5 detik, tanpa memuat ulang. Begitu selesai,
+  halaman menampilkan skor, badge kategori, Ringkasan AI, dan nilai per kriteria, dengan bilah
+  hijau "Penilaian selesai dalam <n> dtk. Hasilnya ada di bawah." dan tombol **Lihat langkahnya**
+  (membuka Log penilaian). Riwayat berisi **Proposal masuk**.
+- Bila berakhir **Perlu dicek manual**, kartu tetap tampil dengan alasannya dan langkah yang tidak
+  dijalankan bertulisan "dilewati". Bila gagal diproses, kartu **Penilaian gagal** menyebut
+  alasannya dan bahwa proposal kembali ke antrean dan dinilai lagi setelah perintah LANJUT.
+- Pemeriksaan otomatis berhenti setelah sekitar 5 menit; kartu lalu bertulisan "Masih berjalan
+  lebih lama dari biasanya, jadi halaman berhenti memeriksa otomatis." dengan tombol **Periksa
+  lagi**.
 - Kartu **Founder** bertuliskan "Data founder tidak disebut." karena unggahan tidak membawa data
   founder, dan baris sumbernya "Unggahan · <nama berkas> · <n> halaman".
 - Proposal baru juga muncul di daftar dan angka tab **Belum ditanggapi** bertambah 1.
@@ -336,7 +352,8 @@ Mengunggah PDF yang persis sama untuk kedua kalinya tidak membuat proposal kedua
 ada.
 
 **Kalau berbeda:** bila status tetap **Antre** lebih dari beberapa menit, cek apakah AISA dijeda
-(banner di atas halaman) dan halaman **Aktivitas AI**.
+(banner di atas halaman; kartunya lalu berjudul **Penilaian dijeda** dan bertulisan "AI sedang
+dijeda (STOP). Proposal ini akan dinilai setelah LANJUT.") dan halaman **Aktivitas AI**.
 
 ### UC-PRP-10 · Mengunggah berkas yang bukan PDF
 
@@ -417,40 +434,55 @@ dengan bukti dari deck.
 - Keterangan kartu menyebut versi aturan dan model, mis. "Aturan v1 · model gemini-3.8-flash."
   Bila aturan sudah diubah sejak dinilai, ada kalimat "Bobot yang tampil dari aturan v3 yang
   berlaku sekarang." Artinya bobot di layar adalah bobot sekarang, bukan bobot saat dinilai.
-- **Cara AI menilai** membuka panel **Log penilaian** (UC-PRP-13). Langkah **Hitung skor** di
-  panel itu menunjukkan tabel Nilai × Bobot = Poin dan **Skor akhir** yang sama dengan skor di
+- **Cara AI menilai** membuka jendela **Log penilaian** (UC-PRP-13). Langkah **Menghitung skor** di
+  jendela itu menunjukkan tabel Nilai × Bobot = Poin dan **Skor akhir** yang sama dengan skor di
   atas.
 
 **Kalau berbeda:** catat kriteria, kutipan, dan nomor halaman yang tidak cocok dengan deck.
 
 ### UC-PRP-13 · Membuka log penilaian
 
-**Situasi:** Anda ingin tahu langkah apa saja yang dikerjakan AISA dan bagian mana yang oleh AI.
+**Situasi:** Anda ingin tahu apa saja yang dikerjakan AISA, kapan, berapa lama, dan bagian mana
+yang oleh AI.
 
-**Sebelum mulai:** di detail proposal yang sudah dinilai, mis. Klinik Desa Sehat.
+**Sebelum mulai:** di detail proposal yang sudah dinilai dan pernah ditanggapi, mis. Panen Kita.
 
 **Langkah:**
 
 1. Klik **Lihat log penilaian** di bawah kotak **Skor kualitas**.
-2. Baca tiga angka di atas panel, lalu daftar langkahnya. Klik **Lihat rincian** di satu langkah.
-3. Klik **Semua aktivitas AI** di bawah panel.
-4. Kembali, lalu tutup panel dengan tombol silang atau tombol Esc.
+2. Baca ringkasan di atas jendela, lalu gulir linimasanya dari atas ke bawah. Klik **Lihat
+   rincian** di langkah **Menghitung skor** dan **Menentukan kategori**.
+3. Di langkah **AI menilai 5 kriteria**, klik label **hal. <n>** pada salah satu bukti.
+4. Tutup pratinjau dengan Esc, lalu klik **Semua aktivitas AI** di bagian bawah.
+5. Kembali, lalu tutup jendela dengan tombol silang atau tombol Esc.
 
 **Yang seharusnya terlihat:**
 
-- Panel di kanan berjudul **Log penilaian**: "Urutan kerja AISA saat menilai proposal ini, dari
-  dokumen masuk sampai kategori ditentukan."
-- Tiga angka: **Lama penilaian** (mis. 18 dtk), **Token AI** (mis. 4,7 rb), **Langkah oleh AI**
-  (mis. 1/8).
-- Kotak "AI hanya memberi nilai dan menulis teks. Skor, cek fokus, dan kategori dihitung sistem
-  dengan aturan yang sama untuk semua proposal."
-- Langkah berurutan: **Ambil pitch deck**, **Ekstrak teks per halaman**, **Cek jumlah teks**,
-  **Menilai 5 kriteria** (satu-satunya bertanda **AI**), **Hitung skor**, **Cek kecocokan**,
-  **Tentukan kategori**, **Simpan hasil penilaian**. Tiap langkah menyebut jam dan pelakunya
-  (**Sistem** atau **AI**).
-- Bila proposal pernah dikoreksi atau ditanggapi, langkah manajer juga tercantum.
+- Jendela di tengah layar (di ponsel memenuhi layar) berjudul **Log penilaian**: "Apa saja yang
+  dikerjakan AISA saat menilai proposal ini, berurutan dari awal sampai selesai. Semua jam dalam
+  WIB." Bagian atasnya tetap terlihat saat digulir.
+- Empat angka: **Lama penilaian** (mis. 23,4 dtk), tanggal dengan jam mulai → selesai (mis.
+  "21.29.22 → 21.29.46"), **Token AI** (mis. 11,7 rb), dan **Model**. Di bawahnya jumlah langkah
+  per pelaku, mis. "1 langkah AI", "6 langkah Sistem", "2 langkah Manajer".
+- Kotak "AI hanya memberi nilai dan menulis alasannya. Skor, cek fokus, dan kategori dihitung
+  sistem dengan aturan yang sama untuk semua proposal."
+- Linimasa berurutan: **Membaca teks tiap halaman**, **Memeriksa deck bisa dibaca**, **AI menilai 5
+  kriteria** (satu-satunya bertanda **AI**), **Menghitung skor**, **Mencocokkan dengan fokus
+  investasi**, **Menentukan kategori**, **Menyimpan hasil**. Proposal Form yang dinilai ulang
+  diawali **Mengambil pitch deck**. Tiap langkah menyebut jam mulai (jj.mm.dd), lamanya, pelakunya
+  (**AI** atau **Sistem**), satu kalimat penjelasan, **Hasil:** (mis. "Skor 81,9", "3 dari 3
+  syarat terpenuhi", "Sangat cocok"), dan nama aksi serta tool yang tercatat (mis. "Menilai 5
+  kriteria · gemini.generate_content"). Garis tipis di bawah judul menunjukkan porsi langkah itu
+  dari seluruh waktu; langkah AI hampir memenuhi garisnya.
+- Rincian **AI menilai 5 kriteria** terbuka sejak awal: nilai, bukti dengan label **hal. <n>**, dan
+  alasan AI tiap kriteria. **hal. <n>** membuka pratinjau deck di halaman itu, dan Esc kembali ke
+  log.
+- Rincian **Menghitung skor** berupa tabel Nilai × Bobot = Poin dan **Skor akhir**; rincian
+  **Menentukan kategori** menjelaskan aturannya (mis. "Lolos cek fokus, skor 81,9 mencapai 80,0,
+  dan tidak ada kriteria bernilai 1.") beserta ambang tiap kategori, yang terpakai disorot.
+- Setelah pemisah **Setelah penilaian**: koreksi dan tanggapan manajer dengan jam dan alasannya.
 - **Semua aktivitas AI** membuka halaman **Aktivitas AI** di pekerjaan penilaian ini.
-- Tombol **Cara AI menilai** dan **Log penilaian** (di kartu **Riwayat**) membuka panel yang sama.
+- Tombol **Cara AI menilai** dan **Log penilaian** (di kartu **Riwayat**) membuka jendela yang sama.
 
 **Kalau berbeda:** bila tombol log tidak ada sama sekali, proposal itu belum punya pekerjaan
 penilaian; catat statusnya.

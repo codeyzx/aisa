@@ -30,11 +30,16 @@ const clock = new Intl.DateTimeFormat(LOCALE, {
   minute: '2-digit',
   second: '2-digit',
 })
-const longDay = new Intl.DateTimeFormat(LOCALE, {
+const minuteClock = new Intl.DateTimeFormat(LOCALE, {
+  timeZone: TIME_ZONE,
+  hour: '2-digit',
+  minute: '2-digit',
+})
+const weekdayDay = new Intl.DateTimeFormat(LOCALE, {
   timeZone: TIME_ZONE,
   weekday: 'long',
   day: 'numeric',
-  month: 'long',
+  month: 'short',
   year: 'numeric',
 })
 const compact = new Intl.NumberFormat(LOCALE, {
@@ -52,8 +57,8 @@ export const shortDate = (date: Date) => day.format(date)
 export const selectAllLabel = (onPage: number) =>
   `Pilih semua ${formatNumber(onPage)} proposal di halaman ini`
 export const dateTime = (date: Date) => dayTime.format(date)
-export const clockTime = (date: Date) => clock.format(date)
-export const longDate = (date: Date) => longDay.format(date)
+/** "10.56.40 WIB": the exact moment, for a tooltip beside a coarser label. */
+export const clockTime = (date: Date) => `${clock.format(date)} WIB`
 /** 25_700 → "25,7 rb", for token counts. */
 export const compactNumber = (value: number) => compact.format(value)
 
@@ -65,6 +70,37 @@ export const initials = (name: string) =>
     .slice(0, 2)
     .map((word) => word[0]?.toUpperCase())
     .join('')
+
+/**
+ * When an assessment ran, to the minute: "Kamis, 22 Okt 2026 · 10.56–10.58 WIB".
+ * One time when it started and ended in the same minute, "10.56–… WIB" while it
+ * is still running, and the end's own day when it ran past WIB midnight.
+ */
+export function timeRange(start: Date, end: Date | null) {
+  const from = minuteClock.format(start)
+  const startDay = weekdayDay.format(start)
+  if (!end) return `${startDay} · ${from}–… WIB`
+  const to = minuteClock.format(end)
+  const endDay = weekdayDay.format(end)
+  if (endDay !== startDay)
+    return `${startDay} · ${from} – ${endDay} · ${to} WIB`
+  return `${startDay} · ${from === to ? from : `${from}–${to}`} WIB`
+}
+
+const pad2 = (value: number) => String(value).padStart(2, '0')
+
+/**
+ * Time since the assessment started, in whole seconds: "+12 dtk",
+ * "+1 mnt 05 dtk", and past an hour "+1 jam 02 mnt". A step logged a moment
+ * before the job's own start reads "+0 dtk", never a negative offset.
+ */
+export function elapsedText(ms: number) {
+  const seconds = Math.max(0, Math.floor(ms / 1000))
+  if (seconds < 60) return `+${seconds} dtk`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `+${minutes} mnt ${pad2(seconds % 60)} dtk`
+  return `+${Math.floor(minutes / 60)} jam ${pad2(minutes % 60)} mnt`
+}
 
 export const durationText = (ms: number) =>
   ms >= 1000

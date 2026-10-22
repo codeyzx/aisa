@@ -58,9 +58,15 @@ test('DSB-20 a scored, fitting proposal shows both stages, quotes and tokens', a
   await expect(grade.getByText('Rentang skor 85–100')).toBeVisible()
   const action = grade.getByTestId('grade-action')
   await expect(action).toContainText('Lanjutkan investasi')
-  await expect(action).toContainText(
-    'Bukti kuat di hampir semua kriteria; layak diprioritaskan.',
+  // Why, read from this proposal's own criteria: a count, then its two
+  // strongest (5s tie, broken by the 25% weights) with their quoted pages.
+  await expect(action.getByTestId('grade-insight')).toHaveText(
+    'Bukti kuat di 5 dari 5 kriteria, tanpa kriteria yang lemah.',
   )
+  await expect(action.getByRole('listitem')).toHaveText([
+    'Menaikkan skor: Tim manajemen 5/5 — Pendiri pernah membangun dan keluar dari startup serupa (hal. 2)',
+    'Menaikkan skor: Rencana & imbal hasil 5/5 — Unit ekonomi positif dan proyeksi imbal hasil rinci (hal. 5)',
+  ])
   await expect(grade.getByTestId('grade-scale')).toContainText(
     'Skor 92,5 dari 100 berada di rentang 85–100: Sangat layak.',
   )
@@ -210,6 +216,30 @@ test('DSB-23 a criterion whose quotes could not be found is capped at 2 and flag
   await expect(produk.getByText(/^Hal\. \d+$/u)).toHaveCount(0)
   // Only that criterion is flagged.
   await expect(page.getByText('kutipan tidak terverifikasi')).toHaveCount(1)
+
+  // Tidak layak: the Aksi names its three weakest criteria, the 2s
+  // ordered by weight, and says the capped one has no quote behind it.
+  const action = gradeCard(page).getByTestId('grade-action')
+  await expect(action.getByTestId('grade-insight')).toHaveText(
+    '3 dari 5 kriteria lemah atau tidak dibahas, jadi buktinya belum cukup untuk dipertimbangkan.',
+  )
+  await expect(action.getByRole('listitem')).toHaveText([
+    'Menahan skor: Tim manajemen 2/5 — Tim baru, belum ada rekam jejak di bidang ini (hal. 2)',
+    'Menahan skor: Risiko & tren makro 2/5 — Pesaing banyak dan bergantung pada satu pemasok (kutipannya tidak ditemukan di deck)',
+    'Menahan skor: Potensi dampak 2/5 — Dampak disebut tanpa angka (hal. 6)',
+  ])
+  await expect(produk.getByTestId('criterion-why')).toContainText(
+    'dibatasi paling tinggi 2',
+  )
+  // Each value says why, against the rubric level it sits on and the next.
+  const why = criterion(page, 'manajemen').getByTestId('criterion-why')
+  await expect(why).toContainText('Mengapa 2/5?')
+  await expect(why).toContainText(
+    "Patokan skor 2: Tim hanya digambarkan dengan klaim umum (mis. 'berpengalaman', 'tim solid') tanpa peran atau latar belakang yang jelas",
+  )
+  await expect(why).toContainText(
+    'Untuk naik ke skor 3: Tim disebut dengan peran dan pengalaman umum, tanpa rekam jejak yang bisa dicek',
+  )
 })
 
 test('DSB-24 a corrected proposal keeps its AI grade and score beside the correction', async ({
@@ -299,8 +329,12 @@ test('DSB-36 Log penilaian is a centred dialog with a timed timeline, start to f
 
   // Summary: how long, from when to when, tokens, model, who did what.
   await expect(log.getByText('Lama penilaian')).toBeVisible()
+  await expect(log.getByText('Waktu penilaian', { exact: true })).toBeVisible()
+  // The day and the range to the minute, no seconds.
   await expect(
-    log.getByText(/^\d{2}\.\d{2}\.\d{2} → \d{2}\.\d{2}\.\d{2}$/u),
+    log.getByText(
+      /^\p{L}+, \d{1,2} \p{L}{3} \d{4} · \d{2}\.\d{2}(–\d{2}\.\d{2})? WIB$/u,
+    ),
   ).toBeVisible()
   await expect(log.getByText('gemini-3.8-flash', { exact: true })).toBeVisible()
   await expect(log.getByText('1 langkah AI', { exact: true })).toBeVisible()
@@ -309,7 +343,7 @@ test('DSB-36 Log penilaian is a centred dialog with a timed timeline, start to f
     log.getByText('2 langkah Manajer', { exact: true }),
   ).toBeVisible()
 
-  // The seven production steps in order, each with its clock time.
+  // The seven production steps in order, each timed from the start.
   const steps = log.getByRole('list', { name: 'Langkah penilaian' })
   await expect(steps.getByRole('heading', { level: 3 })).toHaveText([
     'Membaca teks tiap halaman',
@@ -323,7 +357,12 @@ test('DSB-36 Log penilaian is a centred dialog with a timed timeline, start to f
   const ai = steps.getByRole('listitem').filter({
     has: page.getByRole('heading', { name: 'AI menilai 5 kriteria' }),
   })
-  await expect(ai.locator('time').first()).toHaveText(/^\d{2}\.\d{2}\.\d{2}$/u)
+  // The time since the start, with the exact clock time in the tooltip.
+  const aiTime = ai.locator('time').first()
+  await expect(aiTime).toHaveText(/^\+(\d+ dtk|\d+ mnt \d{2} dtk)$/u)
+  await expect(aiTime).toHaveAttribute('title', /^\d{2}\.\d{2}\.\d{2} WIB$/u)
+  const first = steps.getByRole('listitem').first().locator('time').first()
+  await expect(first).toHaveText('Mulai')
   await expect(ai.getByText('21,4 dtk', { exact: true })).toBeVisible()
   await expect(
     ai.getByText('Menilai 5 kriteria · gemini.generate_content'),
@@ -366,8 +405,12 @@ test('DSB-26 criteria and fit butir the deck does not mention read tidak disebut
   for (const key of ['rencana', 'dampak']) {
     const item = criterion(page, key)
     await expect(item.getByText('1/5', { exact: true })).toBeVisible()
-    await expect(item.getByText('Tidak dibahas di proposal')).toBeVisible()
-    await expect(item.getByText('(tidak disebut)')).toHaveCount(1)
+    await expect(
+      item.getByText('Tidak disebut di deck', { exact: true }),
+    ).toBeVisible()
+    await expect(item.getByTestId('criterion-why')).toContainText(
+      'Mengapa 1/5?',
+    )
   }
   const top = header(page)
   await expect(

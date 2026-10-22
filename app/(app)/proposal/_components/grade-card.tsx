@@ -1,4 +1,10 @@
-import { ArrowRightIcon, ChevronDownIcon, CompassIcon } from 'lucide-react'
+import {
+  ArrowRightIcon,
+  ChevronDownIcon,
+  CompassIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+} from 'lucide-react'
 
 import {
   Card,
@@ -22,6 +28,7 @@ import {
 import {
   isOutsideFocus,
   type Proposal,
+  type Rules,
   type Thresholds,
 } from '@/features/aisa/aisa.schema'
 import { formatScore } from '@/lib/format/number'
@@ -34,6 +41,7 @@ import {
   GradeBadge,
 } from '../../_components/badges'
 import { GradeGuide } from '../../_components/grade-guide'
+import { gradeInsight } from './grade-insight'
 import { dateTime } from './proposal-format'
 
 /** Where `score` sits along the five bands drawn at equal width, in percent. */
@@ -137,12 +145,15 @@ function GradeScale({
 export function GradeCard({
   proposal,
   thresholds,
+  weights,
 }: {
   proposal: Pick<
     Proposal,
     'assessment' | 'category' | 'effectiveCategory' | 'correction' | 'fit'
   >
   thresholds: Thresholds | null
+  /** Breaks ties between equally weak criteria; optional. */
+  weights?: Rules['weights'] | null
 }) {
   const { assessment, correction } = proposal
   const grade = proposal.effectiveCategory
@@ -159,6 +170,7 @@ export function GradeCard({
     correction.category !== proposal.category
   const outside = isOutsideFocus(proposal)
   const failed = failedFitChecks(proposal.fit)
+  const insight = gradeInsight(grade, assessment.criteria, weights)
 
   return (
     <Card data-testid="grade-card" className="gap-4">
@@ -206,7 +218,42 @@ export function GradeCard({
             />
             {CATEGORY_ACTION[grade]}
           </p>
-          <p className="mt-1 text-sm">{CATEGORY_EXPLANATION[grade]}</p>
+          <p data-testid="grade-insight" className="mt-1 text-sm">
+            {insight ? insight.summary : CATEGORY_EXPLANATION[grade]}
+          </p>
+          {insight?.points.length ? (
+            <ul className="mt-2.5 space-y-1.5 text-sm">
+              {insight.points.map((point) => {
+                const Icon =
+                  point.tone === 'strong' ? TrendingUpIcon : TrendingDownIcon
+                return (
+                  <li
+                    key={point.criterion}
+                    data-tone={point.tone}
+                    className="flex gap-2"
+                  >
+                    <Icon
+                      aria-hidden
+                      className={cn(
+                        'mt-0.5 size-4 shrink-0',
+                        point.tone === 'strong'
+                          ? 'text-success'
+                          : 'text-warning',
+                      )}
+                    />
+                    <span>
+                      <span className="sr-only">
+                        {point.tone === 'strong'
+                          ? 'Menaikkan skor: '
+                          : 'Menahan skor: '}
+                      </span>
+                      {point.text}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : null}
         </div>
 
         {corrected ? (

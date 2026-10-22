@@ -82,6 +82,7 @@ import {
   DeckPreviewProvider,
 } from '../_components/deck-preview'
 import { DeleteProposalButton } from '../_components/delete-proposal-button'
+import { rubricFor } from '../_components/criterion-rubric'
 import { GradeCard } from '../_components/grade-card'
 import { proposalHistoryEntries } from '../_components/proposal-history'
 import {
@@ -345,7 +346,11 @@ export default async function ProposalDetailPage({
 
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="flex min-w-0 flex-col gap-5">
-            <GradeCard proposal={proposal} thresholds={thresholds} />
+            <GradeCard
+              proposal={proposal}
+              thresholds={thresholds}
+              weights={rules?.weights}
+            />
 
             {assessment ? (
               <Card className="gap-4 border-primary/25 bg-gradient-to-b from-primary/[0.06] to-transparent">
@@ -430,12 +435,13 @@ export default async function ProposalDetailPage({
                 <CardTitle>Nilai per kriteria</CardTitle>
                 <CardDescription>
                   Lima kriteria A–E. AI memberi nilai 1–5 beserta kutipan dari
-                  proposal; skor akhir dihitung dari bobotnya.
+                  proposal dan alasannya; skor akhir (0–100) dihitung dari
+                  bobotnya.
                   {assessment
                     ? ` Aturan v${assessment.rulesVersion} · model ${assessment.model}.`
                     : ''}
                   {weightsDiffer
-                    ? ` Bobot yang tampil dari aturan v${rules.version} yang berlaku sekarang.`
+                    ? ` Bobot dan patokan skor yang tampil dari aturan v${rules.version} yang berlaku sekarang.`
                     : ''}
                 </CardDescription>
               </CardHeader>
@@ -444,6 +450,11 @@ export default async function ProposalDetailPage({
                   <ul>
                     {CRITERIA.map((criterion) => {
                       const item = assessment.criteria[criterion]
+                      // Anchors are keyed "1".."5"; older rules may store a
+                      // level empty, and an empty one is simply not shown.
+                      const rubric = item
+                        ? rubricFor(rules?.anchors[criterion], item.value)
+                        : null
                       return (
                         <li
                           key={criterion}
@@ -499,10 +510,7 @@ export default async function ProposalDetailPage({
                               {item.notMentioned ? (
                                 <p className="flex items-center gap-1.5 text-sm text-warning">
                                   <CircleHelpIcon className="size-4" />
-                                  Tidak dibahas di proposal
-                                  <span className="sr-only">
-                                    (tidak disebut)
-                                  </span>
+                                  Tidak disebut di deck
                                 </p>
                               ) : null}
                               {item.citations.map((citation) => (
@@ -520,9 +528,6 @@ export default async function ProposalDetailPage({
                                   </DeckPageLink>
                                 </blockquote>
                               ))}
-                              <p className="text-[13px] text-muted-foreground">
-                                {item.reason}
-                              </p>
                               {item.citationsUnverified ? (
                                 <Badge
                                   variant="outline"
@@ -531,6 +536,47 @@ export default async function ProposalDetailPage({
                                   kutipan tidak terverifikasi
                                 </Badge>
                               ) : null}
+                              <div
+                                data-testid="criterion-why"
+                                className="space-y-1.5 rounded-lg bg-muted/50 px-3 py-2.5 text-[13px]"
+                              >
+                                <p className="font-medium">
+                                  Mengapa {item.value}/5?
+                                </p>
+                                <p className="text-muted-foreground">
+                                  {item.reason}
+                                </p>
+                                {item.notMentioned ? (
+                                  <p className="text-muted-foreground">
+                                    Deck tidak membahas kriteria ini, jadi
+                                    nilainya 1, nilai terendah.
+                                  </p>
+                                ) : null}
+                                {item.citationsUnverified ? (
+                                  <p className="text-muted-foreground">
+                                    Kutipan yang diberikan AI tidak ditemukan di
+                                    halaman deck yang disebut, jadi nilainya
+                                    dibatasi paling tinggi 2. Cek sendiri di
+                                    deck sebelum memutuskan.
+                                  </p>
+                                ) : null}
+                                {rubric?.current ? (
+                                  <p>
+                                    <span className="font-medium">
+                                      Patokan skor {rubric.current.level}:
+                                    </span>{' '}
+                                    {rubric.current.text}
+                                  </p>
+                                ) : null}
+                                {rubric?.next ? (
+                                  <p>
+                                    <span className="font-medium">
+                                      Untuk naik ke skor {rubric.next.level}:
+                                    </span>{' '}
+                                    {rubric.next.text}
+                                  </p>
+                                ) : null}
+                              </div>
                             </div>
                           )}
                         </li>

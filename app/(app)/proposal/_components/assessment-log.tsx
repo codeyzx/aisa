@@ -56,8 +56,10 @@ import { DeckPageLink, useDeckPreviewPanel } from './deck-preview'
 import {
   clockTime,
   compactNumber,
+  dateTime,
   durationText,
-  longDate,
+  elapsedText,
+  timeRange,
 } from './proposal-format'
 
 export const BY: Record<
@@ -292,10 +294,13 @@ function TimelineNode({
   step,
   last,
   totalMs,
+  when,
 }: {
   step: LogStep
   last: boolean
   totalMs: number | null
+  /** The step's time as shown; its exact clock time rides in the tooltip. */
+  when: string
 }) {
   const [open, setOpen] = useState(step.detail?.type === 'criteria')
   const by = BY[step.by]
@@ -306,14 +311,15 @@ function TimelineNode({
   const time = (
     <time
       dateTime={step.startedAt.toISOString()}
+      title={clockTime(step.startedAt)}
       className="text-xs text-muted-foreground tabular-nums"
     >
-      {clockTime(step.startedAt)}
+      {when}
     </time>
   )
 
   return (
-    <li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-3 pb-6 last:pb-1 sm:grid-cols-[4.25rem_2.25rem_minmax(0,1fr)]">
+    <li className="relative grid grid-cols-[2.25rem_minmax(0,1fr)] gap-x-3 pb-6 last:pb-1 sm:grid-cols-[5.75rem_2.25rem_minmax(0,1fr)]">
       <div className="hidden pt-2.5 text-right sm:block">{time}</div>
       <div className="relative flex justify-center">
         {!last ? (
@@ -410,13 +416,15 @@ function TimelineNode({
 
 function Stat({
   label,
+  className,
   children,
 }: {
   label: string
+  className?: string
   children: React.ReactNode
 }) {
   return (
-    <div className="min-w-0 bg-popover px-3 py-2.5">
+    <div className={cn('min-w-0 bg-popover px-3 py-2.5', className)}>
       <dt className="text-xs text-muted-foreground">{label}</dt>
       <dd className="mt-0.5 truncate text-sm font-semibold tabular-nums">
         {children}
@@ -432,7 +440,7 @@ function LogDialogBody({
   log: AssessmentLogData
   bodyRef: RefObject<HTMLDivElement | null>
 }) {
-  const end = log.endedAt
+  const start = log.startedAt.getTime()
   return (
     <>
       <DialogHeader className="gap-3 bg-popover">
@@ -448,18 +456,21 @@ function LogDialogBody({
           </DialogTitle>
           <DialogDescription className="max-sm:sr-only">
             Apa saja yang dikerjakan AISA saat menilai proposal ini, berurutan
-            dari awal sampai selesai. Semua jam dalam WIB.
+            dari awal sampai selesai. Waktu tiap langkah dihitung sejak
+            penilaian dimulai; jam persisnya (WIB) muncul saat kursor diarahkan.
           </DialogDescription>
         </div>
-        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border bg-border sm:grid-cols-5">
+          <Stat label="Waktu penilaian" className="col-span-2">
+            {timeRange(log.startedAt, log.endedAt)}
+          </Stat>
           <Stat label="Lama penilaian">
             {log.durationMs !== null ? durationText(log.durationMs) : '—'}
           </Stat>
-          <Stat label={longDate(log.startedAt)}>
-            {clockTime(log.startedAt)} → {end ? clockTime(end) : '…'}
-          </Stat>
           <Stat label="Token AI">{compactNumber(log.tokens)}</Stat>
-          <Stat label="Model">{log.model ?? 'tidak dipakai'}</Stat>
+          <Stat label="Model" className="max-sm:col-span-2">
+            {log.model ?? 'tidak dipakai'}
+          </Stat>
         </dl>
         <ul className="flex flex-wrap gap-1.5 text-xs" aria-label="Pelaku">
           {(['ai', 'sistem', 'manajer'] as const).map((by) =>
@@ -501,6 +512,11 @@ function LogDialogBody({
               step={step}
               last={index === log.steps.length - 1}
               totalMs={log.durationMs}
+              when={
+                index === 0
+                  ? 'Mulai'
+                  : elapsedText(step.startedAt.getTime() - start)
+              }
             />
           ))}
         </ol>
@@ -524,6 +540,7 @@ function LogDialogBody({
                   step={step}
                   last={index === log.after.length - 1}
                   totalMs={null}
+                  when={dateTime(step.startedAt)}
                 />
               ))}
             </ol>

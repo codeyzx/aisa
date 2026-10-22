@@ -256,7 +256,7 @@ def sector_candidates(rows: list[tuple[datetime, str | None]], now: datetime) ->
         a, b = this.get(s, 0), last.get(s, 0)
         if max(a, b) < MIN_INSIGHT_COUNT:
             continue
-        c = {"sektor": s, "mingguIni": a, "mingguLalu": b}
+        c = {"sektor": sector_label(s), "mingguIni": a, "mingguLalu": b}
         if b >= MIN_INSIGHT_COUNT:
             c["perubahanPersen"] = round((a - b) / b * 100)
         out.append(c)

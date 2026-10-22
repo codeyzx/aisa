@@ -105,7 +105,7 @@ def test_rks_05_insight_with_invented_number_uses_code_insight(world, model, sen
     model.insight = "proposal agritech naik 300% minggu ini."
     digest.run_digest("09.00")
     d = world.get(f"digests/{DIGEST_ID}")
-    assert d["insight"] == "minggu ini ada 3 proposal agritech, minggu lalu belum ada."
+    assert d["insight"] == "minggu ini ada 3 proposal Agritech, minggu lalu belum ada."
 
 
 def test_rks_06_paused_uses_template_without_model(world, model, sent):

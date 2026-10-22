@@ -90,12 +90,12 @@ def test_sector_candidates():
         + [(NOW - timedelta(days=2), "fintech")] * 3 + [(NOW - timedelta(days=9), "fintech")] \
         + [(NOW - timedelta(days=2), "edtech"), (NOW - timedelta(days=20), "edtech"), (NOW, None)]
     c = sector_candidates(rows, NOW)
-    agri = next(x for x in c if x["sektor"] == "agritech")
-    assert agri == {"sektor": "agritech", "mingguIni": 6, "mingguLalu": 4, "perubahanPersen": 50}
+    agri = next(x for x in c if x["sektor"] == "Agritech")
+    assert agri == {"sektor": "Agritech", "mingguIni": 6, "mingguLalu": 4, "perubahanPersen": 50}
     # last week too thin for a percentage; edtech too thin to mention at all
-    assert next(x for x in c if x["sektor"] == "fintech") == {"sektor": "fintech", "mingguIni": 3, "mingguLalu": 1}
-    assert all(x["sektor"] != "edtech" for x in c)
-    assert template_insight(c) == "proposal agritech naik 50% dibanding minggu lalu (4 → 6)."
+    assert next(x for x in c if x["sektor"] == "Fintech") == {"sektor": "Fintech", "mingguIni": 3, "mingguLalu": 1}
+    assert all(x["sektor"] != "Edtech" for x in c)
+    assert template_insight(c) == "proposal Agritech naik 50% dibanding minggu lalu (4 → 6)."
 
 
 def test_thin_data_gives_no_insight():

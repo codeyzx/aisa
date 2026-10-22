@@ -37,7 +37,7 @@ PROPOSAL_FIELDS = [
     "assessedAt",
 ]
 
-# Upper bound on proposals scanned per tool call; the hackathon volume is far below it.
+# Upper bound on proposals scanned per tool call; the expected volume is far below it.
 MAX_SCAN = 3000
 
 

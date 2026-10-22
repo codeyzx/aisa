@@ -26,8 +26,7 @@ export default async function LoginPage() {
           AISA
         </div>
         <p className="max-w-xs text-sm text-muted-foreground">
-          Asisten investasi untuk menyaring proposal startup. Prototype ITB
-          Agentic AI Hackathon.
+          Asisten investasi untuk menyaring proposal startup.
         </p>
       </div>
       <div className="w-full max-w-sm">

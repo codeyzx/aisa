@@ -8,7 +8,7 @@ import { formatDecimal, formatNumber } from '@/lib/format/number'
 
 // Display helpers the proposal pages share. Dates use the numeric day ("1 Sep
 // 2026"), not `formatDate`'s two-digit one, because that is how the list and
-// detail read in the prototype.
+// detail read in the original design.
 
 const day = new Intl.DateTimeFormat(LOCALE, {
   timeZone: TIME_ZONE,

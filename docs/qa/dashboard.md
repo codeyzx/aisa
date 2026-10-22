@@ -297,7 +297,7 @@ ditanggapi.
 
 ## Produksi setelah porting UI
 
-Dashboard hasil porting UI prototipe diuji di produksi terhadap `aisa-api`, Firestore, dan
+Dashboard hasil porting desain UI asli diuji di produksi terhadap `aisa-api`, Firestore, dan
 Asisten sungguhan: revisi `aisa-dashboard-00008-r69` (commit `0ed2c92`), `aisa-api-00011-q82`,
 proyek `hackathon-primestep-09`, 22 Okt 2026 00.40–00.53 WIB. Masuk sebagai satu-satunya akun
 Firebase Auth produksi (`manager@aisa.local`, peran admin); kata sandi dibaca dari Secret Manager

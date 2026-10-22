@@ -58,7 +58,7 @@ function weekSum(rows: StatsRow[]) {
   return sums
 }
 
-/** A prototype chart panel (`.a-chart`) found by its heading. */
+/** A chart panel (`.a-chart`) found by its heading. */
 function panel(page: Page, heading: string): Locator {
   return page
     .locator('.a-chart')

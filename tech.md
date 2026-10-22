@@ -3,7 +3,7 @@
 > Untuk Claude Code dan tim developer. Dibaca setelah **dokumen overview project** (masalah, pengguna, aturan penilaian, use case).
 > Dokumen ini menjelaskan **komponen, tools, dan alur sistem** secara garis besar. Detail kode, skema data, dan prompt diputuskan saat implementasi.
 >
-> Versi: draft 2 · 21 Oktober 2026 · Agentic AI Hackathon ITB 2026 (hacking 24 jam, freeze Kamis 22 Okt 13.00 WIB)
+> Versi: draft 2 · 21 Oktober 2026
 
 ---
 
@@ -128,7 +128,7 @@ Region: Cloud Run dan Firestore `asia-southeast2` (Jakarta); Agent Runtime `us-c
 
 ## 6. Strategi model
 
-**Tahap awal (hackathon): stabil dulu.** Semua agent memakai model stabil yang sama:
+**Tahap awal: stabil dulu.** Semua agent memakai model stabil yang sama:
 
 | Agent                                        | Model awal          |
 | -------------------------------------------- | ------------------- |

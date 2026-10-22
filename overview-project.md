@@ -184,6 +184,6 @@ Lima kriteria A–E dan bobot bawaannya mengikuti **panduan scorecard bergaya Ar
 
 Google Forms dan Drive (dipicu Apps Script) · ekstraksi teks di Cloud Run · Google ADK + Gemini · Agent Runtime, Sessions, dan Memory Bank untuk asisten · Cloud Scheduler 09.00 WIB setiap hari, 17.00 WIB setiap Jumat, serta retensi 02.00 WIB · Firestore · aturan penilaian di Firestore (diatur lewat halaman Aturan penilaian) · Secret Manager · GOWA di VPS · dashboard di Cloud Run.
 
-## Batasan hackathon
+## Batasan cakupan
 
 **Tidak termasuk:** saran tindak lanjut otomatis, analisis mendalam dan memo, due diligence, banyak pengguna, audio, masking dokumen (dikerjakan terpisah), pencarian internet, pengiriman pesan ke founder, serta butir PDP c, e (sebagian), dan f.

@@ -170,7 +170,7 @@ export const docsManifest: DocEntry[] = [
     normative: false,
   },
 
-  // AISA hackathon records: actual test results and how AI assistants were used. Facts
+  // AISA project records: actual test results and how AI assistants were used. Facts
   // about this build, not rules, so not normative.
   { path: 'docs/TESTING.md', type: 'reference', normative: false },
   { path: 'docs/AI_USAGE.md', type: 'reference', normative: false },

@@ -1,8 +1,8 @@
 'use client'
 
 import {
-  Bar,
-  BarChart,
+  Area,
+  AreaChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -29,7 +29,14 @@ type Payload = readonly { payload?: { full?: string } }[] | undefined
 const fullLabel = (_: unknown, payload: Payload) =>
   payload?.[0]?.payload?.full ?? ''
 
-/** Daily cost in rupiah, stacked by agent; the exact values sit in a table. */
+/** A one- or two-day area reads as nothing or a bare slope; dot each day. */
+const fewPointDot = (count: number, color: string) =>
+  count < 3 ? { r: 3, fill: color, strokeWidth: 0 } : false
+
+/** Room at both ends, so the first and last day's label are not cut off. */
+const EDGE_PAD = { left: 16, right: 16 }
+
+/** Daily cost in rupiah as areas stacked by agent; the exact values sit in a table. */
 export function CostTrendChart({ days }: { days: CostDay[] }) {
   if (!days.length)
     return (
@@ -62,7 +69,7 @@ export function CostTrendChart({ days }: { days: CostDay[] }) {
           height="100%"
           initialDimension={INITIAL}
         >
-          <BarChart
+          <AreaChart
             data={rows}
             margin={{ top: 8, right: 8, bottom: 0, left: 4 }}
           >
@@ -73,6 +80,7 @@ export function CostTrendChart({ days }: { days: CostDay[] }) {
               axisLine={false}
               fontSize={11}
               minTickGap={12}
+              padding={EDGE_PAD}
             />
             <YAxis
               tickLine={false}
@@ -82,7 +90,7 @@ export function CostTrendChart({ days }: { days: CostDay[] }) {
               tickFormatter={(value) => compactRupiah(Number(value))}
             />
             <Tooltip
-              cursor={{ fill: 'var(--muted)' }}
+              cursor={{ stroke: 'var(--border)' }}
               contentStyle={TOOLTIP_STYLE}
               labelFormatter={fullLabel}
               // Legend order, not the default alphabetical-by-name.
@@ -91,20 +99,25 @@ export function CostTrendChart({ days }: { days: CostDay[] }) {
               }
               formatter={(value) => rupiah(Number(value))}
             />
-            {PRICED_KINDS.map((kind, index) => (
-              <Bar
-                key={kind}
-                dataKey={kind}
-                name={KIND_AGENT[kind].agent}
-                stackId="biaya"
-                fill={agentColor(KIND_AGENT[kind].agent)}
-                maxBarSize={36}
-                radius={
-                  index === PRICED_KINDS.length - 1 ? [3, 3, 0, 0] : undefined
-                }
-              />
-            ))}
-          </BarChart>
+            {PRICED_KINDS.map((kind) => {
+              const color = agentColor(KIND_AGENT[kind].agent)
+              return (
+                <Area
+                  key={kind}
+                  type="monotone"
+                  dataKey={kind}
+                  name={KIND_AGENT[kind].agent}
+                  stackId="biaya"
+                  stroke={color}
+                  fill={color}
+                  fillOpacity={0.55}
+                  strokeWidth={1.5}
+                  dot={fewPointDot(rows.length, color)}
+                  activeDot={{ r: 3 }}
+                />
+              )
+            })}
+          </AreaChart>
         </ResponsiveContainer>
       </div>
       <details>

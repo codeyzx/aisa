@@ -414,7 +414,7 @@ async function interceptDeckHosts(page: Page): Promise<string[]> {
 const previewPanel = (page: Page) =>
   page.getByRole('dialog', { name: 'Pratinjau deck' })
 
-test('DSB-31 Pratinjau deck opens the uploaded deck in a panel and keeps a fresh link on reopen', async ({
+test('DSB-31 Pratinjau deck opens the uploaded deck in a centred dialog and keeps a fresh link on reopen', async ({
   page,
   aisaApi,
 }) => {

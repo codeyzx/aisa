@@ -200,7 +200,7 @@ versi <n>, <tanggal> <jam> WIB. Anggaran pesan WA: <n>.
 
 | ID     | Aksi (lewat)         | Diharapkan di layar / balasan | Cek Firestore | Pembaca yang dicek | Efek keluar  | Tes otomatis |
 | ------ | -------------------- | ----------------------------- | ------------- | ------------------ | ------------ | ------------ |
-| PWA-01 | `undang <nama>` (WA) | …                             | …             | …                  | 1 balasan WA | …            |
+| PWA-01 | `setuju <nama>` (WA) | …                             | …             | …                  | 1 balasan WA | …            |
 
 ## Hasil
 

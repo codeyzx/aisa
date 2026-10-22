@@ -2,9 +2,9 @@
 
 ## Ringkasan
 
-AISA membantu manajer investasi memilah proposal startup yang masuk setiap hari. Setiap proposal dinilai **satu kali saat masuk**: kualitasnya diberi skor 0–100 dengan bukti halaman, lalu dicek kecocokannya dengan fokus investasi. Pukul **09.00 dan 17.00**, manajer menerima ringkasan di WhatsApp yang mengelompokkan proposal per grade. Detail, tren, insight, dan log aktivitas AI ada di dashboard, dan manajer bisa bertanya ke asisten kapan saja.
+AISA membantu manajer investasi memilah proposal startup yang masuk setiap hari. Setiap proposal dinilai **satu kali saat masuk**: kualitasnya diberi skor 0–100 dengan bukti halaman, lalu dicek kecocokannya dengan fokus investasi. Setiap hari pukul **09.00**, manajer menerima ringkasan di WhatsApp yang mengelompokkan proposal per grade, dan setiap **Jumat pukul 17.00** ringkasan mingguan berisi angka minggu itu. Detail, tren, insight, dan log aktivitas AI ada di dashboard, dan manajer bisa bertanya ke asisten kapan saja.
 
-AI hanya menilai dan mengelompokkan. Keputusan mengundang, memantau, atau mengarsipkan proposal sepenuhnya di tangan manajer.
+AI hanya menilai dan mengelompokkan. Keputusan **Setuju** (lanjut ke tahap berikutnya, mis. mengajak founder berdiskusi) atau **Tolak** (tidak dilanjutkan) sepenuhnya di tangan manajer.
 
 ## Masalah
 
@@ -58,7 +58,7 @@ Informasi yang tidak ada diberi nilai 1 dan ditandai **"tidak disebut"**. Skor d
 | 75–84  | **Layak bersyarat**   | Investasi dengan syarat       |
 | 65–74  | **Perlu penyesuaian** | Sesuaikan dulu sebelum lanjut |
 | 50–64  | **Risiko tinggi**     | Pertimbangkan menolak         |
-| < 50   | **Tidak layak**       | Tolak                         |
+| < 50   | **Tidak layak**       | Sebaiknya ditolak             |
 
 **Tahap 2 — Cek kecocokan (kode, tanpa AI dan tanpa token).** Sektor, tahap pendanaan, dan besar dana dicocokkan dengan aturan yang diatur manajer di halaman **Aturan penilaian** dashboard (disimpan di Firestore). Keputusan: butir yang **tidak disebut** di deck dianggap **gagal** cek, karena kecocokan yang tidak bisa dibuktikan tidak boleh dianggap cocok.
 
@@ -66,13 +66,13 @@ Proposal yang gagal cek kecocokan diberi label **Di luar fokus**: prioritas rend
 
 **Perlu dicek manual** adalah status, bukan grade.
 
-### 4. Ringkasan pukul 09.00 dan 17.00
+### 4. Ringkasan harian 09.00 dan mingguan Jumat 17.00
 
-Ringkasan berisi proposal **yang belum ditanggapi**, dikelompokkan per grade (proposal di luar fokus ditandai "(di luar fokus)"), **tanpa saran tindak lanjut**:
+Ringkasan harian pukul 09.00 menghitung proposal baru sejak ringkasan 09.00 sebelumnya (ringkasan pagi pertama: 24 jam terakhir). Isinya proposal **yang belum ditanggapi**, dikelompokkan per grade (proposal di luar fokus ditandai "(di luar fokus)"), **tanpa saran tindak lanjut**:
 
 Salam pembuka mengikuti jam kirim (Selamat pagi/siang/sore/malam), dengan nama manajer bila diatur. Setiap ringkasan memuat tepat satu insight, 1–2 kalimat, diawali label "Yang menarik:". Faktanya dipilih dan dihitung kode: tren sektor minggu ini dibanding minggu lalu bila ada sektor dengan minimal 3 proposal; bila tidak, fakta pertama yang berlaku dari urutan tetap: berapa proposal baru yang masuk grade teratas, rata-rata skor kualitas minggu ini dibanding minggu lalu, jumlah proposal yang perlu perhatian (mis. Perlu dicek manual) yang belum ditanggapi, proposal belum ditanggapi dengan skor tertinggi, lalu berapa proposal yang sudah ditanggapi. Insight hanya kosong bila belum ada proposal sama sekali.
 
-> _Selamat pagi, Pak Budi. Sejak Senin pukul 17.00 masuk 100 proposal baru. Ada 100 proposal yang belum Pak tanggapi._
+> _Selamat pagi, Pak Budi. Sejak ringkasan Kamis pukul 09.00 masuk 100 proposal baru. Ada 100 proposal yang belum Pak tanggapi._
 >
 > _**Sangat layak (4)**_
 > _1. Tani Maju (agritech, Rp5 M) · 93. Pendapatannya tumbuh tiap kuartal dan timnya berpengalaman._
@@ -85,16 +85,36 @@ Salam pembuka mengikuti jam kirim (Selamat pagi/siang/sore/malam), dengan nama m
 >
 > _Yang menarik: proposal agritech naik 76% dibanding minggu lalu._
 
+Ringkasan mingguan pukul 17.00 setiap Jumat merangkum minggu berjalan, dari Senin 00.00 WIB sampai saat kirim, dibanding minggu lalu (Senin–Minggu penuh): proposal masuk, tiga sektor terbanyak dengan persen dan jumlahnya, jumlah per grade dari proposal yang dinilai minggu ini (berapa yang Sangat layak + Layak bersyarat, dan berapa persen di luar fokus), rata-rata skor, keputusan minggu ini (Setuju dan Tolak), jumlah proposal yang masih menunggu keputusan beserta umur yang terlama, top 3 proposal minggu ini (urut grade, sesuai fokus, lalu skor), dan jumlah perlu dicek manual. Semua angka dihitung kode; model hanya merapikan kalimat dan memilih insight dari kandidat yang dihitung kode (sektor terbanyak, perubahan jumlah masuk, porsi di luar fokus, antrean keputusan). Bila teks model memuat angka yang tidak ada di data, yang dikirim templat. Ringkasan 17.00 yang dipicu manual di tengah minggu merangkum minggu itu sampai saat dipicu.
+
+> _Selamat sore, Pak Budi. Ini ringkasan mingguan AISA, 19–23 Oktober 2026._
+>
+> _**Proposal masuk**: 10 (minggu lalu 7, naik 3)_
+> _**Sektor**: F&B 40% (4 dari 10) · Agritech 30% (3 dari 10) · Fintech 20% (2 dari 10)_
+> _**Grade** (9 dinilai): Sangat layak 1 · Layak bersyarat 2 · Perlu penyesuaian 3 · Risiko tinggi 2 · Tidak layak 1_
+> _Sangat layak + Layak bersyarat: 3 · di luar fokus: 33% (3 dari 9)_
+> _**Rata-rata skor**: 68,4 (minggu lalu 65,2, naik 3,2)_
+> _**Keputusan minggu ini**: Setuju 2 · Tolak 4_
+> _Menunggu keputusan: 12 (terlama 9 hari)_
+> _**Top 3 minggu ini**_
+> _1. Tani Maju · Sangat layak · 93_
+> _…_
+> _**Perlu dicek manual**: 1_
+>
+> _Yang menarik: minggu ini paling banyak F&B: 40% (4 dari 10 proposal)._
+
 ### 5. Menanggapi proposal
 
 Manajer menandai proposal lewat WhatsApp atau dashboard:
 
-| Perintah                                              | Hasil                                  |
-| ----------------------------------------------------- | -------------------------------------- |
-| `undang <nama>` · `pantau <nama>` · `arsipkan <nama>` | Status proposal berubah                |
-| `arsipkan semua tidak layak`                          | Tanggapan massal per grade             |
-| `pindahkan <nama> ke layak bersyarat karena …`        | Koreksi grade; skor AI tetap tersimpan |
-| `STOP` · `LANJUT`                                     | Menjeda dan melanjutkan pekerjaan AI   |
+| Perintah                                       | Hasil                                                        |
+| ---------------------------------------------- | ------------------------------------------------------------ |
+| `setuju <nama>` · `tolak <nama>`               | Tanggapan tercatat, mis. "Tercatat: Tani Maju → setuju."     |
+| `tolak semua tidak layak` (lalu `ya`)          | Tanggapan massal per grade; `setuju semua <grade>` juga bisa |
+| `pindahkan <nama> ke layak bersyarat karena …` | Koreksi grade; skor AI tetap tersimpan                       |
+| `STOP` · `LANJUT`                              | Menjeda dan melanjutkan pekerjaan AI                         |
+
+Kata tanggapan lama (`undang`, `pantau`, `arsipkan`) bukan perintah lagi: pesannya dibalas "Perintah sekarang: setuju <nama> atau tolak <nama>." dan tidak diteruskan ke Asisten.
 
 **STOP** berhenti di antara langkah: panggilan model yang sedang berjalan diselesaikan, lalu hasilnya dibuang. Proposal baru menunggu sampai `LANJUT`, dan selama dijeda Asisten tidak menjawab; pesan selain perintah dibalas "AISA sedang dijeda".
 
@@ -149,20 +169,20 @@ Lima kriteria A–E dan bobot bawaannya mengikuti **panduan scorecard bergaya Ar
 
 ## Pelindungan data pribadi (UU 27/2022 Pasal 16 ayat 2)
 
-| Status           | Butir | Penerapan                                                                                                                                                                                                                                                                                                                    |
-| ---------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sudah dirancang  | a     | Form minimal, pemberitahuan tujuan, dan persetujuan                                                                                                                                                                                                                                                                          |
-| Sudah dirancang  | b     | Data hanya untuk menyaring proposal, tidak untuk melatih model                                                                                                                                                                                                                                                               |
-| Sudah dirancang  | d     | Setiap nilai ada kutipan halaman; informasi yang tidak ada ditandai                                                                                                                                                                                                                                                          |
-| Sudah dirancang  | g     | Hapus atas permintaan founder (dashboard atau CLI, alasan wajib) dan retensi harian: proposal yang diarsipkan lebih lama dari periode retensi (default 90 hari) dihapus otomatis. Yang dihapus: proposal, teks deck, file deck, log pekerjaannya, dan konfirmasi tertunda; baris Riwayat disamarkan dan penghapusan tercatat |
-| Sudah dirancang  | h     | Log Aktivitas AI dan Riwayat sebagai jejak audit                                                                                                                                                                                                                                                                             |
-| Rencana lanjutan | c     | Hak akses, perbaikan, dan penghapusan data; keputusan akhir tetap manusia (Pasal 10)                                                                                                                                                                                                                                         |
-| Sebagian         | e     | Hanya teks yang dikirim ke model (kecuali deck hasil pindai, yang PDF-nya dibaca sebagai gambar) sudah berjalan; masking dan pembatasan akses berikutnya                                                                                                                                                                     |
-| Rencana lanjutan | f     | Pemberitahuan privasi dan notifikasi kebocoran maksimal 3×24 jam (Pasal 46)                                                                                                                                                                                                                                                  |
+| Status           | Butir | Penerapan                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sudah dirancang  | a     | Form minimal, pemberitahuan tujuan, dan persetujuan                                                                                                                                                                                                                                                                                                                                                            |
+| Sudah dirancang  | b     | Data hanya untuk menyaring proposal, tidak untuk melatih model                                                                                                                                                                                                                                                                                                                                                 |
+| Sudah dirancang  | d     | Setiap nilai ada kutipan halaman; informasi yang tidak ada ditandai                                                                                                                                                                                                                                                                                                                                            |
+| Sudah dirancang  | g     | Hapus atas permintaan founder (dashboard atau CLI, alasan wajib) dan retensi harian: proposal yang ditolak lebih lama dari periode retensi (default 90 hari, dihitung dari waktu tanggapan Tolak) dihapus otomatis; proposal yang disetujui tidak dihapus otomatis. Yang dihapus: proposal, teks deck, file deck, log pekerjaannya, dan konfirmasi tertunda; baris Riwayat disamarkan dan penghapusan tercatat |
+| Sudah dirancang  | h     | Log Aktivitas AI dan Riwayat sebagai jejak audit                                                                                                                                                                                                                                                                                                                                                               |
+| Rencana lanjutan | c     | Hak akses, perbaikan, dan penghapusan data; keputusan akhir tetap manusia (Pasal 10)                                                                                                                                                                                                                                                                                                                           |
+| Sebagian         | e     | Hanya teks yang dikirim ke model (kecuali deck hasil pindai, yang PDF-nya dibaca sebagai gambar) sudah berjalan; masking dan pembatasan akses berikutnya                                                                                                                                                                                                                                                       |
+| Rencana lanjutan | f     | Pemberitahuan privasi dan notifikasi kebocoran maksimal 3×24 jam (Pasal 46)                                                                                                                                                                                                                                                                                                                                    |
 
 ## Teknologi
 
-Google Forms dan Drive (dipicu Apps Script) · ekstraksi teks di Cloud Run · Google ADK + Gemini · Agent Runtime, Sessions, dan Memory Bank untuk asisten · Cloud Scheduler 09.00 dan 17.00 WIB serta retensi 02.00 WIB · Firestore · aturan penilaian di Firestore (diatur lewat halaman Aturan penilaian) · Secret Manager · GOWA di VPS · dashboard di Cloud Run.
+Google Forms dan Drive (dipicu Apps Script) · ekstraksi teks di Cloud Run · Google ADK + Gemini · Agent Runtime, Sessions, dan Memory Bank untuk asisten · Cloud Scheduler 09.00 WIB setiap hari, 17.00 WIB setiap Jumat, serta retensi 02.00 WIB · Firestore · aturan penilaian di Firestore (diatur lewat halaman Aturan penilaian) · Secret Manager · GOWA di VPS · dashboard di Cloud Run.
 
 ## Batasan hackathon
 

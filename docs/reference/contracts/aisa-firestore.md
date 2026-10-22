@@ -18,7 +18,7 @@ WIB is a display concern. Money is an integer number of rupiah.
 | `Criterion`      | `manajemen`, `kinerja`, `risiko`, `rencana`, `dampak` (A–E)                            |
 | `Category`       | `sangat_layak`, `layak_bersyarat`, `perlu_penyesuaian`, `risiko_tinggi`, `tidak_layak` |
 | `ProposalStatus` | `antre`, `dinilai_proses`, `dinilai`, `perlu_dicek_manual`, `dihentikan`               |
-| `ResponseKind`   | `undang`, `pantau`, `arsipkan`                                                         |
+| `ResponseKind`   | `setuju`, `tolak`                                                                      |
 | `Via`            | `wa`, `dashboard`, `sistem`                                                            |
 | `SourceKind`     | `form`, `upload`                                                                       |
 | `JobKind`        | `penilaian`, `ringkasan`, `asisten`, `perintah`                                        |
@@ -36,6 +36,14 @@ Legacy values: before the 5-grade scale, `Category` was `sangat_cocok`, `cocok`,
 so no proposal keeps the old criteria keys, but old values stay unrewritten in
 `history.before`/`after` and in old `digests` (text and `counts` keys). Readers must
 tolerate them.
+
+Before Setuju/Tolak, `ResponseKind` was `undang`, `pantau`, `arsipkan`. The response
+migration (`aisa migrate-responses`) moves `undang` → `setuju` and `arsipkan` → `tolak`
+(keeping `at`, `via` and `note`, so a `tolak` keeps the retention clock of its archive
+date) and clears `pantau` back to no response; it writes one `tanggapan` history row per
+changed proposal and deletes every `pendingConfirmations` doc. The old words stay
+unrewritten in `history.before`/`after` and `history.detail`; readers must tolerate them
+(the dashboard shows them as "Undang (lama)", "Pantau (lama)", "Arsipkan (lama)").
 
 ## `proposals/{proposalId}`
 
@@ -128,13 +136,28 @@ Audit trail (Riwayat): `{at, via: Via, action, proposalId?, proposalName?, befor
 reason?, detail}` where `action` ∈ `tanggapan`, `tanggapan_massal`, `koreksi`,
 `aturan_diubah`, `stop`, `lanjut`, `ringkasan_terkirim`, `proposal_masuk`, `proposal_dihapus`,
 `dinilai_ulang`. `dinilai_ulang` is written only by the grade migration: `before` is the old
-category value, `after` the new grade.
+category value, `after` the new grade. The response migration writes `tanggapan` rows with
+`via: "sistem"`, `before` the old kind and `after` the new kind, or `after: null` when a
+`pantau` was cleared.
 
 ## `digests/{digestId}`
 
-`{slot: "09.00" | "17.00", windowStart?, sentAt, text, insight: string | null, counts: {<Category>, luarFokus,
-perluDicekManual, belumDitanggapi, baruMasuk}, proposalIds, usedTemplate: bool, jobId,
-gowaMessageIds: [string]}`. `windowStart` is null for the first digest ever sent.
+`{slot: "09.00" | "17.00", period: "harian" | "mingguan", windowStart?, sentAt, text, insight: string | null,
+counts: {<Category>, luarFokus, perluDicekManual, belumDitanggapi, baruMasuk}, proposalIds,
+usedTemplate: bool, jobId, gowaMessageIds: [string], week?: {start, end}, weekly?: WeeklyStats}`.
+The id is `<WIB date>-0900` or `<WIB date>-1700`, so each slot sends at most once per WIB day.
+Slot `09.00` is the daily digest (`period: "harian"`); slot `17.00` is always the weekly summary
+(`period: "mingguan"`), whatever the weekday. `period` is absent on docs written before the
+weekly summary existed and then reads as `"harian"`. For the daily digest `windowStart` is the
+previous `09.00` digest's `sentAt`, or 24 hours before the send when there is none (it is null only on docs
+written before that rule, for the first digest ever sent); for the
+weekly summary it is Monday 00:00 WIB of the send's week. `counts` is, for both periods, the
+proposals awaiting a decision at send time per grade plus `baruMasuk`, the proposals that came
+in during the window; `proposalIds` are the proposals the message names (weekly: its top 3).
+`week` is weekly only: WIB dates `YYYY-MM-DD` of that Monday and of the send day. `weekly` is
+weekly only and holds every number the summary states, counted by code (`WeeklyStats` in
+`models.py` owns the shape): this week vs the full Monday–Sunday before it, proposals placed
+by `createdAt` and decisions by `response.at`, deleted proposals not counted.
 `insight` is the 1–2 sentence insight used in the message, stored without its "Yang
 menarik:" label (the message always prints it with the label), or null when there was none.
 
@@ -160,8 +183,9 @@ updated with `Increment`.
 ## Deleting a proposal
 
 A proposal is deleted on a founder's request (`DELETE /api/proposals/{id}` with a reason,
-or `aisa delete-proposal`) or by the daily retention run, which deletes proposals archived
-(`response.kind` `arsipkan`) more than `rules.retentionDays` days ago.
+or `aisa delete-proposal`) or by the daily retention run, which deletes proposals decided
+`tolak` (`response.kind` `tolak`) whose `response.at` is more than `rules.retentionDays` days ago;
+a `setuju` proposal is never deleted by retention.
 Either path deletes `proposals/{id}`, `proposalTexts/{id}`, the uploaded deck in GCS, the
 proposal's jobs with their steps (`proposalId` equal to it), and any `pendingConfirmations`
 naming it. A job listing it in `proposalIds` is kept for the other proposals with this one

@@ -47,16 +47,17 @@ tertulis di `GLOSSARY.md`, `tech.md`, dan kontrak Firestore, lalu ditegakkan ole
 - **Kategori dan status adalah dua sumbu berbeda.** _Perlu dicek manual_ adalah status tanpa
   skor dan tanpa grade, bukan grade keenam. _Di luar fokus_ adalah label prioritas
   rendah dari cek kecocokan, bukan grade tersendiri, dan tidak mengubah grade.
-- **Makna "ditanggapi".** Tanggapan hanya undang, pantau, atau arsipkan. Koreksi grade
+- **Makna "ditanggapi".** Tanggapan hanya Setuju atau Tolak. Koreksi grade
   **bukan** tanggapan: proposal yang dikoreksi tetap _belum ditanggapi_ dan tetap muncul di
   ringkasan dengan **kategori efektifnya**. Kategori asli dan skor kualitas tidak pernah
   ditimpa, dan koreksi wajib beralasan.
 - **STOP/LANJUT.** STOP membuat sistem _dijeda_: penilaian yang sedang berjalan berhenti di
   langkah berikutnya (`dihentikan`), proposal baru menunggu sebagai `antre`, dan ringkasan
   dikirim dari template tanpa model. Hanya LANJUT yang membuka jeda dan menilai antrean.
-- **Perintah dikenali kode, bukan model.** Pola `undang|pantau|arsipkan <nama>`, `… semua
+- **Perintah dikenali kode, bukan model.** Pola `setuju|tolak <nama>`, `setuju|tolak semua
   <kategori>` (wajib konfirmasi `YA` dalam 10 menit), `pindahkan <nama> ke <kategori> karena
-  <alasan>`, `STOP`, dan `LANJUT` dicocokkan dengan regex. Nama dicocokkan secara persis →
+  <alasan>`, `STOP`, dan `LANJUT` dicocokkan dengan regex. Kata lama `undang`, `pantau`, `arsipkan` dibalas petunjuk perintah
+  baru, bukan diteruskan ke Asisten. Nama dicocokkan secara persis →
   awalan unik → fuzzy unik ≥ 0,85, dan bila ambigu tidak ada yang diubah.
 - **Ringkasan tanpa saran tindak lanjut.** Teks model hanya dipakai bila setiap angka dan
   nama ada di data dan tidak ada kata saran; bila tidak, template kode yang dikirim.
@@ -110,7 +111,7 @@ Keluaran asisten koding tidak diterima hanya karena terlihat benar:
 - **Asisten** menjawab dari data AISA lewat tools baca. Saran yang tidak berasal dari data
   diberi label sebagai saran AI, dan data yang tidak ada dijawab "tidak tersedia" (lihat
   T08 di `docs/TESTING.md`).
-- **Keputusan** undang, pantau, arsipkan, koreksi grade, dan STOP selalu datang dari
+- **Keputusan** Setuju atau Tolak, koreksi grade, dan STOP selalu datang dari
   manajer, dan setiap keputusan tercatat di Riwayat beserta jalurnya (WA atau dashboard).
 
 ### Transparansi pemakaian AI

@@ -34,8 +34,8 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
 - [UC-PRP-14 · Kriteria yang tidak dibahas atau kutipannya tidak terverifikasi](#uc-prp-14--kriteria-yang-tidak-dibahas-atau-kutipannya-tidak-terverifikasi)
 - [UC-PRP-15 · Mengecek kesesuaian dengan fokus investasi](#uc-prp-15--mengecek-kesesuaian-dengan-fokus-investasi)
 - [UC-PRP-16 · Membaca riwayat proposal](#uc-prp-16--membaca-riwayat-proposal)
-- [UC-PRP-17 · Anda memutuskan mengundang founder A](#uc-prp-17--anda-memutuskan-mengundang-founder-a) ⚠️
-- [UC-PRP-18 · Memantau atau mengarsipkan proposal](#uc-prp-18--memantau-atau-mengarsipkan-proposal) ⚠️
+- [UC-PRP-17 · Anda menyetujui proposal A](#uc-prp-17--anda-menyetujui-proposal-a) ⚠️
+- [UC-PRP-18 · Menolak proposal](#uc-prp-18--menolak-proposal) ⚠️
 - [UC-PRP-19 · Menyiapkan pertemuan lewat kartu Tanya AISA](#uc-prp-19--menyiapkan-pertemuan-lewat-kartu-tanya-aisa)
 - [UC-PRP-20 · Menghubungi founder](#uc-prp-20--menghubungi-founder)
 - [UC-PRP-21 · Membuka berkas proposal asli](#uc-prp-21--membuka-berkas-proposal-asli)
@@ -60,8 +60,8 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
 
 1. Di sidebar kiri, bagian **Ruang kerja**, klik **Proposal**.
 2. Lihat baris tab di atas tabel: **Semua**, **Belum ditanggapi**, **Sudah ditanggapi**,
-   **Diundang**, **Dipantau**, **Diarsipkan**. Tiap tab membawa angka di sebelahnya.
-3. Klik tab **Belum ditanggapi**, lalu tab **Diundang**.
+   **Disetujui**, **Ditolak**. Tiap tab membawa angka di sebelahnya.
+3. Klik tab **Belum ditanggapi**, lalu tab **Disetujui**.
 4. Klik nama satu proposal di tabel (mis. **Klinik Desa Sehat**). Klik di mana saja pada barisnya
    juga membuka detail.
 
@@ -72,17 +72,16 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
   **Skor**. Tanpa filter, urutan default: grade tertinggi di atas, lalu yang sesuai fokus lebih
   dulu, lalu skor tertinggi.
 - Di bawah nama startup ada nama founder (kalau ada) dan satu kalimat tentang startupnya.
-- Kolom **Status** berisi badge tanggapan: **Belum ditanggapi**, **Diundang**, **Dipantau**, atau
-  **Diarsipkan**. Kolom **Grade** menampilkan badge grade dengan aksinya di bawahnya (mis. **Layak
+- Kolom **Status** berisi badge tanggapan: **Belum ditanggapi**, **Disetujui**, atau **Ditolak**. Kolom **Grade** menampilkan badge grade dengan aksinya di bawahnya (mis. **Layak
   bersyarat**, lalu "Investasi dengan syarat"); proposal yang belum punya grade menampilkan
   statusnya, mis. **Perlu dicek manual**. Badge **Di luar fokus** muncul bila proposal gagal cek
   kecocokan; arahkan mouse ke badge itu (atau ketuk) untuk membaca alasannya. Teks kecil **dikoreksi** muncul di bawah badge bila grade-nya
   pernah dikoreksi.
 - Angka tab **Semua** = **Belum ditanggapi** + **Sudah ditanggapi**, dan **Sudah ditanggapi** =
-  **Diundang** + **Dipantau** + **Diarsipkan**. Saat panduan ini ditulis: Semua 9, Belum
-  ditanggapi 7, Sudah ditanggapi 2, Diundang 1, Dipantau 0, Diarsipkan 1.
+  **Disetujui** + **Ditolak**.
 - Klik tab mengubah isi tabel dan tab itu ditandai garis bawah. URL bertambah `?tanggapan=belum`
-  atau `?tanggapan=undang`.
+  atau `?tanggapan=setuju`. Tautan lama dengan `?tanggapan=undang`, `pantau`, atau `arsipkan`
+  tidak dikenali dan menampilkan tab **Semua**.
 - Di bawah tabel: "Menampilkan 1–9 dari 9 proposal" dan "Halaman 1 dari 1".
 - Klik nama membuka halaman detail dengan URL `/proposal/<id>` dan judul tab **Detail proposal ·
   AISA**.
@@ -231,8 +230,8 @@ bawah nama startupnya (mis. Saku Hukum, founder Martio).
   terlihat). Dengan filter **Layak bersyarat**, berkas hanya berisi proposal Layak
   bersyarat.
 - Angka ditulis polos: skor `85.6` (titik), dana `3000000000`, tanggal `2026-10-21`. Kolom
-  Tanggapan memakai kata yang sama dengan badge di tabel: **Diundang**, **Dipantau**,
-  **Diarsipkan**, atau **Belum ditanggapi**. Kolom Sektor juga sama dengan tabel (mis. **F&B**).
+  Tanggapan memakai kata yang sama dengan badge di tabel: **Disetujui**, **Ditolak**, atau
+  **Belum ditanggapi**. Kolom Sektor juga sama dengan tabel (mis. **F&B**).
 - Huruf Indonesia dan simbol (mis. "F&B") terbaca benar di Excel.
 
 **Kalau berbeda:** nama atau email founder yang muncul di CSV adalah masalah data pribadi: catat
@@ -240,7 +239,7 @@ dan laporkan segera.
 
 ### UC-PRP-07 · Memilih beberapa baris dan bilah aksinya
 
-**Situasi:** Anda ingin memantau beberapa proposal sekaligus.
+**Situasi:** Anda ingin menyetujui atau menolak beberapa proposal sekaligus.
 
 ⚠️ Langkah 5 mengubah data. Pakai dua proposal uji "UJI …" (lihat UC-PRP-09).
 
@@ -250,22 +249,22 @@ dan laporkan segera.
 
 1. Centang kotak di kiri dua baris.
 2. Lihat bilah gelap yang muncul di bawah tabel, dan tombol ekspor.
-3. Klik **Arsipkan** di bilah itu. Di dialog, klik **Batal**.
+3. Klik **Tolak** di bilah itu. Di dialog, klik **Batal**.
 4. Klik ikon silang (**Batalkan pilihan**) di ujung bilah. Lalu centang kotak di judul tabel.
-5. Hapus centang semua, centang hanya dua proposal UJI, klik **Pantau** di bilah.
+5. Hapus centang semua, centang hanya dua proposal UJI, klik **Setujui** di bilah.
 
 **Yang seharusnya terlihat:**
 
-- Baris yang dicentang diberi warna latar. Bilah bertuliskan "2 dipilih" dengan tombol **Undang**,
-  **Pantau**, **Arsipkan**, dan ikon silang.
+- Baris yang dicentang diberi warna latar. Bilah bertuliskan "2 dipilih" dengan tombol **Setujui**,
+  **Tolak**, dan ikon silang.
 - Tombol ekspor berubah menjadi **Ekspor 2** dan hanya mengekspor dua baris itu.
-- Dialog arsip: judul "Arsipkan 2 proposal?" dan teks "Proposal yang dipilih tidak akan muncul
-  sebagai perlu ditanggapi, tetapi riwayatnya tetap tersimpan." dengan **Batal** dan
-  **Arsipkan**. **Batal** tidak mengubah apa pun.
+- Dialog tolak: judul "Tolak 2 proposal?" dan teks "Proposal yang dipilih tidak dilanjutkan dan
+  nanti dihapus otomatis sesuai masa retensi. Riwayatnya tetap tersimpan." dengan **Batal** dan
+  **Ya, tolak**. **Batal** tidak mengubah apa pun. **Setujui** tidak meminta konfirmasi.
 - Kotak di judul tabel mencentang semua proposal **di halaman ini saja** (namanya "Pilih semua …
   proposal di halaman ini" di baris bawah tabel).
-- Setelah **Pantau**: toast "Pantau: 2 proposal.", centang hilang, kolom **Status** kedua proposal
-  menjadi **Dipantau**, dan angka tab **Dipantau** bertambah 2. Riwayat di detail masing-masing
+- Setelah **Setujui**: toast "Disetujui: 2 proposal.", centang hilang, kolom **Status** kedua
+  proposal menjadi **Disetujui**, dan angka tab **Disetujui** bertambah 2. Riwayat di detail masing-masing
   proposal mendapat baris **Tanggapan**.
 - Kalau sebagian gagal, muncul toast "… dari … proposal gagal: <alasan>" dan yang gagal tetap
   tercentang.
@@ -274,7 +273,7 @@ dan laporkan segera.
 
 ### UC-PRP-08 · Menanggapi semua proposal satu grade sekaligus
 
-**Situasi:** Anda ingin mengundang semua proposal Layak bersyarat yang belum ditanggapi dalam satu
+**Situasi:** Anda ingin menyetujui semua proposal Layak bersyarat yang belum ditanggapi dalam satu
 klik.
 
 ⚠️ Ini mengubah **semua** proposal di grade itu yang belum ditanggapi, termasuk yang tidak
@@ -288,9 +287,9 @@ selesai hanya bila semua proposal di grade itu adalah proposal UJI.
 1. Di kotak **Grade** pilih **Layak bersyarat**.
 2. Lihat kotak di atas tabel: "Tanggapi semua <n> proposal **Layak bersyarat** yang belum
    ditanggapi:" dengan
-   tombol **Undang semua**, **Pantau semua**, **Arsipkan semua**.
-3. Klik **Undang semua**. Teks berganti menjadi "Undang <n> proposal?" dengan **Ya, lanjutkan** dan
-   **Batal**. Klik **Batal**.
+   tombol **Setujui semua** dan **Tolak semua**.
+3. Klik **Setujui semua**. Kedua tombol diganti pertanyaan "Setujui <n> proposal?" dengan
+   **Ya, lanjutkan** dan **Batal**. Klik **Batal**.
 4. (Hanya untuk grade berisi proposal UJI) Ulangi langkah 3, lalu klik **Ya, lanjutkan**.
 
 **Yang seharusnya terlihat:**
@@ -301,8 +300,10 @@ selesai hanya bila semua proposal di grade itu adalah proposal UJI.
   `/proposal?kategori=layak_bersyarat&sektor=agritech`), kotak hilang. Sebabnya, tanggapan massal
   selalu berlaku untuk seluruh grade, termasuk proposal yang disembunyikan
   penyaring lain. Pindah tab (mis. **Belum ditanggapi**) tidak menghilangkan kotak.
-- Setelah **Ya, lanjutkan**: toast "Undang: <n> proposal Layak bersyarat.", kotak hilang, semua proposal itu
-  menjadi **Diundang**. Halaman **Riwayat** mendapat satu baris **Tanggapan massal**, dan kartu
+- Setelah **Ya, lanjutkan**: toast "Disetujui: <n> proposal Layak bersyarat.", kotak hilang, semua proposal
+  itu menjadi **Disetujui**. Dengan **Tolak semua** pertanyaannya "Tolak <n> proposal?", tombol
+  **Ya, lanjutkan** berwarna merah, dan toast-nya "Ditolak: <n> proposal <grade>.". Halaman **Riwayat** mendapat satu baris
+  "Tanggapan massal: disetujui" (atau "Tanggapan massal: ditolak"), dan kartu
   **Riwayat** di detail tiap proposal itu juga menampilkan baris **Tanggapan massal** (lihat
   UC-PRP-16).
 - Angka di toast adalah hitungan dari server; bisa lebih kecil dari angka di kotak bila sebagian
@@ -580,9 +581,9 @@ penilaian**.
 - Tiap baris: judul tindakan, keterangan, alasan atau catatan setelah tanda "—", "via
   Dashboard/WhatsApp/Sistem", dan tanggal-jam.
 - Tanggapan dari WhatsApp juga tercatat di sini dengan "via WhatsApp".
-- Keputusan yang datang dari tanggapan massal per grade (UC-PRP-08, atau "arsipkan semua …"
+- Keputusan yang datang dari tanggapan massal per grade (UC-PRP-08, atau "tolak semua …"
   lewat WhatsApp) tampil sebagai baris **Tanggapan massal** dengan keterangan seperti
-  "Diarsipkan lewat tanggapan massal", catatannya (kalau ada), salurannya, dan waktunya. Hanya
+  "Ditolak lewat tanggapan massal", catatannya (kalau ada), salurannya, dan waktunya. Hanya
   keputusan terakhir proposal yang dibuat begini; tanggapan massal yang sudah ditimpa keputusan
   lain tidak tampil di kartu ini, tetapi tetap ada di halaman **Riwayat**.
 - Keterangan lama yang tersimpan dengan kategori skala lama (mis. `skor 63.1, tidak_cocok`) tetap
@@ -591,9 +592,10 @@ penilaian**.
 
 **Kalau berbeda:** catat tindakan yang Anda tahu terjadi tetapi tidak tercantum.
 
-### UC-PRP-17 · Anda memutuskan mengundang founder A
+### UC-PRP-17 · Anda menyetujui proposal A
 
-**Situasi:** Anda yakin dengan proposal A dan ingin mengundang foundernya berdiskusi.
+**Situasi:** Anda yakin dengan proposal A dan ingin melanjutkannya, mis. mengajak foundernya
+berdiskusi.
 
 ⚠️ Mengubah data dan tidak bisa dikembalikan ke "Belum ditanggapi". Pakai proposal UJI.
 
@@ -601,46 +603,49 @@ penilaian**.
 
 **Langkah:**
 
-1. Di kartu **Keputusan Anda** (kanan), baca "Sekarang: Belum ditanggapi".
-2. Ketik catatan di kolom **Catatan untuk tanggapan (opsional)**, mis. `jadwalkan minggu depan`.
-3. Klik **Undang** ("Ajak founder diskusi").
+1. Di kartu **Keputusan Anda** (kanan), baca "Sekarang:" dengan badge **Belum ditanggapi**.
+2. Ketik catatan di kolom **Catatan untuk keputusan (opsional)**, mis. `jadwalkan minggu depan`.
+3. Klik **Setuju** ("Lanjut ke tahap berikutnya (mis. ajak founder berdiskusi)").
 
 **Yang seharusnya terlihat:**
 
-- Toast "Tanggapan tersimpan: Undang." dan kolom catatan kosong lagi.
-- "Sekarang: Diundang · <tanggal, jam> via Dashboard", catatan tampil dalam tanda kutip di atas
-  tombol.
-- Tombol **Undang** diberi bingkai, ikon centang, dan tidak bisa diklik lagi.
-- Badge di kartu atas menjadi **Diundang**. Riwayat mendapat baris **Tanggapan**: "Undang <nama>
+- Kartu punya dua pilihan yang jelas berbeda: **Setuju** (hijau) dan **Tolak** (garis putus-putus,
+  merah saat diarahkan mouse), masing-masing dengan artinya di bawah judul.
+- Toast "Keputusan tersimpan: Setuju." dan kolom catatan kosong lagi.
+- "Sekarang:" diikuti badge **Disetujui**, dengan "<tanggal, jam> via Dashboard" di baris
+  bawahnya; catatan tampil dalam tanda kutip di atas tombol.
+- Tombol **Setuju** diberi tanda terpilih (ikon centang) dan tidak bisa diklik lagi.
+- Badge di kartu atas menjadi **Disetujui**. Riwayat mendapat baris **Tanggapan**: "Setuju <nama>
   — jadwalkan minggu depan · via Dashboard".
-- Di daftar, proposal pindah ke tab **Diundang**. Angka badge **Proposal** di sidebar berkurang 1.
-- Di bawah kartu tertulis "Bisa juga lewat WhatsApp: ketik “undang <nama>”."
+- Di daftar, proposal pindah ke tab **Disetujui**. Angka badge **Proposal** di sidebar berkurang 1.
+- Di bawah kartu tertulis "Bisa juga lewat WhatsApp: ketik “setuju <nama>” atau “tolak <nama>”."
 
-**Kalau berbeda:** bila muncul kotak merah, catat pesannya; tanggapan belum tersimpan.
+**Kalau berbeda:** bila muncul kotak merah, catat pesannya; keputusan belum tersimpan.
 
-### UC-PRP-18 · Memantau atau mengarsipkan proposal
+### UC-PRP-18 · Menolak proposal
 
-**Situasi:** Anda belum yakin dengan satu proposal, atau sudah yakin tidak melanjutkannya.
+**Situasi:** Anda sudah yakin tidak melanjutkan satu proposal.
 
-⚠️ Mengubah data. Pakai proposal UJI.
+⚠️ Mengubah data. Proposal yang ditolak dihapus otomatis setelah masa retensi. Pakai proposal UJI.
 
 **Sebelum mulai:** di detail proposal UJI.
 
 **Langkah:**
 
-1. Klik **Pantau** ("Lihat lagi nanti").
-2. Klik **Arsipkan** ("Tidak dilanjutkan"). Di dialog, klik **Batal**.
-3. Klik **Arsipkan** lagi, lalu **Arsipkan** di dialog.
+1. Klik **Tolak** ("Tidak dilanjutkan"). Di konfirmasi yang muncul di dalam kartu, klik **Batal**.
+2. Klik **Tolak** lagi, lalu **Ya, tolak**.
 
 **Yang seharusnya terlihat:**
 
-- Langkah 1: toast "Tanggapan tersimpan: Pantau.", "Sekarang: Dipantau".
-- Langkah 2: dialog "Arsipkan <nama>?" dengan teks "Proposal ini tidak lagi muncul di daftar yang
-  perlu ditanggapi. Riwayatnya tetap tersimpan." **Batal** tidak mengubah apa pun.
-- Langkah 3: toast "Tanggapan tersimpan: Arsipkan.", "Sekarang: Diarsipkan". Riwayat sekarang
-  punya dua baris **Tanggapan**.
-- Tanggapan bisa diganti kapan saja ke pilihan lain, tetapi tidak bisa kembali ke "Belum
-  ditanggapi".
+- Langkah 1: tombol **Tolak** diganti konfirmasi di dalam kartu (bukan jendela browser):
+  judul "Tolak <nama>?" dan teks "Proposal tidak dilanjutkan. Proposal yang ditolak dihapus otomatis setelah <n> hari. Riwayatnya
+  tetap tersimpan." dengan **Ya, tolak** dan **Batal**; <n> adalah retensi di Pengaturan, tab
+  Privasi (bawaan 90). **Batal** tidak mengubah apa pun. Satu klik pada **Tolak** tidak pernah
+  langsung menyimpan.
+- Langkah 2: toast "Keputusan tersimpan: Tolak.", "Sekarang:" dengan badge **Ditolak**. Riwayat
+  mendapat baris **Tanggapan** "Tolak <nama>".
+- Keputusan bisa diganti kapan saja ke pilihan lain (Setuju ↔ Tolak), tetapi tidak bisa kembali ke
+  "Belum ditanggapi". Proposal yang kemudian disetujui tidak dihapus oleh retensi.
 
 **Kalau berbeda:** catat tombol yang diklik dan apa yang tampil di "Sekarang:".
 
@@ -927,8 +932,7 @@ lingkungan lokal (emulator) akun ini sudah tersedia: `viewer@aisa.test`.
 
 - Di daftar: tidak ada tombol **Unggah proposal**. **Ekspor CSV**, cari, filter, dan urut tetap
   bisa dipakai. Memilih satu grade tidak memunculkan kotak "Tanggapi semua …".
-- Bilah pilihan hanya berisi "1 dipilih" dan ikon silang, tanpa **Undang**/**Pantau**/
-  **Arsipkan**.
+- Bilah pilihan hanya berisi "1 dipilih" dan ikon silang, tanpa **Setujui**/**Tolak**.
 - Di detail: tidak ada tombol **Hapus data**. Kartu bernama **Keputusan** (bukan "Keputusan
   Anda"), menampilkan "Sekarang: …" dan teks "Akun Anda hanya bisa membaca; tanggapan diberikan
   manajer investasi." tanpa tombol tanggapan.

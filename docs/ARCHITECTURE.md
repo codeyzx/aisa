@@ -13,11 +13,14 @@ AISA adalah **asisten AI untuk tim investasi**. Setiap ada startup yang mengirim
    [di bawah](#lima-kriteria-dan-lima-grade));
 2. **memberi grade** dari skornya, misalnya _Sangat layak_ atau _Layak bersyarat_, dan
    menandai startup yang _Di luar fokus_ investasi;
-3. **melapor** lewat WhatsApp setiap pukul 09.00 dan 17.00;
+3. **melapor** lewat WhatsApp: ringkasan harian setiap pukul 09.00 berisi proposal yang belum
+   ditanggapi per grade, dan ringkasan mingguan setiap Jumat pukul 17.00 berisi angka minggu itu
+   (proposal masuk dan rata-rata skor dibanding minggu lalu, sektor terbanyak, jumlah per grade,
+   jumlah Setuju dan Tolak, yang masih menunggu keputusan, top 3, dan yang perlu dicek manual);
 4. **menjawab pertanyaan** manajer, baik di dashboard (Tanya AISA) maupun di WhatsApp.
 
-Keputusan akhir, yaitu mengundang, memantau, atau mengarsipkan startup, **tetap di tangan
-manusia**. AISA hanya membantu menyaring dan merangkum.
+Keputusan akhir, yaitu **Setuju** (lanjut ke tahap berikutnya) atau **Tolak** (tidak
+dilanjutkan), **tetap di tangan manusia**. AISA hanya membantu menyaring dan merangkum.
 
 ## Gambaran besar
 
@@ -110,7 +113,7 @@ Grade ditentukan **hanya dari skor**:
 | 75–84  | Layak bersyarat   | Investasi dengan syarat       |
 | 65–74  | Perlu penyesuaian | Sesuaikan dulu sebelum lanjut |
 | 50–64  | Risiko tinggi     | Pertimbangkan menolak         |
-| < 50   | Tidak layak       | Tolak                         |
+| < 50   | Tidak layak       | Sebaiknya ditolak             |
 
 Batas skornya juga bisa diubah di _Aturan penilaian_.
 
@@ -126,7 +129,7 @@ Semua agent memakai model **Gemini 3.8 Flash** dari Google, lewat **Vertex AI**.
 | Agent                         | Tugas                                                                                                  | Batasannya                                                                                  |
 | ----------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
 | **Penilai**                   | Membaca proposal, memberi nilai 1–5 per kriteria dengan kutipan halaman, dan mengambil profil startup. | Tidak menentukan skor akhir maupun grade; itu dihitung kode.                                |
-| **Insight** dan **Ringkasan** | Merangkai kalimat untuk laporan WhatsApp pukul 09.00 dan 17.00.                                        | Angka dihitung kode. Bila AI menulis angka yang tidak ada di data, laporan memakai templat. |
+| **Insight** dan **Ringkasan** | Merangkai kalimat untuk laporan WhatsApp harian 09.00 dan mingguan Jumat 17.00.                        | Angka dihitung kode. Bila AI menulis angka yang tidak ada di data, laporan memakai templat. |
 | **Asisten**                   | Menjawab pertanyaan manajer di Tanya AISA dan di WhatsApp.                                             | **Hanya bisa membaca** data; tidak bisa mengubah apa pun.                                   |
 
 ### Asisten dan Google ADK
@@ -166,7 +169,7 @@ pasti. Hanya pertanyaan bebas yang diteruskan ke Asisten.
 | **Google Forms + Apps Script** | Formulir untuk founder. Begitu dikirim, Apps Script meneruskannya ke aisa-api.               |
 | **Vertex AI (Gemini)**         | Model AI yang dipakai semua agent.                                                           |
 | **Vertex AI Agent Runtime**    | Rumah bagi Asisten, termasuk Sessions dan Memory Bank.                                       |
-| **Cloud Scheduler**            | "Jam alarm": ringkasan pukul 09.00 dan 17.00, serta pembersihan arsip lama pukul 02.00.      |
+| **Cloud Scheduler**            | "Jam alarm": ringkasan 09.00 setiap hari, 17.00 setiap Jumat, dan retensi pukul 02.00.       |
 | **Firebase Authentication**    | Login ke dashboard.                                                                          |
 | **Secret Manager**             | Menyimpan kunci rahasia (kata sandi antar-layanan), jadi tidak tertulis di kode.             |
 | **Cloud Build**                | Merakit aplikasi menjadi container sebelum dijalankan di Cloud Run.                          |
@@ -182,8 +185,8 @@ pesan.
   dan WhatsApp memakai tanda tangan digital, dan jam alarm memakai identitas resmi Google.
 - **Tombol STOP**, di Pengaturan atau lewat WhatsApp, menjeda semua pekerjaan AI seketika.
   Proposal baru akan antre sampai `LANJUT`.
-- **Arsip dibersihkan otomatis**: proposal yang diarsipkan dihapus setelah 90 hari (jumlah harinya
-  bisa diubah di Pengaturan).
+- **Proposal yang ditolak dihapus otomatis**: 90 hari setelah tanggapan Tolak (jumlah harinya
+  bisa diubah di Pengaturan). Proposal yang disetujui tidak pernah dihapus otomatis.
 - **Biaya AI terpantau**: setiap pemakaian AI dicatat jumlah token-nya, dan halaman _Biaya AI_
   menghitung biayanya dalam rupiah dan dolar.
 

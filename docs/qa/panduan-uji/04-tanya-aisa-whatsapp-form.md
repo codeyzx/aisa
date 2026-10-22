@@ -4,7 +4,7 @@
 
 Panduan ini untuk Anda yang menguji sendiri tiga pintu AISA: **Tanya AISA** di dashboard (tombol
 bulat kanan bawah, kartu di detail proposal, dan ⌘K), **bot WhatsApp AISA** (pertanyaan,
-perintah, STOP/LANJUT, ringkasan pukul 09.00 dan 17.00), dan **Google Form founder** (proposal
+perintah, STOP/LANJUT, ringkasan harian 09.00 dan mingguan Jumat 17.00), dan **Google Form founder** (proposal
 masuk lalu dinilai, termasuk proposal hasil scan). Dashboard produksi:
 <https://aisa-dashboard-lk5jbo3eza-et.a.run.app>, masuk sebagai `manager@aisa.local` dengan
 sandi admin dari tim. Bot WhatsApp AISA bernomor **+62 877-8116-8546** (`6287781168546`); bot
@@ -17,7 +17,7 @@ Use case bertanda ⚠️ **mengubah data**. Untuk itu, pakai proposal uji: di **
 **Proposal**, klik **Unggah proposal**, pilih PDF sintetis, dan isi **Nama startup (opsional)**
 dengan nama berawalan `UJI` (mis. `UJI Satu`, `UJI Dua`). Setelah selesai, hapus proposal uji:
 buka detailnya, klik **Hapus data**, isi **Alasan (wajib)** (mis. `proposal uji`), lalu
-**Hapus permanen**. Tanggapan (undang/pantau/arsipkan) tidak bisa dibatalkan menjadi "Belum
+**Hapus permanen**. Tanggapan (setuju/tolak) tidak bisa dibatalkan menjadi "Belum
 ditanggapi" lagi, jadi jangan jalankan perintah ⚠️ ke proposal sungguhan.
 
 ## Daftar use case
@@ -48,9 +48,9 @@ ditanggapi" lagi, jadi jangan jalankan perintah ⚠️ ke proposal sungguhan.
 - [UC-WA-02 · Pertanyaan lanjutan lewat WA](#uc-wa-02--pertanyaan-lanjutan-lewat-wa)
 - [UC-WA-03 · Meminta saran lewat WA](#uc-wa-03--meminta-saran-lewat-wa)
 - [UC-WA-04 · Jawaban yang lama: mengetik… dan pesan tunggu](#uc-wa-04--jawaban-yang-lama-mengetik-dan-pesan-tunggu)
-- [UC-WA-05 · Owner menyuruh AISA mengundang satu proposal ⚠️](#uc-wa-05--owner-menyuruh-aisa-mengundang-satu-proposal-️)
-- [UC-WA-06 · Memantau dan mengarsipkan satu proposal ⚠️](#uc-wa-06--memantau-dan-mengarsipkan-satu-proposal-️)
-- [UC-WA-07 · Owner menyuruh AISA mengarsipkan semua yang tidak layak (tanpa YA)](#uc-wa-07--owner-menyuruh-aisa-mengarsipkan-semua-yang-tidak-layak-tanpa-ya)
+- [UC-WA-05 · Owner menyuruh AISA menyetujui satu proposal ⚠️](#uc-wa-05--owner-menyuruh-aisa-menyetujui-satu-proposal-️)
+- [UC-WA-06 · Mengganti keputusan menjadi Tolak, dan kata perintah lama ⚠️](#uc-wa-06--mengganti-keputusan-menjadi-tolak-dan-kata-perintah-lama-️)
+- [UC-WA-07 · Owner menyuruh AISA menolak semua yang tidak layak (tanpa YA)](#uc-wa-07--owner-menyuruh-aisa-menolak-semua-yang-tidak-layak-tanpa-ya)
 - [UC-WA-08 · Mengonfirmasi tanggapan massal dengan YA ⚠️](#uc-wa-08--mengonfirmasi-tanggapan-massal-dengan-ya-️)
 - [UC-WA-09 · YA yang kedaluwarsa atau tanpa perintah](#uc-wa-09--ya-yang-kedaluwarsa-atau-tanpa-perintah)
 - [UC-WA-10 · Tanggapan massal untuk grade kosong](#uc-wa-10--tanggapan-massal-untuk-grade-kosong)
@@ -63,7 +63,7 @@ ditanggapi" lagi, jadi jangan jalankan perintah ⚠️ ke proposal sungguhan.
 - [UC-WA-17 · Perintah tetap jalan saat dijeda ⚠️](#uc-wa-17--perintah-tetap-jalan-saat-dijeda-️)
 - [UC-WA-18 · LANJUT](#uc-wa-18--lanjut)
 - [UC-WA-19 · STOP saat jawaban sedang disiapkan](#uc-wa-19--stop-saat-jawaban-sedang-disiapkan)
-- [UC-WA-20 · Ringkasan pukul 09.00 dan 17.00](#uc-wa-20--ringkasan-pukul-0900-dan-1700)
+- [UC-WA-20 · Ringkasan harian 09.00 dan mingguan Jumat 17.00](#uc-wa-20--ringkasan-harian-0900-dan-mingguan-jumat-1700)
 - [UC-WA-21 · Ringkasan tercatat di Riwayat](#uc-wa-21--ringkasan-tercatat-di-riwayat)
 - [UC-WA-22 · Keputusan lewat WA terlihat di dashboard](#uc-wa-22--keputusan-lewat-wa-terlihat-di-dashboard)
 - [UC-WA-23 · Nomor yang tidak terdaftar](#uc-wa-23--nomor-yang-tidak-terdaftar)
@@ -356,13 +356,13 @@ dan grade.
 halaman detailnya.
 **Langkah:**
 
-1. Ketik `arsipkan Kopi Teras Senja` lalu Enter.
+1. Ketik `tolak Kopi Teras Senja` lalu Enter.
 2. Buka detail Kopi Teras Senja.
 
-**Yang seharusnya terlihat:** AISA tidak mengarsipkan apa pun. Jawabannya menjelaskan bahwa ia
+**Yang seharusnya terlihat:** AISA tidak menolak apa pun. Jawabannya menjelaskan bahwa ia
 hanya bisa membaca data, dan boleh menyebut cara mengubahnya (tombol di dashboard atau perintah
-WhatsApp `arsipkan <nama>`). Kartu **Keputusan Anda** di detail tidak berubah.
-**Kalau berbeda:** bila status berubah, atau AISA mengaku "sudah diarsipkan", itu bug serius.
+WhatsApp `tolak <nama>`). Kartu **Keputusan Anda** di detail tidak berubah.
+**Kalau berbeda:** bila status berubah, atau AISA mengaku "sudah ditolak", itu bug serius.
 
 ### UC-AST-17 · Riwayat percakapan: membuka, mencari, mengganti nama, menghapus
 
@@ -448,13 +448,13 @@ mulai percakapan baru, tapi tetap ingat preferensi gaya Anda.
 **Sebelum mulai:** —
 **Langkah:**
 
-1. Kirim: `Dari yang sangat layak, mana yang sebaiknya saya undang dulu?`
+1. Kirim: `Dari yang sangat layak, mana yang sebaiknya saya setujui dulu?`
 
 **Yang seharusnya terlihat:** balasan berisi fakta dulu (nama, skor, grade), lalu bagian yang
 diawali `💡 *Saran AI (bukan dari data proposal):*` berisi urutan dan alasannya. AISA tidak
-mengubah status apa pun dan tidak mengaku sudah mengundang; di dashboard, status proposal tetap
+mengubah status apa pun dan tidak mengaku sudah menyetujui; di dashboard, status proposal tetap
 sama.
-**Kalau berbeda:** penilaian di luar bagian 💡, atau klaim "sudah saya undang", dicatat.
+**Kalau berbeda:** penilaian di luar bagian 💡, atau klaim "sudah saya setujui", dicatat.
 
 ### UC-WA-04 · Jawaban yang lama: mengetik… dan pesan tunggu
 
@@ -470,80 +470,82 @@ lalu jawaban lengkapnya menyusul. Pesan tunggu hanya dikirim sekali per pertanya
 gagal, balasannya "Maaf, asisten sedang tidak bisa dihubungi. Coba lagi sebentar."
 **Kalau berbeda:** bila tidak ada balasan sama sekali dalam 3–4 menit, catat jamnya.
 
-### UC-WA-05 · Owner menyuruh AISA mengundang satu proposal ⚠️
+### UC-WA-05 · Owner menyuruh AISA menyetujui satu proposal ⚠️
 
-**Situasi:** Anda memutuskan mengundang diskusi satu startup lewat WA.
+**Situasi:** Anda memutuskan melanjutkan satu startup lewat WA, mis. untuk mengajak foundernya
+berdiskusi.
 **Sebelum mulai:** ada proposal uji `UJI Satu` yang sudah **Dinilai** (lihat Cakupan).
 **Langkah:**
 
-1. Kirim: `undang UJI Satu`
+1. Kirim: `setuju UJI Satu`
 2. Di dashboard, buka detail **UJI Satu**.
 
-**Yang seharusnya terlihat:** balasan persis: `Tercatat: UJI Satu → undang.` Di detail, kartu
-**Keputusan Anda** menampilkan "Sekarang: **Diundang** · _tanggal jam_ via WhatsApp", dan badge
-**Diundang** muncul di bawah nama proposal. Perintah ini hanya mencatat status di AISA; AISA
+**Yang seharusnya terlihat:** balasan persis: `Tercatat: UJI Satu → setuju.` Di detail, kartu
+**Keputusan Anda** menampilkan "Sekarang:" dengan badge **Disetujui** dan "_tanggal jam_ via
+WhatsApp" di bawahnya, dan badge **Disetujui** muncul di bawah nama proposal. Perintah ini hanya mencatat status di AISA; AISA
 tidak menghubungi founder.
 **Kalau berbeda:** bila balasannya diawali "Tidak bisa dijalankan:", catat sisa kalimatnya.
 
-### UC-WA-06 · Memantau dan mengarsipkan satu proposal ⚠️
+### UC-WA-06 · Mengganti keputusan menjadi Tolak, dan kata perintah lama ⚠️
 
-**Situasi:** Anda berubah pikiran dan ingin memantau, lalu mengarsipkan.
+**Situasi:** Anda berubah pikiran dan tidak melanjutkan proposal itu. Anda juga masih ingat
+perintah lama.
 **Sebelum mulai:** UC-WA-05 sudah dijalankan pada `UJI Satu`.
 **Langkah:**
 
-1. Kirim: `pantau UJI Satu`
+1. Kirim: `tolak UJI Satu`
 2. Kirim: `arsipkan UJI Satu`
 3. Di dashboard, buka detail **UJI Satu**, lihat kartu **Riwayat** di halamannya.
 
-**Yang seharusnya terlihat:** balasan `Tercatat: UJI Satu → pantau.` lalu
-`Tercatat: UJI Satu → arsipkan.` Keputusan bisa diganti kapan saja; yang terakhir yang berlaku.
-Di detail: **Sekarang: Diarsipkan** via WhatsApp. Di sidebar **Ruang kerja** → **Riwayat**,
-muncul baris "UJI Satu **diarsipkan**" dengan "Sebelumnya: Dipantau" dan keterangan "via
-WhatsApp".
-**Kalau berbeda:** catat urutan status yang tampil di Riwayat.
+**Yang seharusnya terlihat:** langkah 1: `Tercatat: UJI Satu → tolak.` Keputusan bisa diganti
+kapan saja; yang terakhir yang berlaku. Langkah 2: balasan persis `Perintah sekarang: setuju <nama>
+atau tolak <nama>.` Kata lama `undang`, `pantau`, dan `arsipkan` bukan perintah lagi: tidak ada
+yang berubah, pesannya tidak diteruskan ke Asisten, dan tidak ada kartu baru di **Aktivitas AI**.
+Di detail: "Sekarang:" dengan badge **Ditolak** dan "… via WhatsApp", dengan satu baris
+**Tanggapan** untuk langkah 1 saja. Proposal yang ditolak dihapus otomatis setelah masa retensi (Pengaturan, tab Privasi).
+**Kalau berbeda:** bila `arsipkan …` mengubah status atau dijawab Asisten, catat balasannya.
 
-### UC-WA-07 · Owner menyuruh AISA mengarsipkan semua yang tidak layak (tanpa YA)
+### UC-WA-07 · Owner menyuruh AISA menolak semua yang tidak layak (tanpa YA)
 
-**Situasi:** Anda ingin tahu apa yang akan diarsipkan sebelum benar-benar mengarsipkan.
+**Situasi:** Anda ingin tahu apa yang akan ditolak sebelum benar-benar menolaknya.
 **Sebelum mulai:** di dashboard, catat proposal ber-grade **Tidak layak** yang belum
 ditanggapi. Use case ini tidak mengubah apa pun selama Anda
 **tidak** membalas YA.
 **Langkah:**
 
-1. Kirim: `arsipkan semua tidak layak`
+1. Kirim: `tolak semua tidak layak`
 2. Jangan balas apa-apa.
 
 **Yang seharusnya terlihat:** balasan dua baris:
 
 ```text
 Ada 2 proposal Tidak layak yang belum ditanggapi: <nama 1>, <nama 2>
-Balas YA dalam 10 menit untuk arsipkan semuanya.
+Balas YA dalam 10 menit untuk menolak semuanya.
 ```
 
 Jumlah dan nama harus sama dengan catatan Anda (paling banyak 15 nama ditulis, sisanya "…").
-Status di dashboard belum berubah. Perintah yang sama berlaku untuk `undang semua …` dan
-`pantau semua …`, dengan grade `sangat layak`, `layak bersyarat`, `perlu penyesuaian`, `risiko
-tinggi`, atau `tidak layak` (huruf besar-kecil dan jumlah spasi bebas). `layak` saja bukan nama
-grade.
+Status di dashboard belum berubah. Perintah yang sama berlaku untuk `setuju semua …` (baris kedua
+"… untuk menyetujui semuanya."), dengan grade `sangat layak`, `layak bersyarat`, `perlu
+penyesuaian`, `risiko tinggi`, atau `tidak layak` (huruf besar-kecil dan jumlah spasi bebas).
+`layak` saja bukan nama grade.
 **Kalau berbeda:** nama yang tidak cocok dengan dashboard dicatat.
 
 ### UC-WA-08 · Mengonfirmasi tanggapan massal dengan YA ⚠️
 
-**Situasi:** Anda yakin dan ingin mengarsipkan semua proposal di satu grade.
+**Situasi:** Anda yakin dan ingin menolak semua proposal di satu grade.
 **Sebelum mulai:** perintah massal ini mengenai **semua** proposal belum ditanggapi di grade
 itu, termasuk proposal sungguhan. Jalankan hanya bila grade yang dipilih berisi proposal uji
-saja (cek di **Proposal** dengan filter grade), atau bila Anda memang ingin mengarsipkan
-semuanya.
+saja (cek di **Proposal** dengan filter grade), atau bila Anda memang ingin menolak semuanya.
 **Langkah:**
 
-1. Kirim perintah massal, mis. `arsipkan semua risiko tinggi`.
+1. Kirim perintah massal, mis. `tolak semua risiko tinggi`.
 2. Dalam 10 menit, balas: `YA` (atau `ya` / `iya`).
 
-**Yang seharusnya terlihat:** balasan persis: `Selesai: N proposal ditandai arsipkan.` (N sama
-dengan jumlah di pesan sebelumnya, atau lebih kecil bila sebagian sudah ditanggapi di dashboard
-selama menunggu). Di **Riwayat** muncul **Tanggapan massal: diarsipkan** dengan keterangan
-"Arsipkan semua risiko tinggi: N proposal (…nama…)" via WhatsApp. Setiap proposal itu kini
-**Diarsipkan**.
+**Yang seharusnya terlihat:** balasan persis: `Selesai: N proposal ditolak.` (N sama dengan
+jumlah di pesan sebelumnya, atau lebih kecil bila sebagian sudah ditanggapi di dashboard selama
+menunggu; untuk `setuju semua …` balasannya `Selesai: N proposal disetujui.`). Di **Riwayat**
+muncul baris "Tanggapan massal: ditolak" dengan keterangan "Tolak semua risiko tinggi: N proposal
+(…nama…)" via WhatsApp. Setiap proposal itu kini **Ditolak**.
 **Kalau berbeda:** bila N di balasan berbeda dari yang berubah di dashboard, catat.
 
 ### UC-WA-09 · YA yang kedaluwarsa atau tanpa perintah
@@ -559,7 +561,7 @@ Tidak ada data yang berubah di use case ini.
 **Yang seharusnya terlihat:** langkah 1: `Konfirmasi sudah kedaluwarsa (lebih dari 10 menit).
 Kirim ulang perintahnya.` Langkah 2: `Tidak ada perintah yang menunggu konfirmasi.` Status
 proposal tidak berubah.
-**Kalau berbeda:** bila YA terlambat tetap mengarsipkan, itu bug serius.
+**Kalau berbeda:** bila YA terlambat tetap menolak, itu bug serius.
 
 ### UC-WA-10 · Tanggapan massal untuk grade kosong
 
@@ -569,7 +571,7 @@ ditanggapi.
 proposal belum ditanggapi.
 **Langkah:**
 
-1. Kirim: `pantau semua perlu penyesuaian`
+1. Kirim: `setuju semua perlu penyesuaian`
 
 **Yang seharusnya terlihat:** `Tidak ada proposal Perlu penyesuaian yang belum ditanggapi.` Tidak
 ada yang perlu dikonfirmasi.
@@ -628,7 +630,7 @@ punya grade`. Proposal tetap **Perlu dicek manual**.
 **Sebelum mulai:** ada dua proposal uji, `UJI Satu` dan `UJI Dua`. Tidak ada data yang berubah.
 **Langkah:**
 
-1. Kirim: `pantau UJI`
+1. Kirim: `setuju UJI`
 
 **Yang seharusnya terlihat:**
 
@@ -641,7 +643,7 @@ Tidak ada yang diubah. Kirim ulang perintah dengan nama lengkap.
 
 Urutan nama bisa berbeda. Kedua proposal tidak berubah status. Perhatian sebaliknya: nama yang
 hanya cocok dengan **satu** proposal langsung dijalankan tanpa konfirmasi, walau hanya awalan
-(mis. `pantau Kopi` langsung memantau Kopi Teras Senja) atau salah ketik kecil.
+(mis. `setuju Kopi` langsung menyetujui Kopi Teras Senja) atau salah ketik kecil.
 **Kalau berbeda:** bila salah satu ikut berubah, itu bug serius.
 
 ### UC-WA-15 · Nama proposal tidak ditemukan
@@ -650,7 +652,7 @@ hanya cocok dengan **satu** proposal langsung dijalankan tanpa konfirmasi, walau
 **Sebelum mulai:** — (tidak ada data yang berubah)
 **Langkah:**
 
-1. Kirim: `undang Xyzabc`
+1. Kirim: `setuju Xyzabc`
 
 **Yang seharusnya terlihat:** `Proposal "Xyzabc" tidak ditemukan. Tidak ada yang diubah.` Bila
 ada nama yang agak mirip, balasannya berupa daftar seperti UC-WA-14.
@@ -680,9 +682,9 @@ AI** menunjukkan **Dijeda (STOP)**. Di **Riwayat**: **Pekerjaan AI dijeda (STOP)
 **Sebelum mulai:** AISA dalam keadaan STOP (UC-WA-16); ada proposal uji `UJI Satu`.
 **Langkah:**
 
-1. Kirim: `pantau UJI Satu`
+1. Kirim: `setuju UJI Satu`
 
-**Yang seharusnya terlihat:** `Tercatat: UJI Satu → pantau.` Perintah dijalankan oleh kode,
+**Yang seharusnya terlihat:** `Tercatat: UJI Satu → setuju.` Perintah dijalankan oleh kode,
 bukan AI, jadi tetap berjalan saat dijeda. Hanya pertanyaan, penilaian proposal, dan penulisan
 ringkasan oleh AI yang berhenti.
 **Kalau berbeda:** catat balasannya.
@@ -720,20 +722,26 @@ dikirim ulang.` Di **Aktivitas AI**, pekerjaan **Asisten** itu berstatus dihenti
 langkah "Dihentikan oleh STOP".
 **Kalau berbeda:** bila jawaban lama tetap datang setelah STOP, itu bug.
 
-### UC-WA-20 · Ringkasan pukul 09.00 dan 17.00
+### UC-WA-20 · Ringkasan harian 09.00 dan mingguan Jumat 17.00
 
-**Situasi:** Anda menerima ringkasan otomatis di WA setiap pagi dan sore.
-**Sebelum mulai:** tunggu sampai pukul 09.00 atau 17.00 WIB. Buka dashboard di saat yang sama
-untuk mencocokkan angka.
+**Situasi:** Anda menerima ringkasan harian di WA setiap pagi dan ringkasan mingguan setiap Jumat
+sore.
+**Sebelum mulai:** tunggu sampai pukul 09.00 WIB (hari apa saja) atau 17.00 WIB hari Jumat. Pada
+hari lain tidak ada ringkasan pukul 17.00. Buka dashboard di saat yang sama untuk mencocokkan
+angka.
 **Langkah:**
 
 1. Buka pesan ringkasan dari bot.
-2. Bandingkan dengan halaman **Proposal** (filter yang belum ditanggapi per grade).
+2. Untuk ringkasan harian, bandingkan dengan halaman **Proposal** (filter yang belum ditanggapi
+   per grade). Untuk ringkasan mingguan, bandingkan dengan proposal yang masuk sejak Senin.
 
-**Yang seharusnya terlihat:** pesan diawali salam sesuai jam kirim ("Selamat pagi" / "Selamat
-siang" / "Selamat sore" / "Selamat malam") dan sapaan (mis. "Pak"), lalu "Sejak ringkasan _hari_
-pukul _jam_ masuk _N_ proposal baru. Ada _M_ proposal yang belum Bapak tanggapi." Isinya per
-grade dengan judul tebal:
+**Yang seharusnya terlihat (harian, 09.00):** pesan diawali salam sesuai jam kirim ("Selamat
+pagi" / "Selamat siang" / "Selamat sore" / "Selamat malam") dan sapaan (mis. "Pak"), lalu "Sejak
+ringkasan _hari_ pukul _jam_ masuk _N_ proposal baru. Ada _M_ proposal yang belum Pak tanggapi."
+_Hari_ dan _jam_ adalah waktu kirim ringkasan 09.00 sebelumnya: jendela "baru masuk" dihitung
+dari sana, jadi ringkasan mingguan Jumat
+tidak memotongnya. Ringkasan pagi yang pertama kali dikirim menulis "Ini ringkasan pagi pertama
+dari AISA. Dalam 24 jam terakhir masuk _N_ proposal baru." Isinya per grade dengan judul tebal:
 
 - **Sangat layak (n)**, **Layak bersyarat (n)**, **Perlu penyesuaian (n)**, **Risiko tinggi
   (n)**, **Tidak layak (n)**, berurutan dari grade tertinggi.
@@ -745,10 +753,33 @@ grade dengan judul tebal:
 - Baris terakhir diawali **Yang menarik:**, satu fakta dari data (mis. tren sektor atau jumlah
   proposal baru dengan grade teratas).
 
-Hanya proposal **belum ditanggapi** yang dihitung. Ringkasan tidak berisi saran (tidak menyuruh
-mengundang atau mengarsipkan). Cek: setiap angka dan nama sama dengan dashboard; tidak ada angka
-yang tidak bisa Anda temukan di dashboard. Saat AISA dijeda, ringkasan tetap dikirim, tetapi
-memakai teks bawaan tanpa dirapikan AI.
+Hanya proposal **belum ditanggapi** yang dihitung.
+
+**Yang seharusnya terlihat (mingguan, Jumat 17.00):** "Selamat sore, Pak. Ini ringkasan mingguan
+AISA, _Senin_–_hari ini_ _bulan_ _tahun_." lalu bagian-bagian berjudul tebal (`*…*` di WhatsApp):
+
+- **Proposal masuk**: jumlah minggu ini (Senin 00.00 WIB sampai saat kirim), dengan jumlah minggu
+  lalu (Senin–Minggu penuh) dan naik/turun/sama.
+- **Sektor**: paling banyak tiga sektor dengan persen dan jumlah, mis. "F&B 40% (4 dari 10)", plus
+  jumlah tanpa sektor bila ada.
+- **Grade** (_n_ dinilai): jumlah per grade dari proposal minggu ini yang sudah dinilai, lalu
+  "Sangat layak + Layak bersyarat: _n_ · di luar fokus: _p_% (_n_ dari _m_)".
+- **Rata-rata skor** minggu ini dibanding minggu lalu.
+- **Keputusan minggu ini**: Setuju _n_ · Tolak _n_, lalu "Menunggu keputusan: _n_ (terlama _d_
+  hari)". Angka menunggu mencakup semua proposal yang belum diputuskan, bukan hanya yang masuk
+  minggu ini.
+- **Top 3 minggu ini**: nama · grade · skor, urut grade, yang sesuai fokus lebih dulu, lalu skor.
+- **Perlu dicek manual**: jumlah minggu ini.
+- Baris **Yang menarik:** berisi satu fakta yang dihitung kode, mis. sektor terbanyak minggu ini,
+  perubahan jumlah masuk dibanding minggu lalu, porsi di luar fokus, atau jumlah yang masih
+  menunggu keputusan.
+
+Cocokkan: jumlah proposal masuk sama dengan proposal di halaman **Proposal** yang tanggal masuknya
+sejak Senin, dan jumlah Setuju dan Tolak sama dengan keputusan minggu ini di **Riwayat**.
+
+Untuk keduanya: ringkasan tidak berisi saran (tidak menyuruh menyetujui atau menolak). Cek: setiap
+angka dan nama sama dengan dashboard; tidak ada angka yang tidak bisa Anda temukan di dashboard.
+Saat AISA dijeda, ringkasan tetap dikirim, tetapi memakai teks bawaan tanpa dirapikan AI.
 **Kalau berbeda:** angka atau nama yang tidak cocok dicatat beserta jam ringkasannya. Bila baris
 **Yang menarik:** tidak ada, catat juga.
 
@@ -760,7 +791,7 @@ memakai teks bawaan tanpa dirapikan AI.
 
 1. Di sidebar **Ruang kerja**, klik **Riwayat**.
 2. Klik tab **Ringkasan WA**.
-3. Di baris **Ringkasan pagi terkirim** (09.00) atau **Ringkasan sore terkirim** (17.00), klik
+3. Di baris ringkasan harian (09.00) atau ringkasan mingguan (17.00 Jumat) yang terkirim, klik
    **Lihat isi**.
 
 **Yang seharusnya terlihat:** baris berbunyi "Ke WhatsApp · _M_ proposal menunggu keputusan"
@@ -784,7 +815,7 @@ pesan**.
 **Yang seharusnya terlihat:** langkah 2: hanya kejadian via WhatsApp (keputusan, koreksi,
 STOP/LANJUT) yang tersisa, masing-masing dengan keterangan "via WhatsApp". Langkah 3: persentase
 **WhatsApp** naik sesuai jumlah keputusan lewat WA. Langkah 4: setiap perintah tercatat sebagai
-pekerjaan **Perintah** (mis. "Perintah: undang UJI Satu"), dan setiap pertanyaan sebagai
+pekerjaan **Perintah** (mis. "Perintah: setuju UJI Satu"; kata lama seperti `arsipkan …` tidak membuat kartu), dan setiap pertanyaan sebagai
 **Asisten**.
 **Kalau berbeda:** perintah yang dibalas "Tercatat" tetapi tidak ada di Riwayat dicatat.
 

@@ -47,8 +47,8 @@ _Avoid_: kategori, error
 ## Tanggapan manajer
 
 **Tanggapan**:
-Keputusan manajer atas proposal: undang, pantau, atau arsipkan. Proposal bertanggapan tidak lagi muncul di ringkasan.
-_Avoid_: aksi, keputusan AI, follow-up
+Keputusan manajer atas proposal: **Setuju** (lanjut ke tahap berikutnya, mis. mengajak founder berdiskusi) atau **Tolak** (tidak dilanjutkan). Proposal bertanggapan tidak lagi muncul di daftar per grade pada ringkasan. Tanggapan lama Undang, Pantau, dan Arsipkan sudah dipindah ke skala ini (Pantau kembali menjadi belum ditanggapi).
+_Avoid_: aksi, keputusan AI, follow-up, undang/pantau/arsipkan
 
 **Belum ditanggapi**:
 Proposal yang belum pernah diberi tanggapan, termasuk yang grade-nya sudah dikoreksi.
@@ -69,16 +69,16 @@ _Avoid_: dimatikan, dibatalkan
 
 **Penghapusan data**:
 Penghapusan proposal beserta teks dan berkas proposalnya atas permintaan founder, dengan alasan; Riwayat tetap ada tetapi tanpa nama dan isi proposal.
-_Avoid_: arsipkan (arsip adalah tanggapan, bukan penghapusan)
+_Avoid_: tolak (tolak adalah tanggapan, bukan penghapusan)
 
 **Retensi**:
-Periode berapa lama proposal yang diarsipkan disimpan sebelum dihapus otomatis; diatur di Pengaturan, tab Privasi.
+Periode berapa lama proposal yang ditolak disimpan, dihitung dari waktu tanggapan Tolak, sebelum dihapus otomatis; proposal yang disetujui tidak pernah dihapus otomatis; diatur di Pengaturan, tab Privasi.
 _Avoid_: kedaluwarsa, pembersihan
 
 ## Keluaran
 
 **Ringkasan**:
-Pesan WhatsApp pukul 09.00 dan 17.00 berisi proposal belum ditanggapi per kategori efektif, tanpa saran tindak lanjut.
+Pesan WhatsApp tanpa saran tindak lanjut. Ringkasan harian pukul 09.00 berisi proposal belum ditanggapi per kategori efektif; ringkasan mingguan pukul 17.00 setiap Jumat berisi angka minggu itu (proposal masuk, sektor, grade, rata-rata skor, keputusan, top 3, perlu dicek manual), dengan proposal masuk dan rata-rata skor dibanding minggu lalu.
 _Avoid_: digest, laporan, notifikasi
 
 **Pekerjaan**:

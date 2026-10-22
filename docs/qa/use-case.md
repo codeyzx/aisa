@@ -6,6 +6,12 @@
 > (Tim, Pasar & masalah, Produk & keunggulan, Traksi, Model bisnis & keuangan). Hasilnya dibiarkan
 > apa adanya sebagai catatan. Skala yang berlaku sekarang (kriteria A–E, lima grade, label Di luar
 > fokus) ada di [`overview-project.md`](../../overview-project.md) §3.
+>
+> Putaran itu juga memakai tanggapan lama Undang, Pantau, dan Arsipkan (perintah WhatsApp
+> `undang`, `pantau`, `arsipkan`; retensi menghapus proposal yang diarsipkan) dan ringkasan
+> harian kedua pukul 17.00. Sekarang tanggapan hanya Setuju atau Tolak, retensi menghapus
+> proposal yang ditolak, dan pukul 17.00 hanya ada ringkasan mingguan setiap Jumat
+> ([`overview-project.md`](../../overview-project.md) §4–§5).
 
 Penguji: agent penguji (bukan penulis kodenya). Daftar 14 use case diambil dari dokumen use case
 produk (lima kelompok: proposal masuk dan penilaian, ringkasan harian, menanggapi proposal,

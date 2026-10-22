@@ -6,6 +6,12 @@
 > (Tim, Pasar & masalah, Produk & keunggulan, Traksi, Model bisnis & keuangan). Hasilnya dibiarkan
 > apa adanya sebagai catatan. Skala yang berlaku sekarang (kriteria A–E, lima grade, label Di luar
 > fokus) ada di [`overview-project.md`](../overview-project.md) §3.
+>
+> Putaran itu juga memakai tanggapan lama Undang, Pantau, dan Arsipkan (perintah WhatsApp
+> `undang`, `pantau`, `arsipkan`; retensi menghapus proposal yang diarsipkan) dan ringkasan
+> harian kedua pukul 17.00. Sekarang tanggapan hanya Setuju atau Tolak, retensi menghapus
+> proposal yang ditolak, dan pukul 17.00 hanya ada ringkasan mingguan setiap Jumat
+> ([`overview-project.md`](../overview-project.md) §4–§5).
 
 Dokumen ini mencatat **hasil aktual** pengujian AISA: unit test dan skenario T01–T11 dari
 `tech.md` §12. Setiap hasil skenario diambil dari respons API, dokumen Firestore, log Cloud

@@ -30,7 +30,7 @@ Pakai angka ini untuk menghitung ulang dengan kalkulator biasa. Semuanya juga te
 | Bawaan kalkulator: jam kerja per bulan       | 173 jam                                               |
 | Bawaan kalkulator: menit analis per proposal | 15 menit                                              |
 | Bawaan kalkulator: menit membaca hasil AISA  | 2 menit                                               |
-| Ringkasan WhatsApp yang dihitung kalkulator  | 60 per bulan (09.00 dan 17.00 setiap hari)            |
+| Ringkasan WhatsApp yang dihitung kalkulator  | 36 per bulan (09.00 setiap hari, 17.00 setiap Jumat)  |
 
 Rumus dasarnya:
 
@@ -161,8 +161,8 @@ menulis satu ringkasan WhatsApp.
 
 ## Kalkulator AISA vs cek manual
 
-Kalkulator membandingkan biaya **penyaringan awal** per bulan. Keputusan undang, pantau, atau
-arsipkan tetap di tangan manajer di kedua sisi, jadi tidak dihitung. Kalau belum ada proposal yang
+Kalkulator membandingkan biaya **penyaringan awal** per bulan. Keputusan Setuju atau Tolak
+tetap di tangan manajer di kedua sisi, jadi tidak dihitung. Kalau belum ada proposal yang
 dinilai model, kotak ini hanya menampilkan **Perbandingan muncul setelah ada proposal yang dinilai
 model dengan tarif yang tersedia.**
 
@@ -171,11 +171,11 @@ Rumus kalkulator (n = **Proposal per bulan**):
 - Biaya per menit orang = **Gaji analis per bulan** ÷ **Jam kerja per bulan** ÷ 60.
 - **Cek manual per bulan** = n × **Menit analis per proposal** × biaya per menit.
 - **AISA per bulan** = n × (biaya AI per proposal + **Menit membaca hasil AISA** × biaya per
-  menit) + 60 × biaya AI per ringkasan.
+  menit) + 36 × biaya AI per ringkasan.
 - **Hemat per bulan** = cek manual − AISA. "× lebih murah" = cek manual ÷ AISA. "% lebih hemat" =
   hemat ÷ cek manual × 100. "per tahun" = hemat × 12.
 - **Jam analis kembali** = n × (menit analis − menit membaca) ÷ 60, tidak pernah di bawah 0.
-- **Biaya AI per bulan** = n × biaya AI per proposal + 60 × biaya AI per ringkasan.
+- **Biaya AI per bulan** = n × biaya AI per proposal + 36 × biaya AI per ringkasan.
 - Pertanyaan ke Asisten tidak ikut dihitung karena dipakai sesuai kebutuhan, bukan per proposal.
 
 Dengan bawaan (Rp 14.500.000, 173 jam): biaya per menit = Rp 1.396,92. Cek manual 15 menit =
@@ -212,7 +212,7 @@ Dengan bawaan (Rp 14.500.000, 173 jam): biaya per menit = Rp 1.396,92. Cek manua
   yang lebih kecil diberi panjang sebanding. Dengan bawaan, **Cek manual per bulan** = 100 ×
   Rp 20.954 = **Rp 2.095.376**.
 - **Jam analis kembali**: `21,7 jam` (100 × 13 menit ÷ 60), keterangan **per bulan, untuk kerja
-  selain menyaring**. **Biaya AI per bulan**: keterangan **penilaian + hingga 60 ringkasan WA**.
+  selain menyaring**. **Biaya AI per bulan**: keterangan **penilaian + hingga 36 ringkasan WA**.
 - Tabel **Per proposal** (kolom **Cek manual** dan **AISA**):
 
   | Baris             | Cek manual | AISA                             |
@@ -223,14 +223,14 @@ Dengan bawaan (Rp 14.500.000, 173 jam): biaya per menit = Rp 1.396,92. Cek manua
   | Total             | Rp 20.954  | Rp 2.794 + biaya AI per proposal |
 
 - Di bawah tabel ada catatan bahwa biaya AI per proposal adalah rata-rata dari sejumlah proposal
-  yang sudah dinilai, dihitung ulang dengan tarif terpilih, dan bahwa ringkasan dihitung 60 kali
-  sebulan dengan rata-rata Rp … per ringkasan. Kalau belum ada ringkasan yang ditulis model,
+  yang sudah dinilai, dihitung ulang dengan tarif terpilih, dan bahwa ringkasan dihitung 36 kali
+  sebulan (09.00 setiap hari dan 17.00 setiap Jumat) dengan rata-rata Rp … per ringkasan. Kalau belum ada ringkasan yang ditulis model,
   catatannya berbunyi **Ringkasan belum ikut dihitung karena belum ada ringkasan yang ditulis
   model.**
 - Biaya AI per proposal di tabel sama dengan angka di kotak **Per proposal dinilai** selama tarif
   terpilih adalah tarif yang berlaku sekarang.
 
-**Cara mengecek angkanya:** AISA per bulan = 100 × (Rp 2.794 + biaya AI per proposal) + 60 ×
+**Cara mengecek angkanya:** AISA per bulan = 100 × (Rp 2.794 + biaya AI per proposal) + 36 ×
 biaya per ringkasan. Hemat = Rp 2.095.376 − AISA per bulan. Hasilnya bisa berbeda Rp 1 karena
 pembulatan.
 
@@ -322,7 +322,7 @@ jadi tautan tanpa `proposal` bisa menunjukkan angka berbeda di hari lain.
 **Yang seharusnya terlihat:**
 
 - Tiga baris, diurutkan dari yang paling mahal: **Penilai** (Membaca dan menilai proposal),
-  **Pembuat ringkasan** (Ringkasan WhatsApp 09.00 dan 17.00, termasuk insight-nya), dan
+  **Pembuat ringkasan** (Ringkasan WhatsApp harian 09.00 dan mingguan Jumat 17.00, termasuk insight-nya), dan
   **Asisten** (Menjawab pertanyaan manajer). Setiap baris: rupiah, persentase dari total, batang
   berwarna agent, jumlah token, dan dolarnya.
 - Kursor di "… token" memunculkan "… masuk / … keluar".

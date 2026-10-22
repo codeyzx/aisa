@@ -179,8 +179,10 @@ berikutnya.
 **Yang seharusnya terlihat:** angka badge di **Proposal**, baris **… proposal menunggu
 keputusan** di kotak bawah, dan kartu **Menunggu keputusan** di Dashboard sama persis (saat
 panduan ditulis: 7). Kalau tidak ada yang menunggu, badge tidak tampil. Baris **Berikutnya**
-menunjukkan **09.00** atau **17.00** (WIB): 17.00 kalau sekarang antara pukul 09.00 dan 17.00,
-selain itu 09.00.
+menunjukkan ringkasan yang dikirim berikutnya (WIB): "Berikutnya 09.00" kalau sekarang sebelum pukul
+09.00; "Berikutnya 17.00 (mingguan)" kalau sekarang hari Jumat antara pukul 09.00 dan 17.00; selain
+itu "Berikutnya besok 09.00". Ringkasan 17.00 hanya dikirim hari Jumat, jadi hari lain tidak pernah
+menunjukkan 17.00.
 
 **Kalau berbeda:** angka yang tidak sama di tiga tempat itu adalah bug. Catat ketiganya.
 
@@ -446,7 +448,7 @@ layar.
 | --------------------- | -------------------------------------- | ----------------------------------------- |
 | Menunggu keputusan    | Belum Anda tanggapi                    | `/proposal?tanggapan=belum`               |
 | Disarankan untuk Anda | Grade Sangat layak dan Layak bersyarat | `/proposal?kategori=atas&tanggapan=belum` |
-| Sudah ditanggapi      | Diundang, dipantau, atau diarsipkan    | `/proposal?tanggapan=sudah`               |
+| Sudah ditanggapi      | Disetujui atau ditolak                 | `/proposal?tanggapan=sudah`               |
 | Total proposal        | Semua yang tersimpan                   | `/proposal`                               |
 
 Cara mengecek angkanya: **Total proposal** = angka tab **Semua** di halaman Proposal. **Sudah
@@ -499,7 +501,7 @@ yang tidak layak.
 1. Lihat kartu **Menunggu keputusan** di kanan (bukan kartu biru di atas).
 2. Baca batang berwarna dan daftar grade di bawahnya.
 3. Klik baris **Sangat layak**. Kembali.
-4. Di bagian bawah kartu, klik angka **Diundang**, lalu **Dipantau**, lalu **Diarsipkan**.
+4. Di bagian bawah kartu, klik angka **Disetujui**, lalu **Ditolak**.
 
 **Yang seharusnya terlihat:**
 
@@ -510,8 +512,9 @@ yang tidak layak.
   ini tidak bisa diklik. Jumlah semua baris = angka di keterangan kartu. Persentase dibulatkan,
   jadi totalnya bisa 99% atau 101%.
 - Klik baris grade membuka `/proposal?kategori=<grade>&tanggapan=belum`.
-- **Diundang**, **Dipantau**, **Diarsipkan** membuka tab masing-masing di halaman Proposal.
-  Jumlah ketiganya = kartu **Sudah ditanggapi** (saat ditulis: 1 + 0 + 1 = 2).
+- **Disetujui** dan **Ditolak** membuka tab masing-masing di halaman Proposal
+  (`/proposal?tanggapan=setuju`, `/proposal?tanggapan=tolak`). Jumlah keduanya = kartu
+  **Sudah ditanggapi**.
 
 **Kalau berbeda:** jumlah yang tidak cocok antara kartu ini, kartu biru, dan tab di halaman
 Proposal adalah bug.

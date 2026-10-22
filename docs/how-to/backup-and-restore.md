@@ -211,6 +211,32 @@ validation), so the run spends tokens; they are recorded on its job and show up 
 AI**. A second run finds nothing to do and changes nothing. Old values stay in `history` and `digests`; see the
 [AISA Firestore contract](../reference/contracts/aisa-firestore.md).
 
+### The AISA response migration (Python)
+
+Moving stored decisions from `undang` / `pantau` / `arsipkan` to `setuju` / `tolak` is the
+same kind of tool, also in `aisa-api`. It makes no model call.
+
+```bash
+cd services/api
+uv run aisa migrate-responses           # dry run: reads Firestore, prints the plan, no write
+uv run aisa migrate-responses --apply   # does it
+```
+
+It writes to the same Firestore the grade migration would, so read the dry run and take a
+`pnpm snapshot:export` first. With `--apply` it:
+
+1. Rewrites each proposal whose `response.kind` is an old word: `undang` → `setuju` and
+   `arsipkan` → `tolak`, keeping `at`, `via` and `note`; `pantau` → no response
+   (`responded: false`), so the proposal is back to awaiting a decision. A `tolak` keeps its
+   original `response.at`, so retention counts from the old archive date.
+2. Writes one `tanggapan` history row per changed proposal, via `sistem`, with the old kind in
+   `before` and the new kind (or null) in `after`.
+3. Deletes every `pendingConfirmations` doc, since one may name an old command.
+
+A response kind it does not recognise is listed and left alone. A second run finds nothing to
+do and changes nothing. Old words stay in `history`; see the
+[AISA Firestore contract](../reference/contracts/aisa-firestore.md).
+
 ## What this is not
 
 - **Not a scheduled backup service.** Nothing runs these for you and nothing retains the

@@ -30,7 +30,7 @@ Riwayat
 
 - UC-RWY-01 · Ringkasan 7 hari terakhir dan menyaring lewat kartu
 - UC-RWY-02 · Menyaring per jenis kejadian
-- UC-RWY-03 · Siapa yang mengarsipkan proposal minggu ini
+- UC-RWY-03 · Siapa yang menolak proposal minggu ini
 - UC-RWY-04 · Hanya kejadian lewat WhatsApp dalam 30 hari
 - UC-RWY-05 · Membaca isi ringkasan WhatsApp yang sudah terkirim
 - UC-RWY-06 · Memuat kejadian yang lebih lama
@@ -58,9 +58,9 @@ Pengaturan
 - UC-SET-03 · Melihat seperti apa ringkasan WhatsApp berikutnya
 - UC-SET-04 · Memastikan layanan AISA terhubung
 - UC-SET-05 · ⚠️ Menjeda AI sementara lalu menjalankannya lagi
-- UC-SET-06 · Mencoba ganti masa simpan arsip tanpa menyimpan
-- UC-SET-07 · Alasan wajib saat mengganti masa simpan arsip
-- UC-SET-08 · ⚠️ Menyimpan masa simpan arsip lalu mengembalikannya
+- UC-SET-06 · Mencoba ganti masa simpan proposal yang ditolak tanpa menyimpan
+- UC-SET-07 · Alasan wajib saat mengganti masa simpan proposal yang ditolak
+- UC-SET-08 · ⚠️ Menyimpan masa simpan proposal yang ditolak lalu mengembalikannya
 - UC-SET-09 · Akun baca-saja di Pengaturan
 
 ---
@@ -291,8 +291,11 @@ siapa melakukan apa, dan kapan".
 - Di kanan judul tertulis "Dibanding 7 hari sebelumnya · klik kartu untuk menyaring".
 - Ada empat kartu: **Keputusan dibuat**, **Dinilai AI**, **Ringkasan terkirim**, **Koreksi
   grade**. Masing-masing berisi angka, selisih dengan minggu sebelumnya (`+13`, `−2`, atau
-  `sama`), batang kecil per hari, dan catatan. Contoh catatan: "1 diundang · 1 dipantau · 1
-  diarsip · 10 tanpa rincian", "Rata-rata skor 74,5", "9 keputusan dibalas lewat WhatsApp", "75%
+  `sama`), batang kecil per hari, dan catatan. Catatan kartu **Keputusan dibuat** merinci
+  jumlah yang disetujui dan ditolak, mis. "3 disetujui · 1 ditolak" (ditambah "· N skala lama"
+  untuk keputusan Undang/Pantau/Arsipkan lama, dan "· N tanpa rincian" untuk keputusan yang
+  rinciannya tidak diketahui). Baris migrasi tanggapan via **Sistem** tidak dihitung sebagai
+  keputusan. Contoh catatan lain: "Rata-rata skor 74,5", "9 keputusan dibalas lewat WhatsApp", "75%
   dari penilaian minggu ini".
 - Setelah klik pertama, kartu diberi bingkai berwarna. Tab **Keputusan** aktif, dan periode berubah
   ke **7 hari terakhir**. Teks di bawah daftar berbunyi "Menampilkan N dari N kejadian", dan N sama
@@ -333,9 +336,9 @@ seperti di daftar proposal (mis. **F&B**, bukan `f&b`).
 
 **Kalau berbeda:** kalau angka tab tidak cocok dengan jumlah baris, catat tabnya.
 
-### UC-RWY-03 · Siapa yang mengarsipkan proposal minggu ini
+### UC-RWY-03 · Siapa yang menolak proposal minggu ini
 
-**Situasi:** Anda ingin melihat siapa yang mengarsipkan proposal minggu ini, dan lewat kanal apa.
+**Situasi:** Anda ingin melihat siapa yang menolak proposal minggu ini, dan lewat kanal apa.
 
 **Sebelum mulai:** berada di **Riwayat**.
 
@@ -343,20 +346,39 @@ seperti di daftar proposal (mis. **F&B**, bukan `f&b`).
 
 1. Klik tab **Keputusan**.
 2. Klik kotak pilihan periode (awalnya **Semua waktu**), lalu pilih **7 hari terakhir**.
-3. Ketik `arsip` di kolom **Cari startup atau kejadian…**.
+3. Ketik `tolak` di kolom **Cari startup atau kejadian…**.
 
-**Yang seharusnya terlihat:** yang tersisa adalah baris arsip, mis. "Tanggapan massal: diarsipkan"
-dengan catatan "Arsipkan semua tidak layak: 1 proposal (<nama>)", atau "<nama proposal>
-diarsipkan". Di bawah setiap baris ada pelaku **Manajer** (lingkaran "M") dan kanal **via WhatsApp**
-atau **via Dashboard**. Muncul juga tombol **Reset filter**.
+**Yang seharusnya terlihat:** yang tersisa adalah baris keputusan Tolak: baris "Tanggapan massal:
+ditolak" dengan catatan "Tolak semua tidak layak: 1 proposal (<nama>)", atau baris satu proposal
+berjudul "<nama> ditolak" (keputusan Setuju berjudul "<nama> disetujui"). Di
+bawah setiap baris ada pelaku **Manajer** (lingkaran "M") dan kanal **via WhatsApp** atau **via
+Dashboard**. Muncul juga tombol **Reset filter**.
 
 Catatan: Riwayat hanya mencatat peran **Manajer**, bukan email akun yang menekan tombol. Kalau Anda
 perlu tahu siapa persisnya, halaman ini tidak bisa menjawabnya. Keputusan untuk proposal yang sudah
 dihapus tampil sebagai "(dihapus) ditanggapi" tanpa jenis keputusannya, jadi tidak muncul di
-pencarian `arsip`.
+pencarian `tolak`. Proposal yang ditolak dihapus otomatis setelah masa retensi, jadi keputusan Tolak
+yang lama bisa sudah berada di tab **Dihapus**.
 
-**Kalau berbeda:** kalau proposal yang Anda tahu diarsipkan minggu ini tidak muncul, cek dulu apakah
-proposalnya sudah dihapus (tab **Dihapus**).
+Baris yang ditulis sebelum skala Setuju/Tolak memakai kata lama (Undang, Pantau, Arsipkan). Baris
+itu tetap tampil tanpa error dan kata lamanya ditandai "(lama)", mis. "<nama> ditanggapi: Arsipkan
+(lama)", atau "Tanggapan massal: ditanggapi: Arsipkan (lama)" untuk tanggapan massal lama.
+Migrasi tanggapan menambah satu baris via **Sistem** per proposal yang dipindah:
+
+- Undang lama menjadi Setuju (Arsipkan lama menjadi Tolak dengan cara yang sama): judul "Tanggapan
+  <nama> dipindah ke skala baru", badge **Undang (lama)** → **Setuju**, catatan "Tanggapan <nama>
+  dipindah ke skala baru: Undang → Setuju".
+- Pantau lama dikosongkan: judul "Tanggapan <nama> dikosongkan", badge **Pantau (lama)** →
+  **Kosong (menunggu keputusan)**, catatan "Tanggapan Pantau untuk <nama> dikosongkan; proposal
+  kembali menunggu keputusan".
+
+Kedua jenis baris migrasi itu menampilkan kutipan “Skala tanggapan baru: Setuju / Tolak” dan tidak
+dihitung di kartu **Keputusan dibuat**. Pencarian juga membaca catatan dan kutipan, jadi semua
+baris migrasi (pelaku **Sistem**) ikut tampil pada pencarian `tolak` di UC-RWY-03 bila terjadi
+dalam periode yang dipilih.
+
+**Kalau berbeda:** kalau proposal yang Anda tahu ditolak minggu ini tidak muncul, cek dulu apakah
+proposalnya sudah dihapus (tab **Dihapus**). Baris lama yang membuat halaman error adalah bug.
 
 ### UC-RWY-04 · Hanya kejadian lewat WhatsApp dalam 30 hari
 
@@ -390,15 +412,22 @@ WhatsApp**.
 **Langkah:**
 
 1. Klik tab **Ringkasan WA**.
-2. Di baris "Ringkasan pagi terkirim" atau "Ringkasan sore terkirim", klik **Lihat isi**.
+2. Di baris ringkasan harian (09.00) atau ringkasan mingguan (17.00 Jumat) yang terkirim, klik
+   **Lihat isi**.
 3. Klik **Tutup isi**.
 
-**Yang seharusnya terlihat:** di bawah judul ada catatan "Ke WhatsApp · N proposal menunggu
+**Yang seharusnya terlihat:** baris ringkasan harian berjudul "Ringkasan pagi terkirim" dan
+ringkasan mingguan "Ringkasan mingguan terkirim". Di bawah judul ada catatan "Ke WhatsApp · N proposal menunggu
 keputusan" (ditambah "· template" kalau teks tidak dirapikan AI). Setelah **Lihat isi** diklik,
 muncul jumlah per grade (**Sangat layak**, **Layak bersyarat**, **Perlu penyesuaian**, **Risiko
 tinggi**, **Tidak layak**, jumlah **Di luar fokus**, dan **Perlu dicek manual** kalau ada), lalu
 teks pesan persis seperti yang dikirim. Penanda tebal WhatsApp tetap terlihat sebagai `*…*`.
-Pelakunya **AISA**. Ringkasan yang terkirim sebelum skala baru memakai label skala lama (mis. **Sangat
+Untuk ringkasan mingguan, isinya adalah pesan mingguan (proposal masuk, sektor, grade, rata-rata
+skor, keputusan Setuju dan Tolak, top 3, perlu dicek manual), dan jumlah per grade adalah proposal
+yang masih menunggu keputusan saat dikirim. Pelakunya **AISA**. Ringkasan 17.00 yang terkirim
+sebelum 22 Oktober 2026 adalah ringkasan harian sore, bukan ringkasan mingguan: judulnya
+"Ringkasan sore terkirim" (atau "Ringkasan terkirim" bila isinya tidak ditemukan) dan tetap tampil
+tanpa error. Ringkasan yang terkirim sebelum skala baru memakai label skala lama (mis. **Sangat
 cocok (skala lama)**); isinya tetap tampil tanpa error.
 
 **Kalau berbeda:** kalau baris ringkasan hanya berisi teks satu baris tanpa **Lihat isi**, catatan
@@ -579,7 +608,7 @@ saat ini, tanpa memperhitungkan koreksi manajer.
 `65`, `75`, `85` (bawaan). Ada lima kotak: **Sangat layak** 85–100, **Layak bersyarat** 75–84,
 **Perlu penyesuaian** 65–74, **Risiko tinggi** 50–64, **Tidak layak** < 50, masing-masing dengan
 aksinya (Lanjutkan investasi, Investasi dengan syarat, Sesuaikan dulu sebelum lanjut,
-Pertimbangkan menolak, Tolak) dan "N proposal · N%". Batas yang tampil mengikuti aturan aktif,
+Pertimbangkan menolak, Sebaiknya ditolak) dan "N proposal · N%". Batas yang tampil mengikuti aturan aktif,
 bukan angka tetap. **Lihat** membuka **Proposal** dengan URL `/proposal?kategori=layak_bersyarat`,
 dan jumlah barisnya sama dengan angka kotak.
 
@@ -798,23 +827,41 @@ atas header melakukan hal yang sama. Pilihan disimpan di peramban ini saja.
 **Langkah:**
 
 1. Klik tab **Ringkasan WhatsApp**.
-2. Di panel **Pratinjau pesan**, klik **Pagi**, lalu **Sore**.
+2. Di panel **Pratinjau pesan**, klik **Harian**, lalu **Mingguan**.
 
 **Yang seharusnya terlihat:**
 
-- Panel **Jadwal kirim** berisi **Ringkasan pagi** `09.00 WIB` dan **Ringkasan sore** `17.00 WIB`,
-  plus catatan "Berikutnya hari ini pukul … WIB" atau "Berikutnya besok pukul 09.00 WIB" setelah
-  pukul 17.00. Jadwalnya tetap, tidak bisa diubah dari sini.
-- Panel **Isi pesan** menjelaskan isi per baris: **Sangat layak**, **Layak bersyarat, Perlu
-  penyesuaian**, **Risiko tinggi, Tidak layak** ("Jumlahnya saja."), **Di luar fokus** (tetap di
-  grade-nya, diberi tanda “(di luar fokus)”), dan **Perlu dicek manual**.
-- **Pratinjau pesan** berbentuk gelembung chat dari **AISA** "lewat GOWA". Sapaannya berganti antara
-  "Selamat pagi, Pak." dan "Selamat sore, Pak." sesuai tombol. Isinya "Ada N proposal yang belum Pak
-  tanggapi.", lalu daftar per grade dari proposal yang belum ditanggapi (mis. "Sangat layak (2)",
-  1. <nama> …), dengan proposal di luar fokus ditandai "(di luar fokus)".
-- Di bawahnya: "Isi mengikuti N proposal yang belum ditanggapi saat ini. …" dan "Ringkasan … terakhir
-  terkirim …".
-- Cek kewajaran: N sama dengan angka "N proposal menunggu keputusan" di sidebar.
+- Panel **Jadwal kirim** bertuliskan "AISA mengirim ringkasan harian setiap pagi dan ringkasan
+  mingguan setiap Jumat sore. Jadwal ini tetap dan diatur di server." dan berisi dua jadwal:
+  **Ringkasan harian** "09.00 setiap hari" ("Proposal baru sejak ringkasan pagi sebelumnya") dan
+  **Ringkasan mingguan** "17.00 setiap Jumat" ("Ringkasan minggu ini"). Di bawahnya: "Berikutnya
+  hari ini pukul 09.00 WIB (harian)" sebelum pukul 09.00; "Berikutnya hari ini pukul 17.00 WIB
+  (mingguan)" pada hari Jumat antara pukul 09.00 dan 17.00; selain itu "Berikutnya besok pukul
+  09.00 WIB (harian)". Jadwalnya tetap, tidak bisa diubah dari sini.
+- Panel **Isi ringkasan harian** menjelaskan isi ringkasan harian per baris: **Sangat layak**,
+  **Layak bersyarat, Perlu penyesuaian**, **Risiko tinggi, Tidak layak** ("Jumlahnya saja."),
+  **Di luar fokus** (tetap di grade-nya, diberi tanda “(di luar fokus)”), **Perlu dicek manual**,
+  dan **Dikirim ke**. Panel **Isi ringkasan mingguan** menjelaskan **Proposal masuk**, **Sektor**,
+  **Grade**, **Rata-rata skor**, **Keputusan**, **Top 3 minggu ini**, dan **Perlu dicek manual**.
+- **Pratinjau pesan** berbentuk gelembung chat dari **AISA** "lewat GOWA". Saat halaman dibuka,
+  pratinjau yang terpilih mengikuti ringkasan berikutnya (**Mingguan** hanya pada hari Jumat antara
+  pukul 09.00 dan 17.00).
+- Pratinjau harian (jam `09.00`, label **Hari ini**): "Selamat pagi, Pak. Sejak ringkasan <hari>
+  pukul <jam> masuk N proposal baru. Ada M proposal yang belum Pak tanggapi." (sebelum ringkasan
+  pagi pertama: "Ini ringkasan pagi pertama dari AISA. Dalam 24 jam terakhir masuk N proposal
+  baru."), lalu daftar per grade dari proposal yang belum ditanggapi (mis. "Sangat layak (2)"
+  lalu "1. <nama> …"), dengan proposal di luar fokus ditandai "(di luar fokus)".
+- Pratinjau mingguan (jam `17.00`, label **Jumat**): "Selamat sore, Pak. Ini ringkasan mingguan
+  AISA, <tanggal Senin>–<tanggal hari ini>." (mis. "19–22 Oktober 2026") lalu bagian tebal
+  **Proposal masuk** (dibanding minggu lalu), **Sektor** (tiga terbanyak dengan persen, mis. "F&B
+  40% (4 dari 10)"), **Grade**, **Rata-rata skor**, **Keputusan minggu ini** ("Setuju N · Tolak N",
+  lalu "Menunggu keputusan: N" dan umur yang terlama), **Top 3 minggu ini**, dan **Perlu dicek
+  manual**.
+- Di bawahnya: "Harian mengikuti M proposal yang belum ditanggapi saat ini; mingguan menghitung
+  minggu ini sampai sekarang. …" dan "Ringkasan <harian|mingguan> <jam> terakhir terkirim <tanggal>
+  pukul <jam> · N proposal belum ditanggapi." (atau "Belum ada ringkasan yang terkirim.").
+- Cek kewajaran: M sama dengan angka "M proposal menunggu keputusan" di sidebar, dan angka di
+  pratinjau mingguan sama dengan jumlah proposal minggu ini di halaman **Proposal**.
 
 **Kalau berbeda:** catat kalau proposal yang sudah Anda tanggapi masih muncul di pratinjau.
 
@@ -889,7 +936,7 @@ WhatsApp.
 **Kalau berbeda:** kalau label tetap **Dijeda (STOP)** setelah **LANJUT**, muat ulang halaman. Kalau
 masih dijeda, segera beri tahu tim, karena proposal baru tidak akan dinilai.
 
-### UC-SET-06 · Mencoba ganti masa simpan arsip tanpa menyimpan
+### UC-SET-06 · Mencoba ganti masa simpan proposal yang ditolak tanpa menyimpan
 
 **Situasi:** Anda ingin melihat efek retensi 180 hari, lalu berubah pikiran.
 
@@ -898,8 +945,8 @@ masih dijeda, segera beri tahu tim, karena proposal baru tidak akan dinilai.
 **Langkah:**
 
 1. Klik tab **Privasi & data**.
-2. Di panel **Berapa lama arsip disimpan**, klik kotak **Hapus arsip setelah** (awalnya `90 hari`),
-   lalu pilih **180 hari**.
+2. Di panel **Berapa lama proposal yang ditolak disimpan**, baris **Hapus yang ditolak setelah**,
+   klik kotak pilihan retensi (awalnya `90 hari`), lalu pilih **180 hari**.
 3. Perhatikan bilah yang muncul di bawah layar.
 4. Klik tab **Profil**.
 5. Di dialog, klik **Batal**.
@@ -907,13 +954,16 @@ masih dijeda, segera beri tahu tim, karena proposal baru tidak akan dinilai.
 
 **Yang seharusnya terlihat:**
 
-- Kotak fakta di atas: jumlah "proposal tersimpan saat ini", "90 hari arsip lalu dihapus", "Wajib
-  persetujuan founder di formulir".
+- Panel atas **Data founder di AISA** bertuliskan "… dan proposal yang ditolak dihapus otomatis
+  setelah 90 hari." Kotak faktanya: "<N> proposal tersimpan saat ini", "90 hari proposal yang
+  ditolak lalu dihapus", dan "Wajib persetujuan founder di formulir".
+- Panel retensi bertuliskan "Setelah batas ini, proposal yang Anda tolak dihapus otomatis beserta
+  data founder-nya. Proposal yang disetujui tidak pernah dihapus otomatis."
 - Pilihan retensi: **30 hari** · Paling hemat data, **90 hari** · Bawaan, **180 hari** · Untuk
   ditinjau ulang nanti.
-- Setelah memilih 180 hari, teks penjelasan berubah menjadi "Proposal yang diarsipkan dihapus
-  otomatis setelah 180 hari (setiap hari 02.00 WIB). Contoh: proposal yang diarsipkan hari ini
-  dihapus sekitar <tanggal 180 hari lagi>.". Muncul kolom **Alasan perubahan** ("Wajib. Tercatat di
+- Setelah memilih 180 hari, teks penjelasan berbunyi "Proposal yang ditolak dihapus otomatis
+  setelah 180 hari (setiap hari 02.00 WIB). Contoh: proposal yang ditolak hari ini dihapus sekitar
+  <tanggal>." dengan tanggal sekitar 180 hari lagi. Muncul kolom **Alasan perubahan** ("Wajib. Tercatat di
   Riwayat."). Bilah bawah berbunyi "Ada perubahan yang belum disimpan" dengan tombol **Batal** dan
   **Simpan**.
 - Klik tab **Profil** memunculkan dialog **Buang perubahan?** dengan teks "Perubahan di bagian ini
@@ -926,7 +976,7 @@ masih dijeda, segera beri tahu tim, karena proposal baru tidak akan dinilai.
 **Kalau berbeda:** pindah tab tanpa dialog saat bilah tampil adalah temuan, karena perubahan bisa
 hilang diam-diam.
 
-### UC-SET-07 · Alasan wajib saat mengganti masa simpan arsip
+### UC-SET-07 · Alasan wajib saat mengganti masa simpan proposal yang ditolak
 
 **Situasi:** Anda ingin memastikan perubahan retensi tidak bisa disimpan tanpa alasan.
 
@@ -934,7 +984,7 @@ hilang diam-diam.
 
 **Langkah:**
 
-1. Pilih **180 hari** di **Hapus arsip setelah**.
+1. Pilih **180 hari** di kotak pilihan retensi.
 2. Biarkan **Alasan perubahan** kosong, lalu klik **Simpan** di bilah bawah.
 3. Klik **Batal** di bilah bawah.
 
@@ -945,13 +995,13 @@ baris aturan baru.
 **Kalau berbeda:** kalau muncul toast "Retensi … tersimpan …" tanpa alasan, laporkan segera dan
 kembalikan nilainya (lihat UC-SET-08).
 
-### UC-SET-08 · ⚠️ Menyimpan masa simpan arsip lalu mengembalikannya
+### UC-SET-08 · ⚠️ Menyimpan masa simpan proposal yang ditolak lalu mengembalikannya
 
 **Situasi:** Anda ingin membuktikan perubahan retensi tersimpan sebagai versi aturan baru.
 
 **Sebelum mulai:** ⚠️ langkah ini mengubah aturan produksi. Retensi berjalan setiap hari pukul 02.00
-WIB, jadi selesaikan pengembalian jauh sebelum jam itu. Jangan pilih **30 hari**, karena arsip yang
-lebih tua dari 30 hari bisa terhapus permanen pada pukul 02.00 berikutnya. Catat nilai semula
+WIB, jadi selesaikan pengembalian jauh sebelum jam itu. Jangan pilih **30 hari**, karena proposal yang
+ditolak lebih dari 30 hari lalu bisa terhapus permanen pada pukul 02.00 berikutnya. Catat nilai semula
 (saat ini `90 hari`).
 
 **Langkah:**
@@ -982,7 +1032,7 @@ dan batas grade tidak berubah.
 
 **Yang seharusnya terlihat:** di **Integrasi**, panel **Status AI** hanya menampilkan label dan
 teks, tanpa tombol **STOP** atau **LANJUT**. **Detail** dan **Cek koneksi** tetap bisa dipakai. Di
-**Privasi & data**, **Hapus arsip setelah** hanya berupa teks (mis. `90 hari`) tanpa kotak pilihan,
+**Privasi & data**, pilihan retensi hanya berupa teks (mis. `90 hari`) tanpa kotak pilihan,
 sehingga bilah simpan tidak pernah muncul. Di **Profil**, hak **Menanggapi proposal** dan
 **Mengatur AISA** bertanda silang.
 

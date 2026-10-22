@@ -174,6 +174,8 @@ export const docsManifest: DocEntry[] = [
   // about this build, not rules, so not normative.
   { path: 'docs/TESTING.md', type: 'reference', normative: false },
   { path: 'docs/AI_USAGE.md', type: 'reference', normative: false },
+  // A plain-language tour of the system for non-engineers; the spine stays the owner.
+  { path: 'docs/ARCHITECTURE.md', type: 'explanation', normative: false },
   // QA records: one acceptance matrix per feature, with actual results and evidence ids.
   { path: 'docs/qa/inventaris-fitur.md', type: 'reference', normative: false },
   { path: 'docs/qa/api.md', type: 'reference', normative: false },

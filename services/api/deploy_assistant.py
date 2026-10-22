@@ -11,8 +11,10 @@ the model itself is called at the ``global`` location because Gemini 3.x is only
 served there in this project. Only ``aisa/assistant`` is packaged, never the rest of
 ``aisa``.
 
-The engine's service agent (service-<number>@gcp-sa-aiplatform-re.iam.gserviceaccount.com)
-needs read access to Firestore (roles/datastore.viewer) for the tools to work.
+The engine runs as ASSISTANT_SERVICE_ACCOUNT (default ``aisa-assistant``), which holds
+roles/datastore.viewer, roles/aiplatform.user, roles/storage.objectViewer,
+roles/logging.logWriter and roles/cloudtrace.agent: the Asisten can read Firestore but IAM
+refuses any write, not only the absence of a write tool.
 """
 
 from __future__ import annotations
@@ -26,7 +28,7 @@ HERE = Path(__file__).resolve().parent
 PROJECT = os.environ.get("GOOGLE_CLOUD_PROJECT", "hackathon-primestep-09")
 AGENT_LOCATION = os.environ.get("AGENT_LOCATION", "us-central1")
 STAGING_BUCKET = os.environ.get("STAGING_BUCKET", f"gs://{PROJECT}-aisa-staging")
-RUNTIME_SA = os.environ.get("ASSISTANT_SERVICE_ACCOUNT", f"hackathon-runtime@{PROJECT}.iam.gserviceaccount.com")
+ASSISTANT_SA = os.environ.get("ASSISTANT_SERVICE_ACCOUNT", f"aisa-assistant@{PROJECT}.iam.gserviceaccount.com")
 MODEL = os.environ.get("ASSISTANT_MODEL", "gemini-3.8-flash")
 
 # Pinned to the versions the agent was built and tested against; the pickled agent must
@@ -98,8 +100,9 @@ def main() -> None:
             "FIRESTORE_PROJECT": PROJECT,
         },
         "context_spec": {"memory_bank_config": MEMORY_BANK},
-        # The default Reasoning Engine service agent has no Firestore role; the runtime SA does.
-        "service_account": RUNTIME_SA,
+        # Read-only Firestore by IAM; the default Reasoning Engine service agent has no
+        # Firestore role at all.
+        "service_account": ASSISTANT_SA,
     }
 
     if args.update:

@@ -229,7 +229,7 @@ Semua agent menulis log dengan format seragam:
 - Data tidak dipakai untuk melatih model.
 - Proposal yang diarsipkan dihapus setelah periode retensi atau atas permintaan founder (Bagian 7E), termasuk session Asisten dan memory Memory Bank yang menyebutnya; chat WhatsApp yang sudah terkirim tidak ikut terhapus.
 - Dashboard dilindungi login Firebase Auth email/password (1 akun).
-- **Keterbatasan:** Asisten di Agent Runtime berjalan sebagai service account runtime (`hackathon-runtime`), yang punya IAM baca-tulis Firestore. Jaminan baca-saja Asisten ada di kode (tidak ada tool tulis), bukan di IAM. Service account khusus `aisa-assistant@hackathon-primestep-09.iam.gserviceaccount.com` sudah dibuat tetapi belum dipakai: pemberian `roles/datastore.viewer` (dan `roles/aiplatform.user`) membutuhkan admin IAM project, lalu Asisten dideploy ulang dengan `ASSISTANT_SERVICE_ACCOUNT` diisi akun itu.
+- Asisten di Agent Runtime berjalan sebagai service account khusus `aisa-assistant@hackathon-primestep-09.iam.gserviceaccount.com` dengan `roles/datastore.viewer` (plus `aiplatform.user`, `storage.objectViewer`, `logging.logWriter`, `cloudtrace.agent`): sifat baca-saja Asisten dijamin IAM, bukan hanya karena tidak ada tool tulis. `deploy_assistant.py` memakai akun ini kecuali `ASSISTANT_SERVICE_ACCOUNT` diisi lain.
 
 Pemetaan ke UU 27/2022 Pasal 16 ayat 2 ada di dokumen overview.
 

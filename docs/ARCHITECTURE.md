@@ -9,9 +9,10 @@ perlu paham pemrograman. Penjelasan teknis yang lengkap ada di
 AISA adalah **asisten AI untuk tim investasi**. Setiap ada startup yang mengirim pitch deck
 (berkas presentasi PDF), AISA:
 
-1. **membaca dan menilai** deck itu dengan lima kriteria: Tim, Pasar & masalah, Produk &
-   keunggulan, Traksi, serta Model bisnis & keuangan;
-2. **mengelompokkan** hasilnya, misalnya _Sangat cocok_, _Cocok_, atau _Kurang cocok_;
+1. **membaca dan menilai** deck itu dengan lima kriteria (A–E, lihat
+   [di bawah](#lima-kriteria-dan-lima-grade));
+2. **memberi grade** dari skornya, misalnya _Sangat layak_ atau _Layak bersyarat_, dan
+   menandai startup yang _Di luar fokus_ investasi;
 3. **melapor** lewat WhatsApp setiap pukul 09.00 dan 17.00;
 4. **menjawab pertanyaan** manajer, baik di dashboard (Tanya AISA) maupun di WhatsApp.
 
@@ -68,7 +69,7 @@ flowchart TD
     G2 -- tidak --> X[Tandai: Perlu dicek manual]
     G2 -- ya --> E
     D -- ya --> E[Agent Penilai membaca<br/>dan memberi nilai 1–5 per kriteria]
-    E --> H[Kode menghitung skor,<br/>cek kecocokan fokus, dan kategori]
+    E --> H[Kode menghitung skor,<br/>cek fokus, dan grade]
     H --> I[Simpan ke Firestore<br/>dan tampil di dashboard]
 ```
 
@@ -80,11 +81,43 @@ Pembagian kerjanya disengaja:
 
 - **AI hanya memberi nilai per kriteria**, lengkap dengan kutipan dan nomor halaman dari deck
   sebagai bukti.
-- **Skor akhir dan kategori dihitung oleh kode biasa**, memakai bobot dari halaman _Aturan
+- **Skor akhir dan grade dihitung oleh kode biasa**, memakai bobot dari halaman _Aturan
   penilaian_. Jadi angka akhirnya bisa ditelusuri, dan bila bobot diubah, hasilnya berubah
   dengan cara yang bisa diprediksi.
 - Setiap langkah dicatat dengan jamnya, dan bisa dilihat di **Log penilaian** pada halaman
   detail proposal.
+
+## Lima kriteria dan lima grade
+
+Penilai memberi nilai 1–5 untuk setiap kriteria. Kode lalu menghitung skor 0–100 dengan
+bobot berikut (bisa diubah manajer di halaman _Aturan penilaian_):
+
+| Kriteria                                    | Bobot |
+| ------------------------------------------- | ----- |
+| **A.** Tim manajemen                        | 25%   |
+| **B.** Kinerja bisnis saat ini              | 20%   |
+| **C.** Risiko bisnis & tren makro           | 20%   |
+| **D.** Rencana bisnis & potensi imbal hasil | 25%   |
+| **E.** Potensi dampak                       | 10%   |
+
+Pada kriteria C, nilai tinggi berarti risikonya rendah dan tren pasarnya mendukung.
+
+Grade ditentukan **hanya dari skor**:
+
+| Skor   | Grade             | Aksi                          |
+| ------ | ----------------- | ----------------------------- |
+| 85–100 | Sangat layak      | Lanjutkan investasi           |
+| 75–84  | Layak bersyarat   | Investasi dengan syarat       |
+| 65–74  | Perlu penyesuaian | Sesuaikan dulu sebelum lanjut |
+| 50–64  | Risiko tinggi     | Pertimbangkan menolak         |
+| < 50   | Tidak layak       | Tolak                         |
+
+Batas skornya juga bisa diubah di _Aturan penilaian_.
+
+Terpisah dari grade, AISA memeriksa apakah sektor, tahap, dan kebutuhan dana startup sesuai
+fokus investasi. Bila tidak, proposal diberi label **Di luar fokus**: grade-nya tidak berubah,
+tetapi prioritasnya rendah karena risikonya lebih tinggi untuk portofolio. Dalam daftar,
+proposal diurutkan menurut grade, lalu yang sesuai fokus lebih dulu, lalu skor.
 
 ## Para agent AI
 
@@ -92,7 +125,7 @@ Semua agent memakai model **Gemini 3.8 Flash** dari Google, lewat **Vertex AI**.
 
 | Agent                         | Tugas                                                                                              | Batasannya                                                                                  |
 | ----------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| **Penilai**                   | Membaca deck, memberi nilai 1–5 per kriteria dengan kutipan halaman, dan mengambil profil startup. | Tidak menentukan skor akhir maupun kategori; itu dihitung kode.                             |
+| **Penilai**                   | Membaca deck, memberi nilai 1–5 per kriteria dengan kutipan halaman, dan mengambil profil startup. | Tidak menentukan skor akhir maupun grade; itu dihitung kode.                                |
 | **Insight** dan **Ringkasan** | Merangkai kalimat untuk laporan WhatsApp pukul 09.00 dan 17.00.                                    | Angka dihitung kode. Bila AI menulis angka yang tidak ada di data, laporan memakai templat. |
 | **Asisten**                   | Menjawab pertanyaan manajer di Tanya AISA dan di WhatsApp.                                         | **Hanya bisa membaca** data; tidak bisa mengubah apa pun.                                   |
 

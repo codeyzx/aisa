@@ -33,7 +33,7 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
 - [UC-DSB-17 · Memakai AISA dari ponsel](#uc-dsb-17--memakai-aisa-dari-ponsel)
 - [UC-DSB-18 · Empat kartu angka di Dashboard dan ke mana masing-masing membawa](#uc-dsb-18--empat-kartu-angka-di-dashboard-dan-ke-mana-masing-masing-membawa)
 - [UC-DSB-19 · Strip insight di bawah kartu](#uc-dsb-19--strip-insight-di-bawah-kartu)
-- [UC-DSB-20 · Menunggu keputusan per kategori dan hitungan tanggapan](#uc-dsb-20--menunggu-keputusan-per-kategori-dan-hitungan-tanggapan)
+- [UC-DSB-20 · Menunggu keputusan per grade dan hitungan tanggapan](#uc-dsb-20--menunggu-keputusan-per-grade-dan-hitungan-tanggapan)
 - [UC-DSB-21 · Kartu Tren proposal di Dashboard](#uc-dsb-21--kartu-tren-proposal-di-dashboard)
 - [UC-DSB-22 · Aktivitas terakhir](#uc-dsb-22--aktivitas-terakhir)
 - [UC-DSB-23 · Tombol Unggah pitch deck di Dashboard](#uc-dsb-23--tombol-unggah-pitch-deck-di-dashboard)
@@ -225,26 +225,26 @@ dilihat dulu.
 1. Di sidebar, grup **Ruang kerja**, klik **Dashboard**.
 2. Baca angka di kartu biru pertama, **Menunggu keputusan**.
 3. Baca kartu **Disarankan untuk Anda**.
-4. Turun ke kartu **Paling cocok untuk Anda**. Baca urutan nomor 1 dan seterusnya.
+4. Turun ke kartu **Paling layak untuk Anda**. Baca urutan nomor 1 dan seterusnya.
 5. Klik nama di urutan nomor 1 (mis. **Kopi Teras Senja**).
 
 **Yang seharusnya terlihat:**
 
 - **Menunggu keputusan** berisi jumlah proposal yang sudah dinilai atau perlu dicek manual dan
   belum Anda tanggapi (saat ditulis: 7).
-- **Disarankan untuk Anda** berisi jumlah yang kategorinya **Sangat cocok** atau **Cocok** (saat
-  ditulis: 4).
-- **Paling cocok untuk Anda** berisi paling banyak 5 proposal dari kelompok itu, diurutkan dari
-  skor tertinggi. Setiap baris: inisial, nama, badge kategori, satu kalimat ringkasan · sektor
+- **Disarankan untuk Anda** berisi jumlah yang grade-nya **Sangat layak** atau **Layak
+  bersyarat**.
+- **Paling layak untuk Anda** berisi paling banyak 5 proposal dari kelompok itu, diurutkan menurut
+  grade, lalu yang sesuai fokus lebih dulu, lalu skor tertinggi. Setiap baris: inisial, nama, badge grade
+  (dengan label **Di luar fokus** bila gagal cek kecocokan), satu kalimat ringkasan · sektor
   (berhuruf besar, mis. F&B) · tahap, batang skor, dan angka skor (mis. Kopi Teras Senja 100,0, Kelas Kode Rakyat 85,6,
   Klinik Desa Sehat 78,1, Rantai Dingin Bahari 68,1). Jumlah barisnya sama dengan kartu
   **Disarankan untuk Anda** kalau angka itu 5 atau kurang.
 - Langkah 5 membuka halaman proposal itu (`/proposal/<id>`), header **Detail proposal**.
-- Kalau tidak ada yang sangat cocok atau cocok, kartu berisi **Belum ada proposal yang sangat
-  cocok atau cocok.** dan tombol **Buka semua proposal**. Kalau semua sudah ditanggapi:
+- Kalau tidak ada yang sangat layak atau layak bersyarat, kartu berisi **Belum ada proposal Sangat layak atau Layak bersyarat.** dan tombol **Buka semua proposal**. Kalau semua sudah ditanggapi:
   **Semua proposal sudah ditanggapi.**
 
-**Kalau berbeda:** urutan yang tidak menurun menurut skor, atau proposal yang sudah ditanggapi
+**Kalau berbeda:** urutan yang tidak mengikuti grade, lalu fokus, lalu skor, atau proposal yang sudah ditanggapi
 ikut muncul, adalah bug.
 
 ### UC-DSB-10 · Langsung membuka proposal tertentu tanpa lewat menu
@@ -261,13 +261,13 @@ ikut muncul, adalah bug.
 
 **Yang seharusnya terlihat:** sebelum mengetik, jendela hanya berisi grup **Halaman** dan
 **Perintah**. Begitu Anda mengetik, grup **Proposal** muncul. Tiap baris menampilkan nama dan,
-di kanan, sektor · kategori (mis. **F&B · Sangat cocok**; sektor ditulis berhuruf besar seperti di daftar proposal). Setelah Enter, jendela menutup dan
+di kanan, sektor · grade (mis. **F&B · Sangat layak**; sektor ditulis berhuruf besar seperti di daftar proposal). Setelah Enter, jendela menutup dan
 halaman Kopi Teras Senja terbuka (alamat `/proposal/<id>`, header **Detail proposal**). Anda juga
 bisa mencari dengan nama founder, sektor (mis. `agritech` menampilkan **Sawah Pintar
-Nusantara**), atau kategori. Huruf besar dan kecil tidak dibedakan.
+Nusantara**), atau grade. Huruf besar dan kecil tidak dibedakan.
 
 Pencarian menampilkan hanya baris yang memuat **setiap** kata yang Anda ketik, urutannya bebas.
-Jadi `kopi` saja menampilkan proposal yang namanya, founder, sektor, atau kategorinya memuat
+Jadi `kopi` saja menampilkan proposal yang namanya, founder, sektor, atau grade-nya memuat
 "kopi", bukan proposal lain yang hurufnya kebetulan tersebar k…o…p…i.
 `teras kopi` tetap menemukan Kopi Teras Senja.
 
@@ -335,8 +335,8 @@ ada kejadian sama sekali: **Belum ada notifikasi**.
 
 Untuk proposal yang sudah dihapus, judulnya hanya nama kejadian (mis. **Proposal masuk**), sama
 seperti kartu **Aktivitas terakhir** di Dashboard (lihat UC-DSB-22). Keterangan lama yang
-tersimpan dengan skor dan kategori mentah (mis. "skor 63.1, tidak_cocok") ditampilkan dengan kata
-tampilan (mis. "skor 63,1, Tidak cocok"), seperti di **Riwayat**.
+tersimpan dengan skor dan kategori skala lama (mis. `skor 63.1, tidak_cocok`) tetap tampil tanpa
+error sebagai "skor 63,1, Tidak cocok (skala lama)", seperti di **Riwayat**; nilai skala lama tidak boleh terbaca sebagai grade baru.
 
 **Kalau berbeda:** catat judul baris dan tujuan kliknya. Judul yang memuat **(dihapus)** adalah
 bug.
@@ -442,16 +442,16 @@ layar.
 
 **Yang seharusnya terlihat:**
 
-| Kartu                 | Keterangan kecil                    | Membuka                                   |
-| --------------------- | ----------------------------------- | ----------------------------------------- |
-| Menunggu keputusan    | Belum Anda tanggapi                 | `/proposal?tanggapan=belum`               |
-| Disarankan untuk Anda | Kategori sangat cocok dan cocok     | `/proposal?kategori=atas&tanggapan=belum` |
-| Sudah ditanggapi      | Diundang, dipantau, atau diarsipkan | `/proposal?tanggapan=sudah`               |
-| Total proposal        | Semua yang tersimpan                | `/proposal`                               |
+| Kartu                 | Keterangan kecil                       | Membuka                                   |
+| --------------------- | -------------------------------------- | ----------------------------------------- |
+| Menunggu keputusan    | Belum Anda tanggapi                    | `/proposal?tanggapan=belum`               |
+| Disarankan untuk Anda | Grade Sangat layak dan Layak bersyarat | `/proposal?kategori=atas&tanggapan=belum` |
+| Sudah ditanggapi      | Diundang, dipantau, atau diarsipkan    | `/proposal?tanggapan=sudah`               |
+| Total proposal        | Semua yang tersimpan                   | `/proposal`                               |
 
 Cara mengecek angkanya: **Total proposal** = angka tab **Semua** di halaman Proposal. **Sudah
 ditanggapi** = angka tab **Sudah ditanggapi**. **Disarankan untuk Anda** = jumlah baris dengan
-filter kategori **Sangat cocok + cocok**. **Menunggu keputusan** biasanya sama dengan tab
+filter grade **Sangat layak + Layak bersyarat**. **Menunggu keputusan** biasanya sama dengan tab
 **Belum ditanggapi**, tapi bisa lebih kecil: kartu tidak menghitung proposal yang masih
 **Antre** atau sedang dinilai, sedangkan tab menghitungnya.
 
@@ -476,8 +476,8 @@ filter kategori **Sangat cocok + cocok**. **Menunggu keputusan** biasanya sama d
 - **Sejak ringkasan 09.00 · 21 Okt 2026** (slot dan tanggal ringkasan WhatsApp terakhir):
   **… proposal baru masuk** sejak itu. Klik ke daftar **Proposal** lengkap. Kalau belum ada
   ringkasan: judul **Ringkasan WhatsApp** dengan **Belum ada ringkasan terkirim**.
-- **Berkualitas, di luar fokus**: **… proposal patut dilihat lagi**. Klik ke Proposal dengan
-  filter itu dan tab **Belum ditanggapi**.
+- **Di luar fokus**: **… proposal, prioritas rendah**, yaitu proposal yang gagal cek kecocokan.
+  Klik ke Proposal dengan filter **Di luar fokus** (`?luarFokus=1`) dan tab **Belum ditanggapi**.
 - **Perlu dicek manual**: **… proposal tidak bisa dinilai otomatis**. Klik ke Proposal dengan
   filter status **Perlu dicek manual** dan tab **Belum ditanggapi**.
 - Baris **Yang menarik: …** berasal dari ringkasan WhatsApp terakhir yang punya insight, dengan
@@ -487,28 +487,29 @@ filter kategori **Sangat cocok + cocok**. **Menunggu keputusan** biasanya sama d
 **Kalau berbeda:** angka di kotak yang tidak sama dengan jumlah baris di daftar tujuannya adalah
 bug.
 
-### UC-DSB-20 · Menunggu keputusan per kategori dan hitungan tanggapan
+### UC-DSB-20 · Menunggu keputusan per grade dan hitungan tanggapan
 
-**Situasi:** Anda ingin tahu dari proposal yang menunggu, berapa yang sangat cocok dan berapa
-yang tidak cocok.
+**Situasi:** Anda ingin tahu dari proposal yang menunggu, berapa yang sangat layak dan berapa
+yang tidak layak.
 
 **Sebelum mulai:** di **Dashboard**.
 
 **Langkah:**
 
 1. Lihat kartu **Menunggu keputusan** di kanan (bukan kartu biru di atas).
-2. Baca batang berwarna dan daftar kategori di bawahnya.
-3. Klik baris **Sangat cocok**. Kembali.
+2. Baca batang berwarna dan daftar grade di bawahnya.
+3. Klik baris **Sangat layak**. Kembali.
 4. Di bagian bawah kartu, klik angka **Diundang**, lalu **Dipantau**, lalu **Diarsipkan**.
 
 **Yang seharusnya terlihat:**
 
-- Keterangan kartu: **7 proposal, dikelompokkan per kategori** (sama dengan kartu biru).
-- Baris **Sangat cocok**, **Cocok**, **Kurang cocok**, **Tidak cocok**, masing-masing dengan
+- Keterangan kartu: **… proposal, dikelompokkan per grade** (sama dengan kartu biru).
+- Baris **Sangat layak**, **Layak bersyarat**, **Perlu penyesuaian**, **Risiko tinggi**,
+  **Tidak layak**, masing-masing dengan
   jumlah dan persentase. Baris abu-abu **Perlu dicek manual** muncul hanya kalau ada, dan baris
   ini tidak bisa diklik. Jumlah semua baris = angka di keterangan kartu. Persentase dibulatkan,
   jadi totalnya bisa 99% atau 101%.
-- Klik baris kategori membuka `/proposal?kategori=<kategori>&tanggapan=belum`.
+- Klik baris grade membuka `/proposal?kategori=<grade>&tanggapan=belum`.
 - **Diundang**, **Dipantau**, **Diarsipkan** membuka tab masing-masing di halaman Proposal.
   Jumlah ketiganya = kartu **Sudah ditanggapi** (saat ditulis: 1 + 0 + 1 = 2).
 
@@ -527,8 +528,8 @@ Proposal adalah bug.
 2. Baca keterangan di bawah judul dan tiga angka di atas grafik.
 3. Arahkan mouse ke titik di grafik.
 
-**Yang seharusnya terlihat:** tiga angka: **Proposal masuk**, **Sangat cocok**, dan **Rata-rata
-per minggu**. Grafik berisi dua area, **Proposal masuk** dan **Sangat cocok**, per minggu (label
+**Yang seharusnya terlihat:** tiga angka: **Proposal masuk**, **Sangat layak**, dan **Rata-rata
+per minggu**. Grafik berisi dua area, **Proposal masuk** dan **Sangat layak**, per minggu (label
 sumbu bawah = tanggal awal minggu). Kalau catatan harian sudah 24 minggu, keterangan berbunyi
 **12 minggu terakhir, dibanding 12 minggu sebelumnya** dan dua angka pertama diberi badge
 persen naik/turun. Kalau catatannya masih muda, keterangan berbunyi seperti **1 minggu terakhir ·
@@ -557,8 +558,8 @@ lalu paling banyak 5 kejadian terbaru. Masing-masing berisi judul (mis. **Propos
 Teras Senja**, **STOP**, **LANJUT**), keterangan, dan waktu (mis. **22 Okt, 01.06**). Urutannya
 sama dengan lima teratas di lonceng. Untuk proposal yang sudah dihapus, judulnya hanya nama
 kejadian (mis. **Proposal masuk**) dengan keterangan **Rincian dihapus bersama proposal**.
-Keterangan lama dengan skor dan kategori mentah ditampilkan dengan kata tampilan, sama seperti di
-lonceng (UC-DSB-13).
+Keterangan lama dengan skor dan kategori skala lama tampil tanpa error, sama seperti di lonceng
+(UC-DSB-13).
 **Semua** membuka `/riwayat`. Kalau kosong: **Belum ada aktivitas.**
 
 **Kalau berbeda:** baris di sini tidak bisa diklik, itu memang begitu. Catat kalau urutannya
@@ -572,7 +573,7 @@ beda dengan lonceng.
 
 **Langkah:**
 
-1. Di **Dashboard**, kartu **Paling cocok untuk Anda**, lihat bagian paling bawah.
+1. Di **Dashboard**, kartu **Paling layak untuk Anda**, lihat bagian paling bawah.
 2. Klik **Unggah pitch deck**.
 3. Tutup jendelanya tanpa mengunggah (klik di luar jendela atau tekan **Esc**).
 
@@ -636,19 +637,19 @@ angka persisnya.
 
 - Poin pertama, mis. **Hari ini 3 proposal · rata-rata 14 hari 1,8 per hari.** Kalau hari ini
   terbanyak dalam dua minggu, bunyinya **Hari ini … proposal, terbanyak dalam dua minggu.**
-- Poin kedua: **… proposal sangat cocok dari … proposal masuk · …% dari 14 hari terakhir.**
+- Poin kedua: **… proposal Sangat layak dari … proposal masuk · …% dari 14 hari terakhir.**
 - Poin ketiga: **… proposal perlu dicek manual. …**
 - Poin **Yang menarik: …** muncul kalau ringkasan WhatsApp terakhir membawa insight.
-- Grafik batang bertumpuk per hari selama 14 hari, warna per kategori (**Sangat cocok**,
-  **Cocok**, **Kurang cocok**, **Tidak cocok**, **Perlu dicek manual**). Arahkan mouse untuk
-  melihat tanggal lengkap dan jumlah per kategori.
-- Tabel berkolom **Tanggal**, **Total**, empat kategori, **Perlu dicek manual**, **Rata-rata
-  skor** (tanda **–** kalau hari itu tidak ada yang dinilai). Di bawahnya: **Kategori dari kode
+- Grafik batang bertumpuk per hari selama 14 hari, warna per grade (**Sangat layak**,
+  **Layak bersyarat**, **Perlu penyesuaian**, **Risiko tinggi**, **Tidak layak**, **Perlu dicek
+  manual**). Arahkan mouse untuk melihat tanggal lengkap dan jumlah per grade.
+- Tabel berkolom **Tanggal**, **Total**, lima grade, **Perlu dicek manual**, **Rata-rata
+  skor** (tanda **–** kalau hari itu tidak ada yang dinilai). Di bawahnya: **Grade dari kode
   saat dinilai, sebelum koreksi manajer. Total juga menghitung proposal yang masih antre.**
 - Cara mengecek: jumlah kolom **Total** = angka "dari … proposal masuk" di poin kedua.
 
 **Kalau berbeda:** angka di sini dari rekap harian, yang tetap menghitung proposal yang sudah
-dihapus, dan memakai kategori sebelum koreksi. Jadi angkanya boleh beda dengan Dashboard (saat
+dihapus, dan memakai grade sebelum koreksi. Jadi angkanya boleh beda dengan Dashboard (saat
 ditulis: Tren menyebut 7 perlu dicek manual, Dashboard 1). Yang patut dicatat adalah total tabel
 yang berbeda dengan poin kedua.
 

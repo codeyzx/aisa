@@ -6,8 +6,8 @@ Panduan ini untuk Anda yang menguji halaman **Proposal** AISA sendiri di produks
 (https://aisa-dashboard-lk5jbo3eza-et.a.run.app). Isinya: daftar proposal (tab, filter, cari,
 urutan, halaman, ekspor CSV, pilih banyak baris, tanggapan massal, unggah pitch deck) dan halaman
 detail satu proposal (skor, log penilaian, Ringkasan AI, nilai per kriteria, cek fokus, riwayat,
-keputusan Anda, Tanya AISA, founder, koreksi kategori, hapus data). Ada juga proposal yang perlu
-dicek manual, proposal "Berkualitas, di luar fokus", dan akun yang hanya bisa membaca. Use case
+keputusan Anda, Tanya AISA, founder, koreksi grade, hapus data). Ada juga proposal yang perlu
+dicek manual, proposal "Di luar fokus", dan akun yang hanya bisa membaca. Use case
 yang mengubah data ditandai ⚠️. Untuk itu, pakai proposal uji yang Anda unggah sendiri dengan nama
 berawalan "UJI", lalu hapus di akhir (UC-PRP-25). Tanggapan tidak bisa dikembalikan ke "Belum
 ditanggapi", jadi jangan mencobanya pada proposal sungguhan. Nama proposal di contoh (mis. Klinik
@@ -20,12 +20,12 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
 
 - [UC-PRP-01 · Melihat semua proposal dan jumlah per tab](#uc-prp-01--melihat-semua-proposal-dan-jumlah-per-tab)
 - [UC-PRP-02 · Mencari proposal dengan kata kunci](#uc-prp-02--mencari-proposal-dengan-kata-kunci)
-- [UC-PRP-03 · Menyaring menurut kategori, sektor, dan status](#uc-prp-03--menyaring-menurut-kategori-sektor-dan-status)
+- [UC-PRP-03 · Menyaring menurut grade, sektor, dan status](#uc-prp-03--menyaring-menurut-grade-sektor-dan-status)
 - [UC-PRP-04 · Mengurutkan tabel](#uc-prp-04--mengurutkan-tabel)
 - [UC-PRP-05 · Pindah halaman daftar](#uc-prp-05--pindah-halaman-daftar)
 - [UC-PRP-06 · Ekspor CSV tanpa data pribadi founder](#uc-prp-06--ekspor-csv-tanpa-data-pribadi-founder)
 - [UC-PRP-07 · Memilih beberapa baris dan bilah aksinya](#uc-prp-07--memilih-beberapa-baris-dan-bilah-aksinya) ⚠️
-- [UC-PRP-08 · Menanggapi semua proposal satu kategori sekaligus](#uc-prp-08--menanggapi-semua-proposal-satu-kategori-sekaligus) ⚠️
+- [UC-PRP-08 · Menanggapi semua proposal satu grade sekaligus](#uc-prp-08--menanggapi-semua-proposal-satu-grade-sekaligus) ⚠️
 - [UC-PRP-09 · Mengunggah pitch deck](#uc-prp-09--mengunggah-pitch-deck) ⚠️
 - [UC-PRP-10 · Mengunggah berkas yang bukan PDF](#uc-prp-10--mengunggah-berkas-yang-bukan-pdf)
 - [UC-PRP-11 · Mengunggah PDF lebih dari 20 MB](#uc-prp-11--mengunggah-pdf-lebih-dari-20-mb)
@@ -39,12 +39,12 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
 - [UC-PRP-19 · Menyiapkan pertemuan lewat kartu Tanya AISA](#uc-prp-19--menyiapkan-pertemuan-lewat-kartu-tanya-aisa)
 - [UC-PRP-20 · Menghubungi founder](#uc-prp-20--menghubungi-founder)
 - [UC-PRP-21 · Membuka pitch deck asli](#uc-prp-21--membuka-pitch-deck-asli)
-- [UC-PRP-22 · Koreksi kategori tanpa alasan](#uc-prp-22--koreksi-kategori-tanpa-alasan)
-- [UC-PRP-23 · Mengoreksi kategori](#uc-prp-23--mengoreksi-kategori) ⚠️
+- [UC-PRP-22 · Koreksi grade tanpa alasan](#uc-prp-22--koreksi-grade-tanpa-alasan)
+- [UC-PRP-23 · Mengoreksi grade](#uc-prp-23--mengoreksi-grade) ⚠️
 - [UC-PRP-24 · Hapus data tanpa alasan](#uc-prp-24--hapus-data-tanpa-alasan)
 - [UC-PRP-25 · Founder minta datanya dihapus](#uc-prp-25--founder-minta-datanya-dihapus) ⚠️
 - [UC-PRP-26 · Proposal yang perlu dicek manual](#uc-prp-26--proposal-yang-perlu-dicek-manual)
-- [UC-PRP-27 · Proposal berkualitas di luar fokus](#uc-prp-27--proposal-berkualitas-di-luar-fokus)
+- [UC-PRP-27 · Proposal di luar fokus](#uc-prp-27--proposal-di-luar-fokus)
 - [UC-PRP-28 · Akun yang hanya bisa membaca](#uc-prp-28--akun-yang-hanya-bisa-membaca) ⚠️
 - [UC-PRP-29 · Membuka alamat proposal yang tidak ada](#uc-prp-29--membuka-alamat-proposal-yang-tidak-ada)
 
@@ -68,13 +68,16 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
 **Yang seharusnya terlihat:**
 
 - Judul tab browser **Proposal · AISA**.
-- Tabel berkolom **Startup**, **Sektor**, **Kategori**, **Status**, **Dana dicari**, **Masuk**,
-  **Skor**. Tanpa filter, urutan default adalah skor tertinggi di atas.
+- Tabel berkolom **Startup**, **Sektor**, **Grade**, **Status**, **Dana dicari**, **Masuk**,
+  **Skor**. Tanpa filter, urutan default: grade tertinggi di atas, lalu yang sesuai fokus lebih
+  dulu, lalu skor tertinggi.
 - Di bawah nama startup ada nama founder (kalau ada) dan satu kalimat tentang startupnya.
 - Kolom **Status** berisi badge tanggapan: **Belum ditanggapi**, **Diundang**, **Dipantau**, atau
-  **Diarsipkan**. Kolom **Kategori** menampilkan badge kategori; proposal yang belum punya
-  kategori menampilkan statusnya, mis. **Perlu dicek manual**. Teks kecil **dikoreksi** muncul
-  di bawah badge bila kategorinya pernah dikoreksi.
+  **Diarsipkan**. Kolom **Grade** menampilkan badge grade dengan aksinya di bawahnya (mis. **Layak
+  bersyarat**, lalu "Investasi dengan syarat"); proposal yang belum punya grade menampilkan
+  statusnya, mis. **Perlu dicek manual**. Badge **Di luar fokus** muncul bila proposal gagal cek
+  kecocokan; arahkan mouse ke badge itu (atau ketuk) untuk membaca alasannya. Teks kecil **dikoreksi** muncul di bawah badge bila grade-nya
+  pernah dikoreksi.
 - Angka tab **Semua** = **Belum ditanggapi** + **Sudah ditanggapi**, dan **Sudah ditanggapi** =
   **Diundang** + **Dipantau** + **Diarsipkan**. Saat panduan ini ditulis: Semua 9, Belum
   ditanggapi 7, Sudah ditanggapi 2, Diundang 1, Dipantau 0, Diarsipkan 1.
@@ -114,17 +117,19 @@ Senja.
 
 **Kalau berbeda:** catat kata kunci dan nama proposal yang seharusnya muncul.
 
-### UC-PRP-03 · Menyaring menurut kategori, sektor, dan status
+### UC-PRP-03 · Menyaring menurut grade, sektor, dan status
 
-**Situasi:** Anda hanya ingin melihat proposal Cocok di sektor climate.
+**Situasi:** Anda hanya ingin melihat proposal Layak bersyarat di sektor climate.
 
 **Sebelum mulai:** di halaman **Proposal**, tanpa filter.
 
 **Langkah:**
 
-1. Klik kotak pilihan **Semua kategori**. Pilihannya: **Semua kategori**, **Sangat cocok**,
-   **Cocok**, **Kurang cocok**, **Tidak cocok**, lalu (setelah garis pemisah) **Sangat cocok +
-   cocok** dan **Berkualitas, di luar fokus**. Pilih **Cocok**.
+1. Klik kotak pilihan **Grade** (awalnya **Semua grade**). Pilihannya: **Semua grade**, kelima
+   grade (**Sangat layak**, **Layak bersyarat**, **Perlu penyesuaian**, **Risiko tinggi**, **Tidak
+   layak**), dan **Sangat layak + Layak bersyarat**. Pilih **Layak bersyarat**.
+   Di sebelahnya ada kotak **Fokus investasi** (awalnya **Semua fokus**) dengan pilihan **Sesuai
+   fokus** dan **Di luar fokus**; biarkan **Semua fokus**.
 2. Klik kotak **Semua sektor**. Pilihannya diambil dari sektor proposal yang ada, ditulis dengan
    huruf besar seperti di kolom **Sektor** (mis. **Agritech**, **Climate**, **Edtech**, **F&B**,
    **Fashion**, **Healthtech**). Sektor yang tersimpan dengan huruf berbeda (mis. `f&b` dan
@@ -136,18 +141,19 @@ Senja.
 
 **Yang seharusnya terlihat:**
 
-- Setiap pilihan langsung menyaring tabel dan tab menghitung ulang. Contoh saat panduan ditulis:
-  **Cocok** saja = 2 proposal (Klinik Desa Sehat, Rantai Dingin Bahari); ditambah **Climate** = 1
-  (Rantai Dingin Bahari).
-- URL menyimpan pilihan, mis. `?kategori=cocok&sektor=Climate&status=dinilai`. Tab baru dari URL
+- Setiap pilihan langsung menyaring tabel dan tab menghitung ulang: menambah **Climate** hanya
+  menyisakan proposal Layak bersyarat di sektor itu.
+- URL menyimpan pilihan, mis. `?kategori=layak_bersyarat&sektor=Climate&status=dinilai`. Pilihan
+  **Sangat layak + Layak bersyarat** menjadi `?kategori=atas`, **Sesuai fokus** `?luarFokus=0`
+  (hanya proposal yang sudah dinilai dan lolos ketiga cek fokus), dan **Di luar fokus**
+  `?luarFokus=1`. Tautan lama dengan kategori skala lama (mis. `?kategori=cocok`) dianggap tanpa
+  filter grade dan menampilkan semua proposal, tanpa pesan error. Tab baru dari URL
   yang sama menampilkan hasil yang sama. Tautan lama yang menulis sektornya dengan huruf kecil
   (mis. `sektor=climate`) tetap menyaring sektor yang sama.
-- **Sangat cocok + cocok** menampilkan gabungan dua kategori itu.
-- **Reset filter** mengosongkan kategori, sektor, status, dan kata kunci. Tab yang aktif dan
+- **Reset filter** mengosongkan grade, fokus, sektor, status, dan kata kunci. Tab yang aktif dan
   urutan kolom **tidak** ikut direset (tab **Belum ditanggapi** tetap terpilih).
-- Kategori yang dipakai filter adalah kategori yang berlaku sekarang, termasuk hasil koreksi
-  manajer. Kopi Teras Senja yang dikoreksi ke Sangat cocok muncul di **Sangat cocok**, bukan di
-  **Tidak cocok**.
+- Grade yang dipakai filter adalah grade yang berlaku sekarang, termasuk hasil koreksi manajer:
+  proposal yang dikoreksi ke Sangat layak muncul di **Sangat layak**, bukan di grade asli AI.
 
 **Kalau berbeda:** catat kombinasi filter, URL, dan proposal yang salah tampil atau hilang.
 
@@ -212,15 +218,18 @@ bawah nama startupnya (mis. Saku Hukum, founder Martio).
 
 1. Klik **Ekspor CSV** (kanan baris filter).
 2. Buka berkas `proposal-aisa.csv` yang terunduh di Excel atau Google Sheets.
-3. Pilih filter **Cocok**, lalu klik **Ekspor CSV** lagi.
+3. Di kotak **Grade** pilih **Layak bersyarat**, lalu klik **Ekspor CSV** lagi.
 
 **Yang seharusnya terlihat:**
 
-- Kolom berkas: Startup, Sektor, Tahap, Skor, Kategori, Status, Tanggapan, Dana dicari, Masuk.
+- Kolom berkas: Startup, Sektor, Tahap, Skor, Grade, Aksi, Di luar fokus, Status, Tanggapan, Dana
+  dicari, Masuk. Kolom **Di luar fokus** berisi `Ya` atau `Tidak`, dan kosong untuk proposal yang
+  belum punya cek kecocokan.
 - **Tidak ada** nama founder dan **tidak ada** email founder di mana pun dalam berkas. Cari
   "Martio" atau "@" di berkas: tidak ditemukan.
 - Satu baris per proposal yang sedang tampil di tabel (semua halaman, bukan hanya halaman yang
-  terlihat). Dengan filter **Cocok**, berkas hanya berisi proposal Cocok.
+  terlihat). Dengan filter **Layak bersyarat**, berkas hanya berisi proposal Layak
+  bersyarat.
 - Angka ditulis polos: skor `85.6` (titik), dana `3000000000`, tanggal `2026-10-21`. Kolom
   Tanggapan memakai kata yang sama dengan badge di tabel: **Diundang**, **Dipantau**,
   **Diarsipkan**, atau **Belum ditanggapi**. Kolom Sektor juga sama dengan tabel (mis. **F&B**).
@@ -263,41 +272,43 @@ dan laporkan segera.
 
 **Kalau berbeda:** catat jumlah yang dipilih, tombol yang diklik, dan toast yang muncul.
 
-### UC-PRP-08 · Menanggapi semua proposal satu kategori sekaligus
+### UC-PRP-08 · Menanggapi semua proposal satu grade sekaligus
 
-**Situasi:** Anda ingin mengundang semua proposal Cocok yang belum ditanggapi dalam satu klik.
+**Situasi:** Anda ingin mengundang semua proposal Layak bersyarat yang belum ditanggapi dalam satu
+klik.
 
-⚠️ Ini mengubah **semua** proposal di kategori itu yang belum ditanggapi, termasuk yang tidak
+⚠️ Ini mengubah **semua** proposal di grade itu yang belum ditanggapi, termasuk yang tidak
 terlihat karena filter lain. Di produksi, cukup uji sampai langkah 3 lalu **Batal**. Uji sampai
-selesai hanya bila semua proposal di kategori itu adalah proposal UJI.
+selesai hanya bila semua proposal di grade itu adalah proposal UJI.
 
 **Sebelum mulai:** di halaman **Proposal**.
 
 **Langkah:**
 
-1. Di kotak kategori pilih **Cocok**.
-2. Lihat kotak di atas tabel: "Tanggapi semua 2 proposal **Cocok** yang belum ditanggapi:" dengan
+1. Di kotak **Grade** pilih **Layak bersyarat**.
+2. Lihat kotak di atas tabel: "Tanggapi semua <n> proposal **Layak bersyarat** yang belum
+   ditanggapi:" dengan
    tombol **Undang semua**, **Pantau semua**, **Arsipkan semua**.
-3. Klik **Undang semua**. Teks berganti menjadi "Undang 2 proposal?" dengan **Ya, lanjutkan** dan
+3. Klik **Undang semua**. Teks berganti menjadi "Undang <n> proposal?" dengan **Ya, lanjutkan** dan
    **Batal**. Klik **Batal**.
-4. (Hanya untuk kategori berisi proposal UJI) Ulangi langkah 3, lalu klik **Ya, lanjutkan**.
+4. (Hanya untuk grade berisi proposal UJI) Ulangi langkah 3, lalu klik **Ya, lanjutkan**.
 
 **Yang seharusnya terlihat:**
 
-- Kotak ini hanya muncul bila Anda memilih satu kategori (bukan **Semua kategori**, **Sangat
-  cocok + cocok**, atau **Berkualitas, di luar fokus**), kategori itu satu-satunya penyaring, dan
-  masih ada proposal di kategori itu yang belum ditanggapi. Begitu Anda menambah sektor, status,
-  atau kata kunci (mis. buka `/proposal?kategori=cocok&sektor=agritech`), kotak hilang. Sebabnya,
-  tanggapan massal selalu berlaku untuk seluruh kategori, termasuk proposal yang disembunyikan
+- Kotak ini hanya muncul bila Anda memilih satu grade (bukan **Semua grade** atau **Sangat layak +
+  Layak bersyarat**), grade itu satu-satunya penyaring, dan masih ada proposal di grade itu yang
+  belum ditanggapi. Begitu Anda menambah filter fokus, sektor, status, atau kata kunci (mis. buka
+  `/proposal?kategori=layak_bersyarat&sektor=agritech`), kotak hilang. Sebabnya, tanggapan massal
+  selalu berlaku untuk seluruh grade, termasuk proposal yang disembunyikan
   penyaring lain. Pindah tab (mis. **Belum ditanggapi**) tidak menghilangkan kotak.
-- Setelah **Ya, lanjutkan**: toast "Undang: 2 proposal Cocok.", kotak hilang, semua proposal itu
+- Setelah **Ya, lanjutkan**: toast "Undang: <n> proposal Layak bersyarat.", kotak hilang, semua proposal itu
   menjadi **Diundang**. Halaman **Riwayat** mendapat satu baris **Tanggapan massal**, dan kartu
   **Riwayat** di detail tiap proposal itu juga menampilkan baris **Tanggapan massal** (lihat
   UC-PRP-16).
 - Angka di toast adalah hitungan dari server; bisa lebih kecil dari angka di kotak bila sebagian
   sudah ditanggapi lewat WhatsApp sejak halaman dibuka.
 
-**Kalau berbeda:** catat kategori, angka di kotak, dan angka di toast.
+**Kalau berbeda:** catat grade, angka di kotak, dan angka di toast.
 
 ### UC-PRP-09 · Mengunggah pitch deck
 
@@ -327,14 +338,14 @@ MB, mis. deck rekaan startup "UJI Tani Cabai". AISA sedang tidak dijeda.
   dinilai** selama masih antre) dengan pengukur **Sudah berjalan** (menit:detik). Di dalamnya
   daftar langkah: **Membaca teks tiap halaman**, **Memeriksa deck bisa dibaca**, **AI menilai 5
   kriteria** (bertanda **AI**), **Menghitung skor**, **Mencocokkan dengan fokus investasi**,
-  **Menentukan kategori**, **Menyimpan hasil**, masing-masing dengan satu kalimat penjelasan.
+  **Menentukan grade**, **Menyimpan hasil**, masing-masing dengan satu kalimat penjelasan.
   Langkah yang selesai bertanda centang hijau dan lamanya (mis. "1,6 dtk"); langkah yang sedang
   dikerjakan berputar dengan pengukur detiknya sendiri; sisanya abu-abu bertulisan "menunggu".
   Saat AI menilai tertulis "Langkah terlama, biasanya 15–25 detik."; lewat 25 detik berubah
   menjadi "Lebih lama dari biasanya; masih menunggu jawaban AI." Di sela dua langkah, langkah
   berikutnya bertulisan "berikutnya" (bukan berputar).
 - Kartu itu diperbarui sendiri tiap sekitar 1,5 detik, tanpa memuat ulang. Begitu selesai,
-  halaman menampilkan skor, badge kategori, Ringkasan AI, dan nilai per kriteria, dengan bilah
+  halaman menampilkan skor, badge grade, Ringkasan AI, dan nilai per kriteria, dengan bilah
   hijau "Penilaian selesai dalam <n> dtk. Hasilnya ada di bawah." dan tombol **Lihat langkahnya**
   (membuka Log penilaian). Riwayat berisi **Proposal masuk**.
 - Bila berakhir **Perlu dicek manual**, kartu tetap tampil dengan alasannya dan langkah yang tidak
@@ -419,16 +430,21 @@ dengan bukti dari deck.
 **Yang seharusnya terlihat:**
 
 - Kartu atas: nama, kalimat ringkas, sektor, tahap, "Cari Rp 3.000.000.000", "Masuk 21 Okt 2026,
-  18.45", badge **Cocok** dan **Belum ditanggapi**.
+  18.45", badge grade (mis. **Layak bersyarat**) dan **Belum ditanggapi**.
 - **Skor kualitas** 78,1 /100 dengan bar berwarna dan teks "3 dari 3 syarat fokus terpenuhi".
   Angka ini sama dengan kolom **Skor** di daftar.
+- Kartu **Grade** di bawahnya: keterangan "Ditentukan dari skor saja. Kecocokan dengan fokus
+  investasi tidak mengubah grade.", badge grade dengan skornya dan rentangnya (mis. "Rentang skor
+  75–84"), kotak **Aksi yang disarankan** (mis. **Investasi dengan syarat**) dengan satu kalimat
+  artinya, skala lima grade dari Tidak layak sampai Sangat layak dengan penanda skor, dan bagian
+  **Cara membaca grade** yang bisa dibuka untuk melihat batas dan aksi tiap grade.
 - **Ringkasan AI** bertuliskan "Dibuat dari pitch deck · <n> rb token". **Kelebihan** memuat
   kriteria bernilai 4–5. **Perlu dicek** memuat kriteria bernilai 1–2, yang tidak dibahas, atau
   yang kutipannya tidak terverifikasi; bila tidak ada, tertulis "Tidak ada kriteria bernilai 1–2
   atau tanpa bukti." Di bawahnya: "AI bisa salah. Cocokkan dengan kutipan di bawah, atau buka log
   penilaian untuk melihat alasannya."
-- **Nilai per kriteria**: lima baris (Tim, Pasar & masalah, Produk & keunggulan, Traksi, Model
-  bisnis & keuangan). Tiap kutipan diberi label "Hal. <n>". Klik label itu untuk membuka
+- **Nilai per kriteria**: lima baris berurutan A–E (Tim manajemen, Kinerja bisnis saat ini,
+  Risiko bisnis & tren makro, Rencana bisnis & potensi imbal hasil, Potensi dampak). Tiap kutipan diberi label "Hal. <n>". Klik label itu untuk membuka
   pratinjau deck di halaman tersebut (UC-PRP-21) dan cocokkan: kalimat itu ada di halaman yang
   disebut.
 - Keterangan kartu menyebut versi aturan dan model, mis. "Aturan v1 · model gemini-3.8-flash."
@@ -451,7 +467,7 @@ yang oleh AI.
 
 1. Klik **Lihat log penilaian** di bawah kotak **Skor kualitas**.
 2. Baca ringkasan di atas jendela, lalu gulir linimasanya dari atas ke bawah. Klik **Lihat
-   rincian** di langkah **Menghitung skor** dan **Menentukan kategori**.
+   rincian** di langkah **Menghitung skor** dan **Menentukan grade**.
 3. Di langkah **AI menilai 5 kriteria**, klik label **hal. <n>** pada salah satu bukti.
 4. Tutup pratinjau dengan Esc, lalu klik **Semua aktivitas AI** di bagian bawah.
 5. Kembali, lalu tutup jendela dengan tombol silang atau tombol Esc.
@@ -464,22 +480,23 @@ yang oleh AI.
 - Empat angka: **Lama penilaian** (mis. 23,4 dtk), tanggal dengan jam mulai → selesai (mis.
   "21.29.22 → 21.29.46"), **Token AI** (mis. 11,7 rb), dan **Model**. Di bawahnya jumlah langkah
   per pelaku, mis. "1 langkah AI", "6 langkah Sistem", "2 langkah Manajer".
-- Kotak "AI hanya memberi nilai dan menulis alasannya. Skor, cek fokus, dan kategori dihitung
-  sistem dengan aturan yang sama untuk semua proposal."
+- Kotak yang menjelaskan bahwa AI hanya memberi nilai dan menulis alasannya, sedangkan skor, cek
+  fokus, dan grade dihitung sistem dengan aturan yang sama untuk semua proposal.
 - Linimasa berurutan: **Membaca teks tiap halaman**, **Memeriksa deck bisa dibaca**, **AI menilai 5
   kriteria** (satu-satunya bertanda **AI**), **Menghitung skor**, **Mencocokkan dengan fokus
-  investasi**, **Menentukan kategori**, **Menyimpan hasil**. Proposal Form yang dinilai ulang
+  investasi**, **Menentukan grade**, **Menyimpan hasil**. Proposal Form yang dinilai ulang
   diawali **Mengambil pitch deck**. Tiap langkah menyebut jam mulai (jj.mm.dd), lamanya, pelakunya
   (**AI** atau **Sistem**), satu kalimat penjelasan, **Hasil:** (mis. "Skor 81,9", "3 dari 3
-  syarat terpenuhi", "Sangat cocok"), dan nama aksi serta tool yang tercatat (mis. "Menilai 5
+  syarat terpenuhi", "Layak bersyarat"), dan nama aksi serta tool yang tercatat (mis. "Menilai 5
   kriteria · gemini.generate_content"). Garis tipis di bawah judul menunjukkan porsi langkah itu
   dari seluruh waktu; langkah AI hampir memenuhi garisnya.
 - Rincian **AI menilai 5 kriteria** terbuka sejak awal: nilai, bukti dengan label **hal. <n>**, dan
   alasan AI tiap kriteria. **hal. <n>** membuka pratinjau deck di halaman itu, dan Esc kembali ke
   log.
 - Rincian **Menghitung skor** berupa tabel Nilai × Bobot = Poin dan **Skor akhir**; rincian
-  **Menentukan kategori** menjelaskan aturannya (mis. "Lolos cek fokus, skor 81,9 mencapai 80,0,
-  dan tidak ada kriteria bernilai 1.") beserta ambang tiap kategori, yang terpakai disorot.
+  **Menentukan grade** berbunyi seperti "Skor 81,9 berada di rentang 75–84, jadi grade-nya Layak
+  bersyarat." (proposal di luar fokus ditambah kalimat bahwa grade-nya tetap), beserta batas skor
+  tiap grade dari aturan penilaian; yang terpakai disorot.
 - Setelah pemisah **Setelah penilaian**: koreksi dan tanggapan manajer dengan jam dan alasannya.
 - **Semua aktivitas AI** membuka halaman **Aktivitas AI** di pekerjaan penilaian ini.
 - Tombol **Cara AI menilai** dan **Log penilaian** (di kartu **Riwayat**) membuka jendela yang sama.
@@ -497,12 +514,12 @@ mengujinya, unggah deck UJI tanpa halaman tim (lihat UC-PRP-09). ⚠️ Itu memb
 **Langkah:**
 
 1. Buka detail proposal UJI tersebut setelah dinilai.
-2. Lihat kriteria **Tim** di **Nilai per kriteria**.
+2. Lihat kriteria **Tim manajemen** di **Nilai per kriteria**.
 3. Lihat kotak **Perlu dicek** di **Ringkasan AI**.
 
 **Yang seharusnya terlihat:**
 
-- Kriteria **Tim** bernilai 1/5 dengan baris berwarna kuning "Tidak dibahas di pitch deck" dan
+- Kriteria **Tim manajemen** bernilai 1/5 dengan baris berwarna kuning "Tidak dibahas di pitch deck" dan
   tanpa kutipan.
 - Kriteria itu tercantum di **Perlu dicek**.
 - Badge **kutipan tidak terverifikasi** muncul hanya bila AI mengutip kalimat yang tidak
@@ -516,7 +533,7 @@ tidak ada di halaman yang disebut, adalah temuan penting: catat kriteria dan hal
 
 ### UC-PRP-15 · Mengecek kesesuaian dengan fokus investasi
 
-**Situasi:** Anda ingin tahu kenapa Saku Hukum masuk **Tidak cocok** padahal skornya 63,1.
+**Situasi:** Anda ingin tahu kenapa Saku Hukum diberi label **Di luar fokus**.
 
 **Sebelum mulai:** di detail Saku Hukum.
 
@@ -528,12 +545,15 @@ tidak ada di halaman yang disebut, adalah temuan penting: catat kriteria dan hal
 
 **Yang seharusnya terlihat:**
 
-- Keterangan "Dicek otomatis dari aturan penilaian, tanpa AI."
+- Keterangan "Dicek otomatis dari aturan penilaian, tanpa AI. Tidak mengubah grade; yang di luar
+  fokus diberi prioritas rendah."
 - Kotak hijau bertanda centang untuk syarat yang lulus, merah bertanda silang untuk yang gagal.
   Untuk Saku Hukum: Sektor "f&b di luar sektor fokus", Tahap "tidak disebut", Dana "Rp24 M di luar
   rentang Rp1 M–Rp20 M".
 - Jumlah yang lulus sama dengan teks di kotak skor, mis. "0 dari 3 syarat fokus terpenuhi".
-- Proposal yang gagal satu syarat saja langsung berkategori **Tidak cocok**, berapa pun skornya.
+- Proposal yang gagal satu syarat saja diberi badge **Di luar fokus**, dengan butir yang gagal
+  disebut (mis. "Sektor: f&b di luar sektor fokus"). Grade-nya tetap mengikuti skor dan tidak berubah
+  karena label ini.
 - **Lihat aturan** membuka halaman **Aturan penilaian**. Sektor, tahap, dan rentang dana di sana
   sama dengan alasan di kotak.
 
@@ -554,18 +574,19 @@ penilaian**.
 **Yang seharusnya terlihat:**
 
 - Baris terbaru di atas, ditandai titik berwarna. Contoh saat panduan ditulis: dua baris
-  **Koreksi kategori** (satu via Dashboard, satu via WhatsApp, masing-masing dengan alasannya)
+  **Koreksi grade** (satu via Dashboard, satu via WhatsApp, masing-masing dengan alasannya)
   lalu **Proposal masuk** via Sistem.
 - Tiap baris: judul tindakan, keterangan, alasan atau catatan setelah tanda "—", "via
   Dashboard/WhatsApp/Sistem", dan tanggal-jam.
 - Tanggapan dari WhatsApp juga tercatat di sini dengan "via WhatsApp".
-- Keputusan yang datang dari tanggapan massal per kategori (UC-PRP-08, atau "arsipkan semua …"
+- Keputusan yang datang dari tanggapan massal per grade (UC-PRP-08, atau "arsipkan semua …"
   lewat WhatsApp) tampil sebagai baris **Tanggapan massal** dengan keterangan seperti
   "Diarsipkan lewat tanggapan massal", catatannya (kalau ada), salurannya, dan waktunya. Hanya
   keputusan terakhir proposal yang dibuat begini; tanggapan massal yang sudah ditimpa keputusan
   lain tidak tampil di kartu ini, tetapi tetap ada di halaman **Riwayat**.
-- Keterangan lama yang tersimpan dengan skor dan kategori mentah (mis. "skor 63.1, tidak_cocok")
-  ditampilkan dengan kata yang sama seperti di layar lain: "skor 63,1, Tidak cocok".
+- Keterangan lama yang tersimpan dengan kategori skala lama (mis. `skor 63.1, tidak_cocok`) tetap
+  tampil tanpa error sebagai "skor 63,1, Tidak cocok (skala lama)", sama seperti di layar lain, dan tidak terbaca sebagai grade baru. Proposal
+  yang dinilai ulang dengan skala baru punya baris **Dinilai ulang** via Sistem.
 
 **Kalau berbeda:** catat tindakan yang Anda tahu terjadi tetapi tidak tercantum.
 
@@ -705,32 +726,34 @@ pesannya. Bila panel kosong atau browser menampilkan halaman terblokir, catat br
 pakai **Buka di tab baru**. Tab kosong yang langsung tertutup setelah **Buka deck** juga berarti
 tautan gagal dibuat.
 
-### UC-PRP-22 · Koreksi kategori tanpa alasan
+### UC-PRP-22 · Koreksi grade tanpa alasan
 
-**Situasi:** Anda mencoba mengoreksi kategori tanpa menulis alasan.
+**Situasi:** Anda mencoba mengoreksi grade tanpa menulis alasan.
 
 **Sebelum mulai:** di detail proposal yang sudah dinilai, mis. Klinik Desa Sehat. Use case ini
 tidak mengubah data.
 
 **Langkah:**
 
-1. Di kartu **Kategori kurang pas?** ("Ubah kategorinya. Skor dari AI tetap disimpan."), klik
-   **Pilih kategori baru**.
-2. Perhatikan pilihannya, lalu pilih **Kurang cocok**.
+1. Di kartu **Grade kurang pas?** ("Pilih grade yang menurut Anda lebih tepat. Skor dari AI tetap
+   disimpan."), klik kotak **Grade baru** (bertulisan **Pilih grade baru**).
+2. Perhatikan pilihannya, lalu pilih **Perlu penyesuaian**.
 3. Biarkan kolom alasan kosong, klik **Simpan koreksi**.
 
 **Yang seharusnya terlihat:**
 
-- Pilihan: **Sangat cocok**, **Cocok**, **Kurang cocok**, **Tidak cocok**. Kategori yang sedang
-  berlaku (Cocok) tampil redup dan tidak bisa dipilih.
-- **Simpan koreksi** tidak bisa diklik sebelum kategori dipilih.
-- Setelah diklik tanpa alasan: kotak merah "Alasan koreksi wajib diisi." Kategori tidak berubah.
+- Pilihan: **Sangat layak**, **Layak bersyarat**, **Perlu penyesuaian**, **Risiko tinggi**,
+  **Tidak layak**. Tiap pilihan menyebut aksinya di bawah nama grade (mis. **Layak bersyarat**,
+  lalu "Investasi dengan syarat"). Grade yang sedang berlaku tampil redup bertulisan "Grade
+  sekarang" dan tidak bisa dipilih.
+- **Simpan koreksi** tidak bisa diklik sebelum grade dipilih.
+- Setelah diklik tanpa alasan: kotak merah "Alasan koreksi wajib diisi." Grade tidak berubah.
 
-**Kalau berbeda:** bila kategori berubah tanpa alasan, itu bug: catat proposalnya.
+**Kalau berbeda:** bila grade berubah tanpa alasan, itu bug: catat proposalnya.
 
-### UC-PRP-23 · Mengoreksi kategori
+### UC-PRP-23 · Mengoreksi grade
 
-**Situasi:** Anda kenal timnya dan menilai proposal UJI layak naik kategori.
+**Situasi:** Anda kenal timnya dan menilai proposal UJI layak naik grade.
 
 ⚠️ Mengubah data. Pakai proposal UJI.
 
@@ -738,18 +761,22 @@ tidak mengubah data.
 
 **Langkah:**
 
-1. Klik **Pilih kategori baru**, pilih kategori lain.
+1. Klik kotak **Grade baru** (**Pilih grade baru**), pilih grade lain.
 2. Isi kolom **Alasannya, mis. timnya sudah saya kenal**, mis. `tim sudah saya kenal`.
 3. Klik **Simpan koreksi**.
 
 **Yang seharusnya terlihat:**
 
-- Toast "Kategori dikoreksi ke <kategori>."
-- Badge kategori di kartu atas berganti, dan badge **dikoreksi** muncul.
-- Keterangan kartu berubah: "AI menilai <kategori lama>, lalu dikoreksi ke <kategori baru>
-  (<tanggal, jam>, Dashboard): “tim sudah saya kenal”."
+- Toast "Grade dikoreksi ke <grade>."
+- Badge grade di kartu atas berganti, dan badge **dikoreksi** muncul.
+- Keterangan kartu **Grade kurang pas?** berubah: "AI menilai <grade lama>, lalu dikoreksi ke
+  <grade baru> (<tanggal, jam>, Dashboard): “tim sudah saya kenal”."
+- Kartu **Grade** berketerangan "Dikoreksi oleh manajer; skor AI tetap tersimpan apa adanya.",
+  menulis "Skor ini di rentang <rentang> (<grade dari skor>)", dan menyebut "AI memberi grade
+  <grade lama> dari skornya, lalu dikoreksi ke <grade baru> …". **Aksi yang disarankan** mengikuti
+  grade hasil koreksi.
 - **Skor kualitas** tidak berubah.
-- Riwayat mendapat baris **Koreksi kategori**. Di daftar, proposal pindah ke filter kategori baru
+- Riwayat mendapat baris **Koreksi grade**. Di daftar, proposal pindah ke filter grade baru
   dan menampilkan teks **dikoreksi**.
 
 **Kalau berbeda:** bila skornya ikut berubah, catat skor sebelum dan sesudah.
@@ -822,48 +849,57 @@ dihapus, catat di mana tepatnya.
 
 **Yang seharusnya terlihat:**
 
-- Di daftar: badge kuning **Perlu dicek manual** di kolom Kategori, Dana "—", Skor "—". Baris ini
+- Di daftar: badge kuning **Perlu dicek manual** di kolom Grade, Dana "—", Skor "—". Baris ini
   ada di bawah saat diurutkan menurut skor.
 - Di detail: sektor, tahap, dana tertulis "… tidak disebut". Badge **Perlu dicek manual** dengan
   alasan di bawahnya, mis. "teks terlalu sedikit (0 karakter di 10 halaman)". Lumbung Ikan
   Pesisir adalah deck hasil pindai yang dinilai sebelum AISA bisa membaca deck sebagai gambar;
   deck hasil pindai yang masuk sekarang biasanya tetap dinilai (lihat UC-FRM-05).
-- **Skor kualitas** "—" dan "Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori."
-  Kalimat yang sama ada di **Nilai per kriteria**. Kartu **Ringkasan AI** tidak ada.
+- **Skor kualitas** "—" dan "Tidak dinilai: deck perlu dicek manual, tanpa skor dan grade."
+  Kalimat yang sama ada di **Nilai per kriteria**. Kartu **Grade** dan **Ringkasan AI** tidak ada.
   **Sesuai fokus investasi?** bertuliskan "Belum ada cek kecocokan."
-- Kartu **Kategori kurang pas?** tidak ada, karena proposal tanpa kategori tidak bisa dikoreksi.
+- Kartu **Grade kurang pas?** tidak ada, karena proposal tanpa grade tidak bisa dikoreksi.
 - **Keputusan Anda** tetap bisa dipakai: Anda boleh menanggapi setelah membaca deck sendiri.
 
 **Kalau berbeda:** bila deck berteks jelas berakhir di sini, catat alasannya dan nama berkasnya.
 
-### UC-PRP-27 · Proposal berkualitas di luar fokus
+### UC-PRP-27 · Proposal di luar fokus
 
-**Situasi:** Anda tidak ingin melewatkan proposal bagus yang ditolak hanya karena di luar fokus.
+**Situasi:** Anda ingin memastikan proposal yang tidak sesuai fokus investasi tetap tampil dengan
+grade-nya, tetapi jelas ditandai berprioritas rendah.
 
-**Sebelum mulai:** di halaman **Proposal**. Tanda ini muncul pada proposal yang gagal cek fokus
-tetapi skornya mencapai ambang "Berkualitas, di luar fokus" di **Aturan penilaian** (saat panduan
-ditulis 65), selama kategorinya masih **Tidak cocok**. Saat panduan ditulis, filternya kosong:
-Kopi Teras Senja awalnya bertanda ini (lihat Riwayatnya) tetapi sudah dikoreksi ke Sangat cocok,
-jadi tandanya tidak tampil lagi. Untuk mengujinya, unggah deck UJI yang kuat di sektor di luar
-fokus (mis. f&b). ⚠️ Itu membuat proposal baru.
+**Sebelum mulai:** di halaman **Proposal**. Label ini muncul pada setiap proposal yang gagal
+minimal satu syarat di **Sesuai fokus investasi?** (sektor, tahap, atau dana), berapa pun
+skornya. Untuk mengujinya dengan proposal baru, unggah deck UJI di sektor di luar fokus (mis.
+f&b). ⚠️ Itu membuat proposal baru.
 
 **Langkah:**
 
-1. Pilih **Berkualitas, di luar fokus** di kotak kategori.
+1. Di kotak **Fokus investasi** pilih **Di luar fokus** (URL `?luarFokus=1`). Untuk kebalikannya,
+   **Sesuai fokus** (`?luarFokus=0`) hanya menampilkan proposal yang sudah dinilai dan lolos ketiga
+   syarat.
 2. Klik proposal yang muncul.
+3. Kembali ke daftar tanpa filter, lalu bandingkan urutan proposal yang grade-nya sama.
 
 **Yang seharusnya terlihat:**
 
-- URL `?luarFokus=1`. Tanpa proposal yang cocok: **Tidak ada proposal yang cocok** dan angka tab
-  semua 0.
-- Di daftar, proposal itu berbadge **Tidak cocok** dengan teks kuning **Berkualitas, di luar
-  fokus** di bawahnya.
-- Di detail: badge kuning **Berkualitas, di luar fokus** di kartu atas, skor 65 atau lebih, dan
-  minimal satu syarat merah di **Sesuai fokus investasi?**.
-- Setelah dikoreksi ke kategori lain (UC-PRP-23), tanda itu hilang dari daftar dan detail.
+- Tanpa proposal yang cocok: **Tidak ada proposal yang cocok** dan angka tab semua 0.
+- Di daftar, proposal itu tetap berbadge grade sesuai skornya, dengan badge **Di luar fokus** di
+  bawahnya.
+- Di detail: badge **Di luar fokus** di samping grade di kartu atas. Arahkan mouse ke badge itu
+  (atau ketuk) untuk membaca "Prioritas rendah: tidak sesuai fokus investasi (sektor/tahap/dana),
+  jadi risikonya lebih tinggi untuk portofolio.", butir yang gagal (mis. "Sektor: f&b di luar
+  sektor fokus"), dan "Grade tidak berubah; hanya prioritasnya yang lebih rendah.".
+- Kartu **Grade** memuat kotak **Di luar fokus — prioritas rendah** dengan kalimat "Prioritas
+  rendah: tidak sesuai fokus investasi (sektor/tahap/dana), jadi risikonya lebih tinggi untuk
+  portofolio." dan daftar butir yang gagal yang sama. Di **Sesuai fokus investasi?** minimal satu
+  syarat merah.
+- Dalam satu grade, proposal yang sesuai fokus diurutkan di atas proposal di luar fokus, baru
+  kemudian menurut skor.
 
-**Kalau berbeda:** catat proposal yang bertanda padahal skornya di bawah ambang, atau yang tidak
-bertanda padahal memenuhi syaratnya.
+**Kalau berbeda:** catat proposal yang berlabel padahal ketiga syaratnya lulus, yang tidak
+berlabel padahal ada syarat gagal, atau yang grade-nya berbeda dari batas skor di **Aturan
+penilaian**.
 
 ### UC-PRP-28 · Akun yang hanya bisa membaca
 
@@ -886,13 +922,13 @@ lingkungan lokal (emulator) akun ini sudah tersedia: `viewer@aisa.test`.
 **Yang seharusnya terlihat:**
 
 - Di daftar: tidak ada tombol **Unggah pitch deck**. **Ekspor CSV**, cari, filter, dan urut tetap
-  bisa dipakai. Memilih satu kategori tidak memunculkan kotak "Tanggapi semua …".
+  bisa dipakai. Memilih satu grade tidak memunculkan kotak "Tanggapi semua …".
 - Bilah pilihan hanya berisi "1 dipilih" dan ikon silang, tanpa **Undang**/**Pantau**/
   **Arsipkan**.
 - Di detail: tidak ada tombol **Hapus data**. Kartu bernama **Keputusan** (bukan "Keputusan
   Anda"), menampilkan "Sekarang: …" dan teks "Akun Anda hanya bisa membaca; tanggapan diberikan
   manajer investasi." tanpa tombol tanggapan.
-- Kartu **Kategori kurang pas?** tidak ada, kecuali proposal itu pernah dikoreksi: maka hanya
+- Kartu **Grade kurang pas?** tidak ada, kecuali proposal itu pernah dikoreksi: maka hanya
   keterangan koreksinya yang tampil, tanpa formulir.
 - **Lihat log penilaian**, **Tanya AISA**, **Email**, **Pratinjau deck** (juga dari label
   "Hal. <n>"), dan **Buka deck** tetap bisa dipakai.

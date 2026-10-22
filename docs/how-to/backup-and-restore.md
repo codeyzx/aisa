@@ -177,6 +177,40 @@ nobody chose. It loads `.env.local` then `.env` itself (exported values win),
 loading _every_ key rather than just the project id, so the banner and the Admin
 SDK cannot end up describing different databases.
 
+### The AISA grade migration (Python)
+
+Moving stored data from the old scale (criteria `tim`…`bisnis`, four `*_cocok` categories) to
+the A–E criteria and five grades is a separate tool from `pnpm migrate`: it lives in `aisa-api`
+because it has to re-run the Penilai.
+
+```bash
+cd services/api
+uv run aisa migrate-grades           # dry run: reads Firestore, prints the plan, no model call, no write
+uv run aisa migrate-grades --apply   # does it
+```
+
+It writes to whatever Firestore the `aisa-api` environment points at (`GOOGLE_CLOUD_PROJECT`,
+or the emulator when `FIRESTORE_EMULATOR_HOST` is set), so read the dry run's output before
+`--apply`, and take a `pnpm snapshot:export` of the same project first. With `--apply` it:
+
+1. Saves `settings/rules` as a new version with the new weights, default anchors for the new
+   criteria, and the new thresholds; fit, models, `minCharsPerPage` and `retentionDays` are
+   kept. One `aturan_diubah` history row, via `sistem`.
+2. Re-assesses every `dinilai` proposal not yet on that version from its stored
+   `proposalTexts`, through the same code as intake. Each gets a new assessment, profile,
+   fit and grade, its old-scale correction cleared, a `penilaian` job card ("Menilai ulang
+   <nama> (skala baru)") and one `dinilai_ulang` history row. Response and dates are kept.
+   A proposal the Penilai fails twice becomes `perlu_dicek_manual`. Proposals in other
+   statuses are not touched.
+3. Recomputes `dailyStats.byCategory` for each existing date from the surviving `dinilai`
+   proposals; deleted proposals cannot be re-graded and drop out of those counts.
+4. Deletes every `pendingConfirmations` doc, since one may name an old category.
+
+**Each re-assessed proposal costs a Penilai model call** (two when the first answer fails
+validation), so the run spends tokens; they are recorded on its job and show up under **Biaya
+AI**. A second run finds nothing to do and changes nothing. Old values stay in `history` and `digests`; see the
+[AISA Firestore contract](../reference/contracts/aisa-firestore.md).
+
 ## What this is not
 
 - **Not a scheduled backup service.** Nothing runs these for you and nothing retains the

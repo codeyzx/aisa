@@ -1,5 +1,12 @@
 # Dashboard (layar baca dan tombol tulis) — matriks penerimaan
 
+> **Skala penilaian lama.** Putaran uji di dokumen ini yang dijalankan sebelum 22 Oktober 2026
+> memakai skala lama: empat kategori (Sangat cocok, Cocok, Kurang cocok, Tidak cocok; proposal di
+> luar fokus selalu Tidak cocok, dengan tanda "Berkualitas, di luar fokus") dan kriteria lama
+> (Tim, Pasar & masalah, Produk & keunggulan, Traksi, Model bisnis & keuangan). Hasilnya dibiarkan
+> apa adanya sebagai catatan. Skala yang berlaku sekarang (kriteria A–E, lima grade, label Di luar
+> fokus) ada di [`overview-project.md`](../../overview-project.md) §3.
+
 Penguji: agent penguji E2E dashboard (bukan penulis kodenya). Matriks ditulis dari
 `overview-project.md` (§3 Penilaian, §5 Menanggapi proposal, §7 Dashboard, Aktivitas AI,
 pelindungan data butir g), `GLOSSARY.md`, dan celah baris **DSB** di

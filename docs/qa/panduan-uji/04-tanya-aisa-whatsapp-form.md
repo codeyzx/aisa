@@ -50,12 +50,12 @@ ditanggapi" lagi, jadi jangan jalankan perintah ⚠️ ke proposal sungguhan.
 - [UC-WA-04 · Jawaban yang lama: mengetik… dan pesan tunggu](#uc-wa-04--jawaban-yang-lama-mengetik-dan-pesan-tunggu)
 - [UC-WA-05 · Owner menyuruh AISA mengundang satu proposal ⚠️](#uc-wa-05--owner-menyuruh-aisa-mengundang-satu-proposal-️)
 - [UC-WA-06 · Memantau dan mengarsipkan satu proposal ⚠️](#uc-wa-06--memantau-dan-mengarsipkan-satu-proposal-️)
-- [UC-WA-07 · Owner menyuruh AISA mengarsipkan semua yang tidak cocok (tanpa YA)](#uc-wa-07--owner-menyuruh-aisa-mengarsipkan-semua-yang-tidak-cocok-tanpa-ya)
+- [UC-WA-07 · Owner menyuruh AISA mengarsipkan semua yang tidak layak (tanpa YA)](#uc-wa-07--owner-menyuruh-aisa-mengarsipkan-semua-yang-tidak-layak-tanpa-ya)
 - [UC-WA-08 · Mengonfirmasi tanggapan massal dengan YA ⚠️](#uc-wa-08--mengonfirmasi-tanggapan-massal-dengan-ya-️)
 - [UC-WA-09 · YA yang kedaluwarsa atau tanpa perintah](#uc-wa-09--ya-yang-kedaluwarsa-atau-tanpa-perintah)
-- [UC-WA-10 · Tanggapan massal untuk kategori kosong](#uc-wa-10--tanggapan-massal-untuk-kategori-kosong)
-- [UC-WA-11 · Memindahkan kategori dengan alasan ⚠️](#uc-wa-11--memindahkan-kategori-dengan-alasan-️)
-- [UC-WA-12 · Memindahkan kategori tanpa alasan](#uc-wa-12--memindahkan-kategori-tanpa-alasan)
+- [UC-WA-10 · Tanggapan massal untuk grade kosong](#uc-wa-10--tanggapan-massal-untuk-grade-kosong)
+- [UC-WA-11 · Memindahkan grade dengan alasan ⚠️](#uc-wa-11--memindahkan-grade-dengan-alasan-️)
+- [UC-WA-12 · Memindahkan grade tanpa alasan](#uc-wa-12--memindahkan-grade-tanpa-alasan)
 - [UC-WA-13 · Memindahkan proposal yang perlu dicek manual](#uc-wa-13--memindahkan-proposal-yang-perlu-dicek-manual)
 - [UC-WA-14 · Nama proposal ambigu](#uc-wa-14--nama-proposal-ambigu)
 - [UC-WA-15 · Nama proposal tidak ditemukan](#uc-wa-15--nama-proposal-tidak-ditemukan)
@@ -95,8 +95,7 @@ ditanggapi" lagi, jadi jangan jalankan perintah ⚠️ ke proposal sungguhan.
 AISA** dan di bawahnya titik hijau dengan teks **Asisten yang sama di WhatsApp**; di kanannya
 ikon jam (**Riwayat percakapan**), pensil, layar penuh, dan ✕. Di tengah:
 **Halo** dan kalimat "Ada yang mau ditanyakan soal _N_ proposal? Jawaban diambil langsung dari
-data AISA." Di bawahnya tiga kartu contoh, mis. **Fintech sangat cocok**, **Berkualitas, di luar
-fokus**, **Alasan skor** ("Kenapa skor Kopi Teras Senja segitu?"). Kolom ketik berplaceholder
+data AISA." Di bawahnya tiga kartu contoh, mis. **Fintech sangat layak**, **Di luar fokus**, **Alasan skor** ("Kenapa skor Kopi Teras Senja segitu?"). Kolom ketik berplaceholder
 **Tanya AISA tentang proposal Anda…**, dan catatan kecil "Jawaban diambil dari data proposal.
 Keputusan tetap di tangan Anda." Tombol bulat kanan bawah berubah menjadi ✕. Cek: angka _N_
 sama dengan jumlah proposal di halaman **Proposal**, dan nama di contoh **Alasan skor** adalah
@@ -150,7 +149,7 @@ dengan daftar di **Proposal** yang berstatus **Belum ditanggapi**.
 1. Ketik `Mana yang sebaiknya saya cek dulu minggu ini, dan kenapa?` lalu tekan Enter.
 
 **Yang seharusnya terlihat:** jawaban terbagi dua. Bagian atas berisi fakta dari data (nama,
-skor kualitas, kategori) tanpa label. Bagian bawah berada di **kotak bergaris putus-putus**
+skor kualitas, grade) tanpa label. Bagian bawah berada di **kotak bergaris putus-putus**
 dan diawali **💡 Saran AI (bukan dari data proposal):**. Semua penilaian (urutan prioritas,
 alasan, risiko) ada di dalam kotak itu, tidak di bagian atas. Cek juga kebalikannya: pertanyaan
 data biasa (UC-AST-03) tidak boleh punya kotak 💡.
@@ -181,13 +180,13 @@ diminta dalam bentuk singkat (mis. "Rp15 M"). Cek dengan dana di halaman detail 
 **Yang seharusnya terlihat:** panel memenuhi seluruh layar, tombol bulat kanan bawah hilang.
 Di kiri ada panel samping berisi tombol **Percakapan baru**, kolom **Cari percakapan**, daftar
 riwayat percakapan yang dikelompokkan per tanggal (lihat UC-AST-17), dan di bawahnya kotak
-**DATA SAAT INI** berisi **Total proposal**, **Belum ditanggapi**, **Sangat cocok, menunggu**.
+**DATA SAAT INI** berisi **Total proposal**, **Belum ditanggapi**, dan **Sangat layak, menunggu**.
 Bila percakapan yang terbuka masih kosong, di tengah tampil **Halo**, judul kecil **COBA
-TANYAKAN**, dan enam kartu contoh (**Fintech sangat cocok**, **Berkualitas, di luar fokus**,
+TANYAKAN**, dan enam kartu contoh (**Fintech sangat layak**, **Di luar fokus**,
 **Alasan skor**, **Bandingkan proposal**, **Pertanyaan untuk founder**, **Dana di bawah Rp3 M**).
 Ikon di kepala berubah menjadi **Kecilkan jendela**. Cek: **Total proposal** sama dengan jumlah
-di halaman **Proposal**; **Sangat cocok, menunggu** sama dengan jumlah Sangat cocok yang belum
-ditanggapi. Di layar sempit (ponsel), panel samping tidak tampil dan kartu contoh hanya empat;
+di halaman **Proposal**; angka **Sangat layak, menunggu** sama dengan jumlah Sangat layak yang
+belum ditanggapi. Di layar sempit (ponsel), panel samping tidak tampil dan kartu contoh hanya empat;
 riwayat dibuka lewat ikon jam di kepala panel.
 **Kalau berbeda:** catat angka di kotak dan di halaman Proposal.
 
@@ -229,7 +228,7 @@ pertamanya.
 **Sebelum mulai:** panel Tanya AISA terbuka.
 **Langkah:**
 
-1. Ketik `Bandingkan semua proposal Sangat cocok secara rinci` lalu Enter.
+1. Ketik `Bandingkan semua proposal Sangat layak secara rinci` lalu Enter.
 2. Selagi tiga titik memantul, klik tombol kotak hitam (**Berhenti menunggu jawaban**).
 
 **Yang seharusnya terlihat:** tiga titik hilang, tombol kembali menjadi **Kirim**, dan Anda bisa
@@ -303,7 +302,7 @@ orang; kembalikan dengan LANJUT di akhir, dan lakukan saat tidak ada proposal ya
 2. Di kotak **Status AI**, klik **STOP**. Toast **AI dijeda (STOP).** muncul dan label berubah
    menjadi **Dijeda (STOP)**.
 3. Buka Tanya AISA (tutup dulu lalu buka lagi bila sudah terbuka).
-4. Ketik `Berapa proposal Sangat cocok?` lalu Enter.
+4. Ketik `Berapa proposal Sangat layak?` lalu Enter.
 5. Kembali ke **Pengaturan** → **Integrasi**, klik **LANJUT**. Toast **AI dilanjutkan
    (LANJUT).** muncul.
 
@@ -347,7 +346,7 @@ menunggu dan baru terkirim setelah jawaban pertama selesai.
 
 **Yang seharusnya terlihat:** kotak pencarian tertutup, panel Tanya AISA terbuka dan langsung
 mengirim "Ringkas peluang minggu ini". Jawabannya berisi daftar proposal dengan skor kualitas
-dan kategori.
+dan grade.
 **Kalau berbeda:** catat bila **Tanya asisten** tidak ada di grup **Perintah**.
 
 ### UC-AST-16 · Tanya AISA tidak menjalankan perintah
@@ -416,14 +415,15 @@ Balasan **pertanyaan** ditulis oleh AI, jadi kata-katanya bebas; yang dicek adal
 
 ### UC-WA-01 · Owner bertanya lewat WA tentang proposal A
 
-**Situasi:** Anda di jalan dan ingin tahu kenapa Kelas Kode Rakyat masuk Sangat cocok.
+**Situasi:** Anda di jalan dan ingin tahu kenapa Kelas Kode Rakyat masuk Sangat layak (pakai proposal
+Sangat layak yang ada di dashboard Anda).
 **Sebelum mulai:** AISA tidak sedang dijeda.
 **Langkah:**
 
-1. Kirim: `Kenapa Kelas Kode Rakyat masuk sangat cocok?`
+1. Kirim: `Kenapa Kelas Kode Rakyat masuk sangat layak?`
 
 **Yang seharusnya terlihat:** di kepala chat muncul "mengetik…" selama AISA menyiapkan jawaban.
-Balasan menyebut skor kualitas (mis. 85,6, desimal pakai koma), kategori, dan nilai kriteria
+Balasan menyebut skor kualitas (mis. 85,6, desimal pakai koma), grade, dan nilai kriteria
 1–5 beserta alasannya. Tebal ditulis dengan satu bintang (`*seperti ini*`), tanpa tabel. Cek di
 dashboard: angka sama persis dengan halaman detail Kelas Kode Rakyat. Pekerjaan ini juga muncul
 di **Aktivitas AI** sebagai **Asisten**, "Menjawab pertanyaan manajer".
@@ -448,9 +448,9 @@ mulai percakapan baru, tapi tetap ingat preferensi gaya Anda.
 **Sebelum mulai:** —
 **Langkah:**
 
-1. Kirim: `Dari yang sangat cocok, mana yang sebaiknya saya undang dulu?`
+1. Kirim: `Dari yang sangat layak, mana yang sebaiknya saya undang dulu?`
 
-**Yang seharusnya terlihat:** balasan berisi fakta dulu (nama, skor, kategori), lalu bagian yang
+**Yang seharusnya terlihat:** balasan berisi fakta dulu (nama, skor, grade), lalu bagian yang
 diawali `💡 *Saran AI (bukan dari data proposal):*` berisi urutan dan alasannya. AISA tidak
 mengubah status apa pun dan tidak mengaku sudah mengundang; di dashboard, status proposal tetap
 sama.
@@ -502,45 +502,47 @@ muncul baris "UJI Satu **diarsipkan**" dengan "Sebelumnya: Dipantau" dan keteran
 WhatsApp".
 **Kalau berbeda:** catat urutan status yang tampil di Riwayat.
 
-### UC-WA-07 · Owner menyuruh AISA mengarsipkan semua yang tidak cocok (tanpa YA)
+### UC-WA-07 · Owner menyuruh AISA mengarsipkan semua yang tidak layak (tanpa YA)
 
 **Situasi:** Anda ingin tahu apa yang akan diarsipkan sebelum benar-benar mengarsipkan.
-**Sebelum mulai:** di dashboard, catat proposal berkategori **Tidak cocok** yang belum
-ditanggapi (mis. PT Hanum Fashion, Saku Hukum). Use case ini tidak mengubah apa pun selama Anda
+**Sebelum mulai:** di dashboard, catat proposal ber-grade **Tidak layak** yang belum
+ditanggapi. Use case ini tidak mengubah apa pun selama Anda
 **tidak** membalas YA.
 **Langkah:**
 
-1. Kirim: `arsipkan semua tidak cocok`
+1. Kirim: `arsipkan semua tidak layak`
 2. Jangan balas apa-apa.
 
 **Yang seharusnya terlihat:** balasan dua baris:
 
 ```text
-Ada 2 proposal Tidak cocok yang belum ditanggapi: PT Hanum Fashion, Saku Hukum
+Ada 2 proposal Tidak layak yang belum ditanggapi: <nama 1>, <nama 2>
 Balas YA dalam 10 menit untuk arsipkan semuanya.
 ```
 
 Jumlah dan nama harus sama dengan catatan Anda (paling banyak 15 nama ditulis, sisanya "…").
 Status di dashboard belum berubah. Perintah yang sama berlaku untuk `undang semua …` dan
-`pantau semua …`, dengan kategori `sangat cocok`, `cocok`, `kurang cocok`, atau `tidak cocok`.
+`pantau semua …`, dengan grade `sangat layak`, `layak bersyarat`, `perlu penyesuaian`, `risiko
+tinggi`, atau `tidak layak` (huruf besar-kecil dan jumlah spasi bebas). `layak` saja bukan nama
+grade.
 **Kalau berbeda:** nama yang tidak cocok dengan dashboard dicatat.
 
 ### UC-WA-08 · Mengonfirmasi tanggapan massal dengan YA ⚠️
 
-**Situasi:** Anda yakin dan ingin mengarsipkan semua proposal di satu kategori.
-**Sebelum mulai:** perintah massal ini mengenai **semua** proposal belum ditanggapi di kategori
-itu, termasuk proposal sungguhan. Jalankan hanya bila kategori yang dipilih berisi proposal uji
-saja (cek di **Proposal** dengan filter kategori), atau bila Anda memang ingin mengarsipkan
+**Situasi:** Anda yakin dan ingin mengarsipkan semua proposal di satu grade.
+**Sebelum mulai:** perintah massal ini mengenai **semua** proposal belum ditanggapi di grade
+itu, termasuk proposal sungguhan. Jalankan hanya bila grade yang dipilih berisi proposal uji
+saja (cek di **Proposal** dengan filter grade), atau bila Anda memang ingin mengarsipkan
 semuanya.
 **Langkah:**
 
-1. Kirim perintah massal, mis. `arsipkan semua kurang cocok`.
+1. Kirim perintah massal, mis. `arsipkan semua risiko tinggi`.
 2. Dalam 10 menit, balas: `YA` (atau `ya` / `iya`).
 
 **Yang seharusnya terlihat:** balasan persis: `Selesai: N proposal ditandai arsipkan.` (N sama
 dengan jumlah di pesan sebelumnya, atau lebih kecil bila sebagian sudah ditanggapi di dashboard
 selama menunggu). Di **Riwayat** muncul **Tanggapan massal: diarsipkan** dengan keterangan
-"Arsipkan semua kurang cocok: N proposal (…nama…)" via WhatsApp. Setiap proposal itu kini
+"Arsipkan semua risiko tinggi: N proposal (…nama…)" via WhatsApp. Setiap proposal itu kini
 **Diarsipkan**.
 **Kalau berbeda:** bila N di balasan berbeda dari yang berubah di dashboard, catat.
 
@@ -559,64 +561,65 @@ Kirim ulang perintahnya.` Langkah 2: `Tidak ada perintah yang menunggu konfirmas
 proposal tidak berubah.
 **Kalau berbeda:** bila YA terlambat tetap mengarsipkan, itu bug serius.
 
-### UC-WA-10 · Tanggapan massal untuk kategori kosong
+### UC-WA-10 · Tanggapan massal untuk grade kosong
 
-**Situasi:** Anda memberi perintah massal untuk kategori yang tidak punya proposal belum
+**Situasi:** Anda memberi perintah massal untuk grade yang tidak punya proposal belum
 ditanggapi.
-**Sebelum mulai:** di dashboard, pastikan satu kategori (mis. **Kurang cocok**) tidak punya
+**Sebelum mulai:** di dashboard, pastikan satu grade (mis. **Perlu penyesuaian**) tidak punya
 proposal belum ditanggapi.
 **Langkah:**
 
-1. Kirim: `pantau semua kurang cocok`
+1. Kirim: `pantau semua perlu penyesuaian`
 
-**Yang seharusnya terlihat:** `Tidak ada proposal Kurang cocok yang belum ditanggapi.` Tidak
+**Yang seharusnya terlihat:** `Tidak ada proposal Perlu penyesuaian yang belum ditanggapi.` Tidak
 ada yang perlu dikonfirmasi.
 **Kalau berbeda:** catat balasannya.
 
-### UC-WA-11 · Memindahkan kategori dengan alasan ⚠️
+### UC-WA-11 · Memindahkan grade dengan alasan ⚠️
 
-**Situasi:** Anda tidak setuju dengan kategori dari AI dan ingin memindahkannya.
+**Situasi:** Anda tidak setuju dengan grade dari AI dan ingin memindahkannya.
 **Sebelum mulai:** proposal uji `UJI Dua` berstatus **Dinilai**. Catat skor kualitasnya.
 **Langkah:**
 
-1. Kirim: `pindahkan UJI Dua ke cocok karena timnya sudah pernah exit`
+1. Kirim: `pindahkan UJI Dua ke layak bersyarat karena timnya sudah pernah exit`
 2. Di dashboard, buka detail **UJI Dua**.
 
-**Yang seharusnya terlihat:** balasan persis: `Kategori UJI Dua dipindahkan ke Cocok. Skor
-kualitas tetap <skor>.` (skor ditulis dengan koma, mis. 62,5). Di detail: badge kategori menjadi
-**Cocok** dengan badge **dikoreksi**, dan kartu **Kategori kurang pas?** berbunyi "AI menilai …,
-lalu dikoreksi ke Cocok (_tanggal_, WhatsApp): “timnya sudah pernah exit”." Skor tidak berubah.
-Di **Riwayat** muncul "Kategori UJI Dua **dikoreksi**" dengan alasan dalam tanda kutip, via
+**Yang seharusnya terlihat:** balasan persis: `Grade UJI Dua dipindahkan ke Layak bersyarat.
+Skor kualitas tetap <skor>.` (skor ditulis dengan koma, mis. 62,5). Di detail: badge grade menjadi
+**Layak bersyarat** dengan badge **dikoreksi**, dan kartu **Grade kurang pas?** berbunyi "AI
+menilai <grade dari AI>, lalu dikoreksi ke Layak bersyarat (<tanggal, jam>, WhatsApp): “timnya
+sudah pernah exit”." Skor tidak berubah. Di **Riwayat**, tab **Koreksi**, muncul baris "Grade UJI
+Dua dikoreksi" dengan badge grade lama → **Layak bersyarat** dan alasan dalam tanda kutip, via
 WhatsApp.
 **Kalau berbeda:** bila skornya ikut berubah, catat.
 
-### UC-WA-12 · Memindahkan kategori tanpa alasan
+### UC-WA-12 · Memindahkan grade tanpa alasan
 
 **Situasi:** Anda lupa menulis alasan.
 **Sebelum mulai:** — (tidak ada data yang berubah)
 **Langkah:**
 
-1. Kirim: `pindahkan UJI Dua ke sangat cocok`
-2. Kirim: `pindahkan UJI Dua ke sangat cocok karena`
+1. Kirim: `pindahkan UJI Dua ke sangat layak`
+2. Kirim: `pindahkan UJI Dua ke sangat layak karena`
 
-**Yang seharusnya terlihat:** kedua pesan dibalas sama: `Koreksi kategori perlu alasan. Contoh:
-pindahkan UJI Dua ke sangat cocok karena <alasan>`. Kategori di dashboard tidak berubah.
-Nama dicek lebih dulu daripada alasan: `pindahkan Xyzabc ke cocok` (nama yang tidak ada, tanpa
+**Yang seharusnya terlihat:** kedua pesan dibalas sama: `Koreksi grade perlu alasan. Contoh:
+pindahkan UJI Dua ke sangat layak karena <alasan>`. Grade di dashboard tidak berubah.
+Nama dicek lebih dulu daripada alasan: `pindahkan Xyzabc ke layak bersyarat` (nama yang tidak ada, tanpa
 alasan) dibalas `Proposal "Xyzabc" tidak ditemukan. Tidak ada yang diubah.`, bukan permintaan
 alasan. Nama yang cocok dengan beberapa proposal dibalas daftar seperti UC-WA-14.
-**Kalau berbeda:** bila kategori berubah tanpa alasan, itu bug.
+**Kalau berbeda:** bila grade berubah tanpa alasan, itu bug.
 
 ### UC-WA-13 · Memindahkan proposal yang perlu dicek manual
 
-**Situasi:** Anda mencoba memindahkan kategori proposal yang belum punya kategori.
+**Situasi:** Anda mencoba memindahkan grade proposal yang belum punya grade.
 **Sebelum mulai:** ada proposal berstatus **Perlu dicek manual** (mis. Lumbung Ikan Pesisir).
 Tidak ada data yang berubah.
 **Langkah:**
 
-1. Kirim: `pindahkan Lumbung Ikan Pesisir ke cocok karena uji`
+1. Kirim: `pindahkan Lumbung Ikan Pesisir ke layak bersyarat karena uji`
 
 **Yang seharusnya terlihat:** `Tidak bisa dijalankan: hanya proposal yang sudah dinilai yang
-punya kategori`. Proposal tetap **Perlu dicek manual**.
+punya grade`. Proposal tetap **Perlu dicek manual**.
 **Kalau berbeda:** catat balasannya.
 
 ### UC-WA-14 · Nama proposal ambigu
@@ -661,7 +664,7 @@ LANJUT (UC-WA-18) di akhir.
 **Langkah:**
 
 1. Kirim: `STOP`
-2. Kirim: `Berapa proposal yang sangat cocok?`
+2. Kirim: `Berapa proposal yang sangat layak?`
 3. Di dashboard, buka **Dashboard** dan **Pengaturan** → **Integrasi**.
 
 **Yang seharusnya terlihat:** langkah 1: `AISA dijeda (STOP). Proposal baru akan antre. Kirim
@@ -725,21 +728,22 @@ untuk mencocokkan angka.
 **Langkah:**
 
 1. Buka pesan ringkasan dari bot.
-2. Bandingkan dengan halaman **Proposal** (filter yang belum ditanggapi per kategori).
+2. Bandingkan dengan halaman **Proposal** (filter yang belum ditanggapi per grade).
 
 **Yang seharusnya terlihat:** pesan diawali salam sesuai jam kirim ("Selamat pagi" / "Selamat
 siang" / "Selamat sore" / "Selamat malam") dan sapaan (mis. "Pak"), lalu "Sejak ringkasan _hari_
 pukul _jam_ masuk _N_ proposal baru. Ada _M_ proposal yang belum Bapak tanggapi." Isinya per
-kategori dengan judul tebal:
+grade dengan judul tebal:
 
-- **Sangat cocok (n)**: daftar bernomor, tiap baris nama (sektor, dana) · skor, plus satu
-  kalimat alasan.
-- **Cocok (n)**: nama dan skor dalam satu baris.
-- **Kurang cocok (n)** dan **Tidak cocok (n)**: hanya jumlah.
-- **Berkualitas, di luar fokus (n)**: hanya muncul bila ada, dengan alasan tidak masuk fokus.
+- **Sangat layak (n)**, **Layak bersyarat (n)**, **Perlu penyesuaian (n)**, **Risiko tinggi
+  (n)**, **Tidak layak (n)**, berurutan dari grade tertinggi.
+- Dalam satu grade, proposal yang sesuai fokus disebut lebih dulu; proposal di luar fokus ditandai
+  "(di luar fokus)". **Risiko tinggi** dan **Tidak layak** hanya berisi jumlah, tanpa nama.
+- Bila ada proposal di luar fokus, ada baris "_N_ di antaranya di luar fokus (sektor, tahap, atau
+  dana): prioritas rendah."
 - **Perlu dicek manual (n)**: hanya muncul bila ada, berisi nama (mis. Lumbung Ikan Pesisir).
 - Baris terakhir diawali **Yang menarik:**, satu fakta dari data (mis. tren sektor atau jumlah
-  proposal baru yang cocok).
+  proposal baru dengan grade teratas).
 
 Hanya proposal **belum ditanggapi** yang dihitung. Ringkasan tidak berisi saran (tidak menyuruh
 mengundang atau mengarsipkan). Cek: setiap angka dan nama sama dengan dashboard; tidak ada angka
@@ -760,7 +764,7 @@ memakai teks bawaan tanpa dirapikan AI.
    **Lihat isi**.
 
 **Yang seharusnya terlihat:** baris berbunyi "Ke WhatsApp · _M_ proposal menunggu keputusan"
-(ditambah "· template" bila teksnya teks bawaan). **Lihat isi** membuka jumlah per kategori,
+(ditambah "· template" bila teksnya teks bawaan). **Lihat isi** membuka jumlah per grade (termasuk jumlah di luar fokus),
 kalimat "Yang menarik", dan teks pesan lengkap; isinya sama dengan pesan di WA. Untuk melihat
 bentuk pesan sebelum jam kirim, buka **Pengaturan** → **Ringkasan WhatsApp** → **Pratinjau
 pesan**.
@@ -817,7 +821,7 @@ deck sintetis). AISA tidak dijeda.
 3. Klik **UJI Form Satu**.
 
 **Yang seharusnya terlihat:** proposal muncul mula-mula **Antre**, lalu **Sedang dinilai**, lalu
-**Dinilai** dalam sekitar satu menit, dengan skor kualitas dan kategori. Daftar **Proposal** perlu
+**Dinilai** dalam sekitar satu menit, dengan skor kualitas dan grade. Daftar **Proposal** perlu
 dimuat ulang, tetapi halaman detail yang dibuka selagi **Antre** atau **Sedang dinilai** memperbarui
 dirinya sendiri setiap beberapa detik (paling lama sekitar lima menit). Di detail, kartu founder
 menampilkan nama dan email, tombol **Email**, dan baris "Form · _nama berkas_ · _N_ halaman".
@@ -870,10 +874,10 @@ membaca.
 
 **Yang seharusnya terlihat:** badge kuning **Perlu dicek manual** di bawah nama, disertai alasan
 mis. "teks terlalu sedikit (0 karakter di 10 halaman)". Kotak **Skor kualitas** berisi "—" dan
-"Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori." Tidak ada kategori dan tidak
-ada kartu **Kategori kurang pas?**. Proposal ini tetap muncul di ringkasan WA pada baris
+"Tidak dinilai: deck perlu dicek manual, tanpa skor dan grade." Tidak ada grade dan tidak
+ada kartu **Grade kurang pas?**. Proposal ini tetap muncul di ringkasan WA pada baris
 **Perlu dicek manual**.
-**Kalau berbeda:** bila proposal ini punya skor atau kategori, catat.
+**Kalau berbeda:** bila proposal ini punya skor atau grade, catat.
 
 ### UC-FRM-05 · Deck hasil scan dibaca sebagai gambar ⚠️
 
@@ -889,10 +893,10 @@ sebagai PDF, sehingga teksnya tidak bisa diblok di pembaca PDF. Jaga ukurannya p
 
 **Yang seharusnya terlihat:** karena teksnya tidak bisa diambil, AI membaca deck sebagai
 gambar dan menyalin teks yang terlihat di tiap halaman. Bila slide-nya terbaca, status akhirnya
-**Dinilai** dengan skor dan kategori seperti deck biasa, dan kutipannya berasal dari teks
+**Dinilai** dengan skor dan grade seperti deck biasa, dan kutipannya berasal dari teks
 salinan itu. Di **Log penilaian** muncul langkah **AI membaca deck sebagai gambar** (bertanda
 **AI**) di antara **Memeriksa deck bisa dibaca** dan **AI menilai 5 kriteria**. Status
-**Perlu dicek manual** (tanpa skor dan kategori, seperti UC-FRM-04) hanya muncul bila deck
+**Perlu dicek manual** (tanpa skor dan grade, seperti UC-FRM-04) hanya muncul bila deck
 tetap tidak terbaca, dengan alasan "teks terlalu sedikit, juga setelah dibaca sebagai gambar
 (…)", atau bila deck lebih dari 15 MB atau 50 halaman, dengan alasan "… terlalu besar untuk
 dibaca sebagai gambar (maks. 15 MB dan 50 halaman)". Hapus dengan **Hapus data** setelah

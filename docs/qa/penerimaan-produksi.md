@@ -1,5 +1,12 @@
 # Penerimaan di produksi lewat API dan webhook — matriks penerimaan
 
+> **Skala penilaian lama.** Putaran uji di dokumen ini yang dijalankan sebelum 22 Oktober 2026
+> memakai skala lama: empat kategori (Sangat cocok, Cocok, Kurang cocok, Tidak cocok; proposal di
+> luar fokus selalu Tidak cocok, dengan tanda "Berkualitas, di luar fokus") dan kriteria lama
+> (Tim, Pasar & masalah, Produk & keunggulan, Traksi, Model bisnis & keuangan). Hasilnya dibiarkan
+> apa adanya sebagai catatan. Skala yang berlaku sekarang (kriteria A–E, lima grade, label Di luar
+> fokus) ada di [`overview-project.md`](../../overview-project.md) §3.
+
 Penguji: agent penguji (bukan penulis kodenya). Matriks ditulis dari `services/api/README.md`
 (tabel rute, "Deleting a proposal", perintah WhatsApp), `GLOSSARY.md`, `tech.md` §E, dan
 celah di [`inventaris-fitur.md`](inventaris-fitur.md). `aisa/orchestrator.py` dan

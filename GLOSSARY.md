@@ -13,8 +13,12 @@ Berkas PDF yang dilampirkan founder; yang dinilai hanya teks per halamannya (unt
 _Avoid_: dokumen, file
 
 **Skor kualitas**:
-Angka 0–100 yang dihitung kode dari nilai 1–5 lima kriteria dan bobot aturan penilaian aktif.
+Angka 0–100 yang dihitung kode dari nilai 1–5 lima kriteria (A–E) dan bobot aturan penilaian aktif.
 _Avoid_: skor AI, rating
+
+**Kriteria**:
+Lima hal yang dinilai Penilai, berurutan A–E: Tim manajemen, Kinerja bisnis saat ini, Risiko bisnis & tren makro (nilai tinggi = risiko rendah dan tren mendukung), Rencana bisnis & potensi imbal hasil, Potensi dampak.
+_Avoid_: tim, pasar, produk, traksi, model bisnis (kriteria skala lama)
 
 **Nilai kriteria**:
 Angka 1–5 yang diberi Penilai untuk satu kriteria, selalu disertai kutipan halaman atau tanda "tidak disebut".
@@ -25,16 +29,16 @@ Pencocokan sektor, tahap pendanaan, dan besar dana proposal dengan tesis dana; b
 _Avoid_: filter, screening
 
 **Aturan penilaian**:
-Kumpulan bobot, patokan nilai, aturan kecocokan, dan batas kategori yang berlaku; berversi dan diubah manajer di halaman Aturan penilaian (`/aturan`).
+Kumpulan bobot, patokan nilai, aturan kecocokan, dan batas skor grade yang berlaku; berversi dan diubah manajer di halaman Aturan penilaian (`/aturan`).
 _Avoid_: rubrik (untuk keseluruhan), config, Sheets
 
-**Kategori**:
-Salah satu dari Sangat cocok, Cocok, Kurang cocok, Tidak cocok — ditentukan kode dari skor kualitas dan cek kecocokan.
-_Avoid_: label, tier, status
+**Grade**:
+Salah satu dari Sangat layak (skor 85–100), Layak bersyarat (75–84), Perlu penyesuaian (65–74), Risiko tinggi (50–64), Tidak layak (< 50) — ditentukan kode dari skor kualitas saja, dengan batas dari aturan penilaian. Disebut juga kategori (field `category`).
+_Avoid_: tier, status, Sangat cocok/Cocok/Kurang cocok/Tidak cocok (skala lama)
 
-**Berkualitas, di luar fokus**:
-Tanda pada proposal Tidak cocok yang gagal cek kecocokan tetapi skor kualitasnya ≥ 65.
-_Avoid_: kategori tersendiri
+**Di luar fokus**:
+Label prioritas rendah pada proposal yang gagal cek kecocokan; grade-nya tidak berubah, tetapi dalam urutan ia ditaruh setelah proposal se-grade yang sesuai fokus.
+_Avoid_: grade tersendiri, Berkualitas di luar fokus
 
 **Perlu dicek manual**:
 Status proposal yang tidak bisa dinilai (teks terlalu sedikit atau penilaian gagal validasi); tidak punya skor maupun kategori.
@@ -47,12 +51,12 @@ Keputusan manajer atas proposal: undang, pantau, atau arsipkan. Proposal bertang
 _Avoid_: aksi, keputusan AI, follow-up
 
 **Belum ditanggapi**:
-Proposal yang belum pernah diberi tanggapan, termasuk yang kategorinya sudah dikoreksi.
+Proposal yang belum pernah diberi tanggapan, termasuk yang grade-nya sudah dikoreksi.
 _Avoid_: baru, pending
 
-**Koreksi kategori**:
-Penggantian kategori oleh manajer dengan alasan; kategori asli dan skor kualitas tetap tersimpan, dan koreksi bukan tanggapan.
-_Avoid_: override, ubah skor
+**Koreksi grade**:
+Penggantian grade oleh manajer dengan alasan; grade asli dari kode dan skor kualitas tetap tersimpan, dan koreksi bukan tanggapan.
+_Avoid_: koreksi kategori, override, ubah skor
 
 **Kategori efektif**:
 Kategori hasil koreksi bila ada, selain itu kategori dari kode; inilah yang dipakai ringkasan dan dashboard.

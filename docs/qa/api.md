@@ -1,5 +1,12 @@
 # aisa-api (rute, perintah, intake, ringkasan) — matriks penerimaan
 
+> **Skala penilaian lama.** Putaran uji di dokumen ini yang dijalankan sebelum 22 Oktober 2026
+> memakai skala lama: empat kategori (Sangat cocok, Cocok, Kurang cocok, Tidak cocok; proposal di
+> luar fokus selalu Tidak cocok, dengan tanda "Berkualitas, di luar fokus") dan kriteria lama
+> (Tim, Pasar & masalah, Produk & keunggulan, Traksi, Model bisnis & keuangan). Hasilnya dibiarkan
+> apa adanya sebagai catatan. Skala yang berlaku sekarang (kriteria A–E, lima grade, label Di luar
+> fokus) ada di [`overview-project.md`](../../overview-project.md) §3.
+
 Penguji: agent penguji pytest (bukan penulis kodenya). Ditulis dari `services/api/README.md`
 (tabel rute, "Behaviour worth knowing", perintah WhatsApp), `GLOSSARY.md`, dan celah di
 [`inventaris-fitur.md`](inventaris-fitur.md) sebelum membaca implementasinya; teks balasan

@@ -41,12 +41,13 @@ tertulis di `GLOSSARY.md`, `tech.md`, dan kontrak Firestore, lalu ditegakkan ole
   Hanya nomor manajer di `MANAGER_PHONES` yang dilayani, dan webhook wajib bertanda tangan
   HMAC.
 - **Setiap deck dinilai satu kali.** Semua angka (skor, cek kecocokan, kategori, hitungan
-  ringkasan) dihitung kode, bukan model. Rumus skor `Σ bobot × (nilai − 1) / 4` dan bobot
-  baseline berasal dari rata-rata Scorecard Method dan Hustle Fund.
+  ringkasan) dihitung kode, bukan model. Rumus skor `Σ bobot × (nilai − 1) / 4 × 100`; lima kriteria
+  A–E dan bobot bawaannya (25/20/20/25/10) mengikuti panduan scorecard bergaya Arunami yang
+  diadopsi tim, dan grade ditentukan dari skor saja.
 - **Kategori dan status adalah dua sumbu berbeda.** _Perlu dicek manual_ adalah status tanpa
-  skor dan tanpa kategori, bukan kategori kelima. _Berkualitas, di luar fokus_ adalah tanda
-  pada proposal Tidak cocok dengan skor ≥ 65, bukan kategori tersendiri.
-- **Makna "ditanggapi".** Tanggapan hanya undang, pantau, atau arsipkan. Koreksi kategori
+  skor dan tanpa grade, bukan grade keenam. _Di luar fokus_ adalah label prioritas
+  rendah dari cek kecocokan, bukan grade tersendiri, dan tidak mengubah grade.
+- **Makna "ditanggapi".** Tanggapan hanya undang, pantau, atau arsipkan. Koreksi grade
   **bukan** tanggapan: proposal yang dikoreksi tetap _belum ditanggapi_ dan tetap muncul di
   ringkasan dengan **kategori efektifnya**. Kategori asli dan skor kualitas tidak pernah
   ditimpa, dan koreksi wajib beralasan.
@@ -109,7 +110,7 @@ Keluaran asisten koding tidak diterima hanya karena terlihat benar:
 - **Asisten** menjawab dari data AISA lewat tools baca. Saran yang tidak berasal dari data
   diberi label sebagai saran AI, dan data yang tidak ada dijawab "tidak tersedia" (lihat
   T08 di `docs/TESTING.md`).
-- **Keputusan** undang, pantau, arsipkan, koreksi kategori, dan STOP selalu datang dari
+- **Keputusan** undang, pantau, arsipkan, koreksi grade, dan STOP selalu datang dari
   manajer, dan setiap keputusan tercatat di Riwayat beserta jalurnya (WA atau dashboard).
 
 ### Transparansi pemakaian AI

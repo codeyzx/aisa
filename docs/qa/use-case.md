@@ -1,5 +1,12 @@
 # Use case AISA — status penerimaan
 
+> **Skala penilaian lama.** Putaran uji di dokumen ini yang dijalankan sebelum 22 Oktober 2026
+> memakai skala lama: empat kategori (Sangat cocok, Cocok, Kurang cocok, Tidak cocok; proposal di
+> luar fokus selalu Tidak cocok, dengan tanda "Berkualitas, di luar fokus") dan kriteria lama
+> (Tim, Pasar & masalah, Produk & keunggulan, Traksi, Model bisnis & keuangan). Hasilnya dibiarkan
+> apa adanya sebagai catatan. Skala yang berlaku sekarang (kriteria A–E, lima grade, label Di luar
+> fokus) ada di [`overview-project.md`](../../overview-project.md) §3.
+
 Penguji: agent penguji (bukan penulis kodenya). Daftar 14 use case diambil dari dokumen use case
 produk (lima kelompok: proposal masuk dan penilaian, ringkasan harian, menanggapi proposal,
 Asisten, dashboard dan pengaturan). UC14 di sini adalah aturan yang diubah di halaman

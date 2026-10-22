@@ -4,7 +4,7 @@
 
 Panduan ini untuk Anda, pemilik produk, yang ingin mencoba sendiri empat halaman "di balik layar"
 AISA: **Aktivitas AI** (apa yang dikerjakan AI, berapa token, berapa lama), **Riwayat** (jejak
-audit siapa melakukan apa), **Aturan penilaian** (cara AISA menghitung skor dan kategori), dan
+audit siapa melakukan apa), **Aturan penilaian** (cara AISA menghitung skor dan grade), dan
 **Pengaturan** (akun, tema, ringkasan WhatsApp, integrasi, privasi). Sebagian besar langkah hanya
 membaca. Langkah yang mengubah data ditandai ⚠️. Untuk langkah itu, selalu kembalikan nilai semula
 setelah selesai. Nama proposal di sini (mis. Kopi Teras Senja, Kelas Kode Rakyat) hanya contoh dari
@@ -43,7 +43,7 @@ Aturan penilaian
 - UC-ATR-01 · Memahami tiga langkah cara AISA menilai
 - UC-ATR-02 · Kriteria mana yang paling berpengaruh
 - UC-ATR-03 · Kenapa satu proposal dapat skor sekian
-- UC-ATR-04 · Berapa proposal di tiap kategori
+- UC-ATR-04 · Berapa proposal di tiap grade
 - UC-ATR-05 · Sektor, tahap, dan dana yang menjadi fokus
 - UC-ATR-06 · Seberapa sering Anda tidak setuju dengan AI
 - UC-ATR-07 · Melihat dampak perubahan aturan tanpa menyimpan
@@ -181,7 +181,7 @@ token.
 
 1. Buka salah satu kartu "Menilai proposal …".
 2. Lihat baris dengan tulisan **(kode)** di kolom **Aksi**, mis. "Hitung skor (kode)", "Cek kecocokan
-   (kode)", "Tentukan kategori (kode)".
+   (kode)", "Tentukan grade (kode)".
 3. Gulir ke bawah daftar dan baca catatan kecil di bagian paling bawah.
 
 **Yang seharusnya terlihat:** setiap baris **(kode)** menampilkan `0` di kolom **Token masuk /
@@ -231,7 +231,7 @@ Senja.
 
 - Panel **Log penilaian** menampilkan tiga angka: **Lama penilaian** (mis. `12 dtk`), **Token AI**
   (mis. `4,4 rb`), dan **Langkah oleh AI** (mis. `1/9`). Di bawahnya ada urutan langkah. Setiap
-  langkah diberi badge **AI**, **Sistem**, atau **Manajer**. Koreksi kategori manajer juga ikut
+  langkah diberi badge **AI**, **Sistem**, atau **Manajer**. Koreksi grade oleh manajer juga ikut
   muncul.
 - Setelah klik **Semua aktivitas AI**, URL berubah ke
   `/aktivitas?job=penilaian-…#job-penilaian-…`. Halaman langsung bergulir ke kartu "Menilai proposal
@@ -288,7 +288,7 @@ siapa melakukan apa, dan kapan".
 
 - Di kanan judul tertulis "Dibanding 7 hari sebelumnya · klik kartu untuk menyaring".
 - Ada empat kartu: **Keputusan dibuat**, **Dinilai AI**, **Ringkasan terkirim**, **Koreksi
-  kategori**. Masing-masing berisi angka, selisih dengan minggu sebelumnya (`+13`, `−2`, atau
+  grade**. Masing-masing berisi angka, selisih dengan minggu sebelumnya (`+13`, `−2`, atau
   `sama`), batang kecil per hari, dan catatan. Contoh catatan: "1 diundang · 1 dipantau · 1
   diarsip · 10 tanpa rincian", "Rata-rata skor 74,5", "9 keputusan dibalas lewat WhatsApp", "75%
   dari penilaian minggu ini".
@@ -312,14 +312,21 @@ adalah keputusan untuk proposal yang sudah dihapus, karena jenis keputusannya ik
 2. Klik tab lain satu per satu, lalu kembali ke **Semua**.
 
 **Yang seharusnya terlihat:** tab yang tersedia: **Semua**, **Keputusan**, **Penilaian AI**,
-**Proposal masuk**, **Ringkasan WA**, **Koreksi**, **Aturan**, **STOP/LANJUT**, **Dihapus**. Setiap
-tab punya angka jumlah. Angka tab **Semua** sama dengan jumlah angka tab lainnya. Di tab **Aturan**,
+**Dinilai ulang** (hanya bila ada proposal yang dinilai ulang dengan skala baru), **Proposal
+masuk**, **Ringkasan WA**, **Koreksi**, **Aturan**, **STOP/LANJUT**, **Dihapus**. Setiap tab punya
+angka jumlah. Angka tab **Semua** sama dengan jumlah angka tab lainnya. Di tab **Aturan**,
 setiap baris berjudul "Aturan penilaian diperbarui ke versi N", dengan catatan "Berlaku untuk
 proposal berikutnya. Skor lama tidak berubah." dan alasan dalam tanda kutip. Kejadian dikelompokkan
 per hari dengan judul **Hari ini**, **Kemarin**, atau nama hari dan tanggal, plus "N kejadian".
-Di tab **Proposal masuk**, catatan baris berbunyi seperti "Proposal <nama> masuk: skor 63,1, Tidak
-cocok": skor memakai koma desimal dan kategorinya kata tampilan, juga untuk baris lama yang dulu
-tersimpan sebagai `63.1, tidak_cocok`. Di tab **Penilaian AI**, sektor ditulis berhuruf besar
+Di tab **Proposal masuk**, catatan baris berbunyi seperti "Proposal <nama> masuk: skor 70,0,
+Perlu penyesuaian": skor memakai koma desimal dan grade-nya kata tampilan. Baris lama yang tersimpan
+dengan kategori skala lama (mis. `63.1, tidak_cocok`) tetap tampil tanpa error sebagai "skor 63,1,
+Tidak cocok (skala lama)" dan tidak terbaca sebagai grade baru. Di tab **Dinilai ulang**, setiap
+proposal yang dinilai ulang dengan skala baru punya baris via Sistem berjudul "<nama> dinilai ulang
+dengan skala baru", dengan badge redup skala lama (mis. **Sangat cocok (skala lama)**) → badge grade
+baru, lalu catatan seperti "<nama> dinilai ulang dengan skala baru: skor 70,0, Perlu penyesuaian".
+Di tab **Koreksi**, baris berjudul "Grade <nama> dikoreksi" dengan badge grade lama → grade baru dan
+alasannya; koreksi dari sebelum skala baru tampil dengan label "(skala lama)". Di tab **Penilaian AI**, sektor ditulis berhuruf besar
 seperti di daftar proposal (mis. **F&B**, bukan `f&b`).
 
 **Kalau berbeda:** kalau angka tab tidak cocok dengan jumlah baris, catat tabnya.
@@ -337,7 +344,7 @@ seperti di daftar proposal (mis. **F&B**, bukan `f&b`).
 3. Ketik `arsip` di kolom **Cari startup atau kejadian…**.
 
 **Yang seharusnya terlihat:** yang tersisa adalah baris arsip, mis. "Tanggapan massal: diarsipkan"
-dengan catatan "Arsipkan semua tidak cocok: 1 proposal (Balkan Gourmet)", atau "<nama proposal>
+dengan catatan "Arsipkan semua tidak layak: 1 proposal (<nama>)", atau "<nama proposal>
 diarsipkan". Di bawah setiap baris ada pelaku **Manajer** (lingkaran "M") dan kanal **via WhatsApp**
 atau **via Dashboard**. Muncul juga tombol **Reset filter**.
 
@@ -386,9 +393,11 @@ WhatsApp**.
 
 **Yang seharusnya terlihat:** di bawah judul ada catatan "Ke WhatsApp · N proposal menunggu
 keputusan" (ditambah "· template" kalau teks tidak dirapikan AI). Setelah **Lihat isi** diklik,
-muncul jumlah per kategori (**Sangat cocok**, **Cocok**, **Kurang cocok**, **Tidak cocok**, dan
-**Perlu dicek manual** kalau ada), lalu teks pesan persis seperti yang dikirim. Penanda tebal
-WhatsApp tetap terlihat sebagai `*…*`. Pelakunya **AISA**.
+muncul jumlah per grade (**Sangat layak**, **Layak bersyarat**, **Perlu penyesuaian**, **Risiko
+tinggi**, **Tidak layak**, jumlah **Di luar fokus**, dan **Perlu dicek manual** kalau ada), lalu
+teks pesan persis seperti yang dikirim. Penanda tebal WhatsApp tetap terlihat sebagai `*…*`.
+Pelakunya **AISA**. Ringkasan yang terkirim sebelum skala baru memakai label skala lama (mis. **Sangat
+cocok (skala lama)**); isinya tetap tampil tanpa error.
 
 **Kalau berbeda:** kalau baris ringkasan hanya berisi teks satu baris tanpa **Lihat isi**, catatan
 isi ringkasan itu tidak ditemukan. Lihat juga temuan di laporan: ringkasan yang dikirim ulang untuk
@@ -442,7 +451,7 @@ tetap ada tanpa data founder.
 **Langkah:**
 
 1. Klik tab **Dihapus**.
-2. Klik tab **Semua**, lalu cari baris berjudul "(dihapus) mengirim proposal" atau "Kategori
+2. Klik tab **Semua**, lalu cari baris berjudul "(dihapus) mengirim proposal" atau "Grade
    (dihapus) dikoreksi".
 
 **Yang seharusnya terlihat:** di tab **Dihapus**, setiap baris berjudul "Sebuah proposal dihapus"
@@ -496,15 +505,17 @@ dihitung sistem.
 - Kartu atas: "Aturan versi N" dengan badge **Sedang dipakai**, lalu "Disimpan di Firestore ·
   diperbarui <tanggal>, <jam> · <alasan>". Ada tombol **Riwayat perubahan** dan **Ubah aturan**.
   Di bawahnya ada catatan "Perubahan hanya berlaku untuk proposal yang masuk setelah disimpan. Skor
-  dan kategori proposal lama tidak dihitung ulang.".
+  dan grade proposal lama tidak dihitung ulang.".
 - Tiga kartu: **Langkah 1** (badge **AI**) "AI membaca pitch deck", hasil "5 nilai, skala 1–5".
   **Langkah 2** (badge **Sistem**) "Sistem menghitung skor", hasil "Skor 0–100", dengan contoh
-  "nilai Tim 4 × bobot 27,5% = 20,6 poin". **Langkah 3** (badge **Sistem**) "Sistem menentukan
-  kategori", hasil "1 dari 4 kategori".
-- Kotak hijau: "AI tidak menentukan kategori dan tidak mengambil keputusan."
+  nilai satu kriteria × bobotnya (mis. nilai Tim manajemen 4 × bobot 25% = 18,8 poin). **Langkah 3**
+  (badge **Sistem**) "Sistem menentukan grade", hasil "1 dari 5 grade, plus tanda fokus": grade dari
+  skor saja, dan proposal di luar fokus tetap mendapat grade-nya dengan tanda “Di luar fokus”.
+- Kotak hijau yang menegaskan AI tidak menentukan grade dan tidak mengambil keputusan.
 - Klik **Riwayat perubahan** membuka halaman **Riwayat**.
 
-**Kalau berbeda:** angka contoh di Langkah 2 harus sama dengan 3/4 bobot Tim saat ini. Catat kalau
+**Kalau berbeda:** angka contoh di Langkah 2 harus sama dengan 3/4 bobot kriteria
+itu saat ini. Catat kalau
 tidak.
 
 ### UC-ATR-02 · Kriteria mana yang paling berpengaruh
@@ -517,11 +528,11 @@ tidak.
 
 1. Lihat kartu **Bobot kriteria**.
 
-**Yang seharusnya terlihat:** lima baris: **Tim**, **Pasar & masalah**, **Produk & keunggulan**,
-**Traksi**, **Model bisnis & keuangan**. Setiap baris punya persen dan "maks. N poin" (mis. Tim
-`27,5%`, `maks. 27,5 poin`). Total kelima persen 100%. Di bawahnya ada kalimat "<kriteria> paling
-berpengaruh: nilai sempurna di kriteria ini menyumbang N dari 100 poin." (saat ini **Pasar &
-masalah**, 30). Di bawah halaman ada kartu **Dasar bobot (baseline)** yang menjelaskan asal angka
+**Yang seharusnya terlihat:** lima baris berurutan A–E: **Tim manajemen**, **Kinerja bisnis saat
+ini**, **Risiko bisnis & tren makro**, **Rencana bisnis & potensi imbal hasil**, **Potensi dampak**.
+Setiap baris punya persen dan "maks. N poin" (bawaan: 25%, 20%, 20%, 25%, 10%). Total kelima persen
+100%. Di bawahnya ada kalimat yang menyebut kriteria paling berpengaruh dan berapa poin yang
+disumbang nilai sempurna di kriteria itu. Di bawah halaman ada kartu **Bobot dari panduan** yang menjelaskan asal angka
 bobot itu.
 
 **Kalau berbeda:** catat kalau total persen tidak 100%.
@@ -538,36 +549,37 @@ bobot itu.
 2. Baca tabelnya, lalu klik **Buka proposal**.
 
 **Yang seharusnya terlihat:** tabel dengan kolom **Kriteria**, **Nilai AI** (mis. `5/5`), **Bobot**
-(`× 27,5%`), dan **Poin**. Baris akhirnya **Skor (1 desimal)**, mis. `100,0`. Kalau proposal dinilai
+(mis. `× 25%`), dan **Poin**. Baris akhirnya **Skor (1 desimal)**, mis. `100,0`. Kalau proposal dinilai
 dengan aturan versi lama, ada catatan "Proposal ini dinilai dengan aturan versi 1 (skor tersimpan
 100,0). Angka di atas memakai aturan versi 3.". Di bawahnya ada **Cek fokus** dengan tiga lencana
 **Sektor**, **Tahap**, **Dana** (hijau kalau lolos, merah kalau gagal), dan **Hasil** dengan badge
-kategori. **Buka proposal** membuka detail proposal itu.
+grade. **Buka proposal** membuka detail proposal itu.
 
-Contoh saat ini: Kopi Teras Senja (sektor f&b) gagal cek **Sektor**, jadi **Hasil** di sini **Tidak
-cocok**. Di daftar proposal, kategorinya **Sangat cocok** karena manajer mengoreksinya. Kotak ini
-selalu menghitung dari nilai AI dan aturan saat ini, tanpa memperhitungkan koreksi.
+Proposal yang gagal cek fokus (mis. sektor f&b) tetap mendapat grade dari skornya; kegagalan itu
+hanya membuatnya berlabel **Di luar fokus**. Kotak ini selalu menghitung dari nilai AI dan aturan
+saat ini, tanpa memperhitungkan koreksi manajer.
 
 **Kalau berbeda:** jumlah kolom **Poin** harus sama dengan skor. Catat kalau selisihnya lebih dari
 0,1.
 
-### UC-ATR-04 · Berapa proposal di tiap kategori
+### UC-ATR-04 · Berapa proposal di tiap grade
 
-**Situasi:** Anda ingin tahu batas skor tiap kategori dan sebaran proposal saat ini.
+**Situasi:** Anda ingin tahu batas skor tiap grade dan sebaran proposal saat ini.
 
 **Sebelum mulai:** berada di **Aturan penilaian**.
 
 **Langkah:**
 
-1. Lihat kartu **Batas kategori**.
-2. Klik **Lihat** di kotak **Cocok**.
-3. Kembali, lalu klik **Lihat proposal** di kotak "Proposal bagus di luar fokus tidak hilang.".
+1. Lihat kartu **Batas grade**.
+2. Klik **Lihat** di kotak **Layak bersyarat**.
 
-**Yang seharusnya terlihat:** skala "Sebaran skor N proposal yang sudah dinilai" dengan batas `45`,
-`65`, `80`. Ada empat kotak: **Sangat cocok** `≥ 80`, **Cocok** `≥ 65`, **Kurang cocok** `≥ 45`,
-**Tidak cocok** `< 45`. Masing-masing berisi aturan satu kalimat dan "N proposal · N%". **Lihat**
-membuka **Proposal** dengan URL `/proposal?kategori=cocok`, dan jumlah barisnya sama dengan angka
-kotak. **Lihat proposal** membuka `/proposal?luarFokus=1`.
+**Yang seharusnya terlihat:** skala sebaran skor proposal yang sudah dinilai dengan batas `50`,
+`65`, `75`, `85` (bawaan). Ada lima kotak: **Sangat layak** 85–100, **Layak bersyarat** 75–84,
+**Perlu penyesuaian** 65–74, **Risiko tinggi** 50–64, **Tidak layak** < 50, masing-masing dengan
+aksinya (Lanjutkan investasi, Investasi dengan syarat, Sesuaikan dulu sebelum lanjut,
+Pertimbangkan menolak, Tolak) dan "N proposal · N%". Batas yang tampil mengikuti aturan aktif,
+bukan angka tetap. **Lihat** membuka **Proposal** dengan URL `/proposal?kategori=layak_bersyarat`,
+dan jumlah barisnya sama dengan angka kotak.
 
 **Kalau berbeda:** catat kalau jumlah di kotak tidak sama dengan jumlah baris di daftar Proposal yang
 terbuka.
@@ -593,7 +605,7 @@ proposal saat ini lolos ketiga cek fokus.".
 
 ### UC-ATR-06 · Seberapa sering Anda tidak setuju dengan AI
 
-**Situasi:** Anda ingin tahu apakah kategori dari AI sering Anda koreksi, sebagai bahan untuk
+**Situasi:** Anda ingin tahu apakah grade dari AI sering Anda koreksi, sebagai bahan untuk
 menyesuaikan aturan.
 
 **Sebelum mulai:** berada di **Aturan penilaian**.
@@ -603,10 +615,11 @@ menyesuaikan aturan.
 1. Gulir ke kartu **Kalibrasi**.
 
 **Yang seharusnya terlihat:** bagian **Koreksi manajer** dengan tiga angka: **Ditinjau manajer**,
-**Dikoreksi**, dan **Arah koreksi** ("Naik kategori N · Turun kategori N"). Di bawahnya ada kalimat
+**Dikoreksi**, dan **Arah koreksi** ("Naik grade N · Turun grade N"). Di bawahnya ada kalimat
 "AI sepakat dengan manajer pada N dari M proposal yang ditinjau (…%)." dan tabel koreksi dengan kolom
-**Proposal**, **Kategori AI**, **Koreksi manajer**, **Alasan**, **Tanggal**, **Skor kualitas**
-(mis. Kopi Teras Senja, Tidak cocok → Sangat cocok (naik)). Bagian **Kalibrasi analis** berlabel
+**Proposal**, **Grade AI**, **Koreksi manajer**, **Alasan**, **Tanggal**, **Skor kualitas**
+(mis. <nama>, Perlu penyesuaian → Layak bersyarat (naik)). Koreksi yang dibuat dengan skala lama
+dihapus oleh migrasi grade, jadi tabel ini hanya memuat koreksi sesudahnya. Bagian **Kalibrasi analis** berlabel
 **belum ada data**. Kalau belum ada yang ditinjau, muncul teks "Belum ada proposal yang ditinjau
 manajer. …".
 
@@ -614,7 +627,7 @@ manajer. …".
 
 ### UC-ATR-07 · Melihat dampak perubahan aturan tanpa menyimpan
 
-**Situasi:** Anda ingin tahu berapa proposal yang akan pindah kategori kalau batas Sangat cocok
+**Situasi:** Anda ingin tahu berapa proposal yang akan pindah grade kalau batas Sangat layak
 dinaikkan, tanpa benar-benar mengubah aturan.
 
 **Sebelum mulai:** masuk sebagai admin. Langkah ini tidak menyimpan apa pun, asal Anda mengakhirinya
@@ -625,43 +638,38 @@ dengan **Batal**.
 1. Di **Aturan penilaian**, klik **Ubah aturan**.
 2. Di dialog **Ubah aturan penilaian**, lihat panel kanan **Dampak perubahan**. Di layar sempit,
    panel ini berupa satu baris di atas kolom alasan.
-3. Klik tab **Batas kategori**. Di kotak **Sangat cocok**, ganti **Skor minimal** dari `80` menjadi
-   `90`.
-4. Klik tab **Bobot kriteria**. Ganti bobot **Tim** menjadi `40` dan perhatikan baris **Total**.
+3. Klik tab **Batas grade**. Di kotak **Sangat layak**, ganti **Skor minimal** dari `85` menjadi `90`.
+4. Klik tab **Bobot kriteria**. Ganti bobot **Tim manajemen** menjadi `40` dan perhatikan baris
+   **Total**.
 5. Klik **Batal**.
 6. Klik **Ubah aturan** lagi.
 
 **Yang seharusnya terlihat:**
 
 - Dialog berjudul **Ubah aturan penilaian** dengan keterangan "Disimpan sebagai versi N+1. Berlaku
-  untuk proposal yang masuk setelah ini.". Ada tab **Bobot kriteria**, **Batas kategori**, **Fokus
+  untuk proposal yang masuk setelah ini.". Ada tab **Bobot kriteria**, **Batas grade**, **Fokus
   investasi**, **Patokan nilai**, **Model**.
 - Sebelum ada perubahan, panel berbunyi "Belum ada perubahan. Geser bobot atau ubah batas, hasilnya
   langsung terlihat di sini." dan tombol **Simpan versi N+1** nonaktif.
-- Di bawah judul panel tertulis "Simulasi kategori AI pada N proposal yang sudah dinilai. Hanya
-  pratinjau, skor lama tidak diubah.".
-- Setelah batas Sangat cocok `90`, panel menunjukkan angka besar `1`, "proposal akan pindah
-  kategori AI", "0 naik", "1 turun". Tabel dengan kolom **Kategori**, **AI sekarang**, **Aturan
-  baru** menunjukkan Sangat cocok `2 → 1 (-1)` dan Cocok `2 → 3 (+1)`, dan bagian **Contoh yang
-  pindah kategori AI** menyebut Kelas Kode Rakyat (Sangat cocok → Cocok). Angka bisa berbeda kalau
-  datanya berubah.
-- Kalau proposal yang pindah pernah dikoreksi manajer, contohnya diberi baris kecil "Tetap
-  <kategori> (koreksi manajer)", di bawah angka besar ada "N di antaranya tetap pada kategori koreksi
-  manajer." (atau "Semuanya tetap pada kategori koreksi manajer." kalau semua yang pindah dikoreksi),
-  dan ringkasan satu baris di layar sempit ditambah ", N tetap pada koreksi manajer".
-- Setelah Tim `40`, baris **Total** menjadi `112,5%` dengan "· lebih 12,5%" berwarna kuning, pesan
+- Di bawah judul panel tertulis bahwa ini simulasi pada proposal yang sudah dinilai, hanya
+  pratinjau, dan skor lama tidak diubah.
+- Setelah batas Sangat layak `90`, panel menunjukkan berapa proposal yang akan pindah grade AI,
+  berapa naik dan turun. Tabel per grade dengan kolom **AI sekarang** dan **Aturan baru**
+  menunjukkan proposal skor 85–89,9 berpindah dari **Sangat layak** ke **Layak bersyarat**, dan
+  bagian contoh menyebut proposalnya. Bila tidak ada proposal dengan skor 85–89,9, tidak ada yang
+  pindah.
+- Kalau proposal yang pindah pernah dikoreksi manajer, contohnya diberi catatan bahwa ia tetap pada
+  grade koreksi manajer.
+- Setelah Tim manajemen `40`, baris **Total** menjadi `115%` dengan keterangan lebih 15%, pesan
   "Total bobot lima kriteria harus tepat 100%." muncul, dan panel berbunyi "Ada isian yang belum
   benar, misalnya total bobot belum 100%. Perbaiki dulu untuk melihat dampaknya." dan teks di bawah
   judul panel menjadi "Simulasi menunggu semua isian benar.".
-- Setelah **Batal** lalu **Ubah aturan** lagi, semua isian kembali ke nilai tersimpan (Tim `27.5`,
-  Sangat cocok `80`). Kartu atas halaman tetap "Aturan versi N" yang sama.
+- Setelah **Batal** lalu **Ubah aturan** lagi, semua isian kembali ke nilai tersimpan (Tim
+  manajemen `25`, Sangat layak `85`). Kartu atas halaman tetap "Aturan versi N" yang sama.
 
-Catatan: kedua kolom menghitung ulang kategori dari nilai AI, dengan aturan saat ini dan aturan
-baru. Koreksi manajer tidak ikut, dan keterangan di atas tabel mengatakannya: "Kategori dari AI,
-dihitung ulang dengan aturan sekarang dan aturan baru. Koreksi manajer tidak ikut berubah, jadi angka
-ini bisa berbeda dari kartu Batas kategori." Jadi angka **AI sekarang** bisa berbeda dari kotak
-**Batas kategori** di halaman (mis. Sangat cocok `2` di panel, `3` di halaman, karena Kopi Teras
-Senja dikoreksi manajer). Itu bukan temuan.
+Catatan: kedua kolom menghitung ulang grade dari nilai AI, dengan aturan saat ini dan aturan baru.
+Koreksi manajer tidak ikut, jadi angka **AI sekarang** bisa berbeda dari kartu **Batas grade** di
+halaman bila ada proposal yang dikoreksi manajer. Itu bukan temuan.
 
 **Kalau berbeda:** kalau versi aturan berubah atau ada toast "Aturan penilaian tersimpan sebagai
 versi baru." padahal Anda menekan **Batal**, itu temuan serius. Laporkan segera.
@@ -674,15 +682,15 @@ versi baru." padahal Anda menekan **Batal**, itu temuan serius. Laporkan segera.
 
 **Langkah:**
 
-1. Klik **Ubah aturan**. Di tab **Batas kategori**, ganti **Skor minimal** **Cocok** menjadi `85`
-   (lebih tinggi dari Sangat cocok `80`).
-2. Kembalikan ke `65`. Di tab **Bobot kriteria**, ubah Tim menjadi `30` dan Pasar & masalah menjadi
-   `27.5` (desimal pakai titik) supaya **Total** tetap `100%` · "sudah pas".
+1. Klik **Ubah aturan**. Di tab **Batas grade**, ganti **Skor minimal** **Layak bersyarat** menjadi
+   `90` (lebih tinggi dari Sangat layak `85`).
+2. Kembalikan ke `75`. Di tab **Bobot kriteria**, ubah Tim manajemen menjadi `27.5` dan Rencana
+   bisnis & potensi imbal hasil menjadi `22.5` (desimal pakai titik) supaya **Total** tetap `100%` · "sudah pas".
 3. Biarkan **Alasan perubahan (wajib)** kosong, lalu klik **Simpan versi N+1**.
 4. Klik **Batal**.
 
-**Yang seharusnya terlihat:** pada langkah 1 muncul pesan "Batas harus berurutan: Sangat cocok >
-Cocok > Kurang cocok.". Pada langkah 3 muncul kotak merah "Alasan perubahan wajib diisi.", dialog
+**Yang seharusnya terlihat:** pada langkah 1 muncul pesan "Batas Sangat layak harus lebih tinggi
+dari batas Layak bersyarat (90).". Pada langkah 3 muncul kotak merah "Alasan perubahan wajib diisi.", dialog
 tetap terbuka, dan tidak ada toast. Setelah **Batal**, versi aturan di kartu atas tidak berubah.
 Pesan lain yang bisa Anda coba, yang muncul setelah klik **Simpan versi N+1**: "Pilih minimal satu
 sektor." (hapus semua sektor di tab **Fokus investasi**) dan "Dana minimum melebihi maksimum.". Saat
@@ -701,10 +709,11 @@ yang sedang masuk. Catat dulu nilai semula: bobot kelima kriteria dan nomor vers
 
 **Langkah:**
 
-1. Klik **Ubah aturan**. Di tab **Bobot kriteria**, ubah Tim `27.5` → `30` dan Pasar & masalah `30` →
-   `27.5` (desimal pakai titik). Pastikan **Total** `100%` · "sudah pas".
+1. Klik **Ubah aturan**. Di tab **Bobot kriteria**, ubah Tim manajemen `25` → `27.5` dan Rencana
+   bisnis & potensi imbal hasil `25` → `22.5` (desimal pakai titik). Pastikan **Total** `100%` · "sudah pas".
 2. Isi **Alasan perubahan (wajib)**: `UJI panduan: ubah bobot sementara`. Klik **Simpan versi N+1**.
-3. Klik **Ubah aturan** lagi. Kembalikan Tim `27.5` dan Pasar & masalah `30`. Isi alasan
+3. Klik **Ubah aturan** lagi. Kembalikan Tim manajemen `25` dan Rencana bisnis & potensi imbal
+   hasil `25`. Isi alasan
    `UJI panduan: kembalikan bobot`, lalu klik **Simpan versi N+2**.
 4. Buka **Riwayat**, tab **Aturan**.
 
@@ -794,12 +803,13 @@ atas header melakukan hal yang sama. Pilihan disimpan di peramban ini saja.
 - Panel **Jadwal kirim** berisi **Ringkasan pagi** `09.00 WIB` dan **Ringkasan sore** `17.00 WIB`,
   plus catatan "Berikutnya hari ini pukul … WIB" atau "Berikutnya besok pukul 09.00 WIB" setelah
   pukul 17.00. Jadwalnya tetap, tidak bisa diubah dari sini.
-- Panel **Isi pesan** menjelaskan isi per kategori (mis. Sangat cocok "Ditulis lengkap … Paling
-  banyak 10 proposal.").
+- Panel **Isi pesan** menjelaskan isi per baris: **Sangat layak**, **Layak bersyarat, Perlu
+  penyesuaian**, **Risiko tinggi, Tidak layak** ("Jumlahnya saja."), **Di luar fokus** (tetap di
+  grade-nya, diberi tanda “(di luar fokus)”), dan **Perlu dicek manual**.
 - **Pratinjau pesan** berbentuk gelembung chat dari **AISA** "lewat GOWA". Sapaannya berganti antara
   "Selamat pagi, Pak." dan "Selamat sore, Pak." sesuai tombol. Isinya "Ada N proposal yang belum Pak
-  tanggapi.", lalu daftar per kategori dari proposal yang belum ditanggapi (mis. "Sangat cocok (2)",
-  1. Kopi Teras Senja …).
+  tanggapi.", lalu daftar per grade dari proposal yang belum ditanggapi (mis. "Sangat layak (2)",
+  1. <nama> …), dengan proposal di luar fokus ditandai "(di luar fokus)".
 - Di bawahnya: "Isi mengikuti N proposal yang belum ditanggapi saat ini. …" dan "Ringkasan … terakhir
   terkirim …".
 - Cek kewajaran: N sama dengan angka "N proposal menunggu keputusan" di sidebar.
@@ -953,7 +963,7 @@ lebih tua dari 30 hari bisa terhapus permanen pada pukul 02.00 berikutnya. Catat
 aturan versi N." lalu "Retensi 90 hari tersimpan sebagai aturan versi N+1.", dan bilah bawah
 hilang. Kotak fakta di atas mengikuti nilai baru. Kartu atas **Aturan penilaian** naik dua versi.
 **Riwayat** mencatat dua baris "Aturan penilaian diperbarui ke versi …" dengan alasan Anda. Bobot
-dan batas kategori tidak berubah.
+dan batas grade tidak berubah.
 
 **Kalau berbeda:** kalau pengembalian gagal, ulangi langkah 2 sampai berhasil, lalu beri tahu tim.
 

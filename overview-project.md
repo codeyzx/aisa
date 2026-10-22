@@ -2,7 +2,7 @@
 
 ## Ringkasan
 
-AISA membantu manajer investasi memilah proposal startup yang masuk setiap hari. Setiap proposal dinilai **satu kali saat masuk**: kualitasnya diberi skor 0–100 dengan bukti halaman, lalu dicek kecocokannya dengan fokus investasi. Pukul **09.00 dan 17.00**, manajer menerima ringkasan di WhatsApp yang mengelompokkan proposal per kategori. Detail, tren, insight, dan log aktivitas AI ada di dashboard, dan manajer bisa bertanya ke asisten kapan saja.
+AISA membantu manajer investasi memilah proposal startup yang masuk setiap hari. Setiap proposal dinilai **satu kali saat masuk**: kualitasnya diberi skor 0–100 dengan bukti halaman, lalu dicek kecocokannya dengan fokus investasi. Pukul **09.00 dan 17.00**, manajer menerima ringkasan di WhatsApp yang mengelompokkan proposal per grade. Detail, tren, insight, dan log aktivitas AI ada di dashboard, dan manajer bisa bertanya ke asisten kapan saja.
 
 AI hanya menilai dan mengelompokkan. Keputusan mengundang, memantau, atau mengarsipkan proposal sepenuhnya di tangan manajer.
 
@@ -34,13 +34,13 @@ Teks diambil di server **per halaman** dengan penanda `[hal. n]`. Biasanya hanya
 
 **Tahap 1 — Skor kualitas (AI).** Penilai memberi nilai 1–5 untuk lima kriteria, masing-masing dengan kutipan halaman:
 
-| Kriteria                | Bobot baseline |
-| ----------------------- | -------------- |
-| Tim                     | 27,5%          |
-| Pasar & masalah         | 30%            |
-| Produk & keunggulan     | 20%            |
-| Traksi                  | 12,5%          |
-| Model bisnis & keuangan | 10%            |
+| Kriteria                                    | Yang dinilai                                                                                                                       | Bobot baseline |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| **A.** Tim manajemen                        | Rekam jejak, pengalaman, dan kelengkapan tim pendiri dan manajemen                                                                 | 25%            |
+| **B.** Kinerja bisnis saat ini              | Bukti bisnis sudah berjalan: pendapatan, pengguna, pertumbuhan, pelanggan yang disebut namanya                                     | 20%            |
+| **C.** Risiko bisnis & tren makro           | Seberapa terkendali risikonya (persaingan, regulasi, ketergantungan) dan apakah tren pasar mendukung; nilai tinggi = risiko rendah | 20%            |
+| **D.** Rencana bisnis & potensi imbal hasil | Penggunaan dana, proyeksi berdasar data, unit ekonomi, potensi imbal hasil bagi investor                                           | 25%            |
+| **E.** Potensi dampak                       | Dampak sosial atau lingkungan yang terukur (mis. lapangan kerja, inklusi, emisi)                                                   | 10%            |
 
 | Nilai | Arti                                                   |
 | ----- | ------------------------------------------------------ |
@@ -48,37 +48,39 @@ Teks diambil di server **per halaman** dengan penanda `[hal. n]`. Biasanya hanya
 | 3     | Ada bukti sebagian                                     |
 | 5     | Bukti kuat: data, perilaku pelanggan, atau rekam jejak |
 
-Informasi yang tidak ada diberi nilai 1 dan ditandai **"tidak disebut"**. Skor dihitung dengan kode: `skor = Σ bobot × (nilai − 1) / 4`. Bila tidak ada satu pun kutipan sebuah kriteria yang bisa ditemukan di halaman yang disebut, nilainya dibatasi paling tinggi 2 dan dashboard menampilkan tanda **kutipan tidak terverifikasi**.
+Informasi yang tidak ada diberi nilai 1 dan ditandai **"tidak disebut"**. Skor dihitung dengan kode: `skor = Σ bobot × (nilai − 1) / 4 × 100`, satu desimal. Bila tidak ada satu pun kutipan sebuah kriteria yang bisa ditemukan di halaman yang disebut, nilainya dibatasi paling tinggi 2 dan dashboard menampilkan tanda **kutipan tidak terverifikasi**.
+
+**Grade (kode), dari skor saja.** Batasnya diatur di halaman **Aturan penilaian**; nilai bawaannya:
+
+| Skor   | Grade                 | Aksi                          |
+| ------ | --------------------- | ----------------------------- |
+| 85–100 | **Sangat layak**      | Lanjutkan investasi           |
+| 75–84  | **Layak bersyarat**   | Investasi dengan syarat       |
+| 65–74  | **Perlu penyesuaian** | Sesuaikan dulu sebelum lanjut |
+| 50–64  | **Risiko tinggi**     | Pertimbangkan menolak         |
+| < 50   | **Tidak layak**       | Tolak                         |
 
 **Tahap 2 — Cek kecocokan (kode, tanpa AI dan tanpa token).** Sektor, tahap pendanaan, dan besar dana dicocokkan dengan aturan yang diatur manajer di halaman **Aturan penilaian** dashboard (disimpan di Firestore). Keputusan: butir yang **tidak disebut** di deck dianggap **gagal** cek, karena kecocokan yang tidak bisa dibuktikan tidak boleh dianggap cocok.
 
-**Kategori:**
+Proposal yang gagal cek kecocokan diberi label **Di luar fokus**: prioritas rendah karena tidak sesuai fokus investasi (sektor, tahap, atau dana), jadi risikonya lebih tinggi untuk portofolio. Label ini tidak mengubah grade, dan dashboard menyebut butir mana yang gagal (mis. "Sektor f&b di luar fokus"). Di daftar proposal, ringkasan, dan Asisten, urutannya: grade, lalu yang sesuai fokus lebih dulu, lalu skor.
 
-| Kondisi                                                          | Kategori                                                                          |
-| ---------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Lulus cek, skor ≥ 80, dan tidak ada kriteria bernilai 1          | **Sangat cocok**                                                                  |
-| Lulus cek, skor 65–79 (atau ≥ 80 tetapi ada kriteria bernilai 1) | **Cocok**                                                                         |
-| Lulus cek, skor 45–64                                            | **Kurang cocok**                                                                  |
-| Lulus cek, skor < 45                                             | **Tidak cocok**                                                                   |
-| Gagal cek kecocokan                                              | **Tidak cocok**, dan bila skor ≥ 65 diberi tanda **"Berkualitas, di luar fokus"** |
-
-**Perlu dicek manual** adalah status, bukan kategori.
+**Perlu dicek manual** adalah status, bukan grade.
 
 ### 4. Ringkasan pukul 09.00 dan 17.00
 
-Ringkasan berisi proposal **yang belum ditanggapi**, dikelompokkan per kategori, **tanpa saran tindak lanjut**:
+Ringkasan berisi proposal **yang belum ditanggapi**, dikelompokkan per grade (proposal di luar fokus ditandai "(di luar fokus)"), **tanpa saran tindak lanjut**:
 
-Salam pembuka mengikuti jam kirim (Selamat pagi/siang/sore/malam), dengan nama manajer bila diatur. Setiap ringkasan memuat tepat satu insight, 1–2 kalimat, diawali label "Yang menarik:". Faktanya dipilih dan dihitung kode: tren sektor minggu ini dibanding minggu lalu bila ada sektor dengan minimal 3 proposal; bila tidak, fakta pertama yang berlaku dari urutan tetap: berapa proposal baru yang masuk Sangat cocok/Cocok, rata-rata skor kualitas minggu ini dibanding minggu lalu, jumlah "Berkualitas, di luar fokus" atau Perlu dicek manual yang belum ditanggapi, proposal belum ditanggapi dengan skor tertinggi, lalu berapa proposal yang sudah ditanggapi. Insight hanya kosong bila belum ada proposal sama sekali.
+Salam pembuka mengikuti jam kirim (Selamat pagi/siang/sore/malam), dengan nama manajer bila diatur. Setiap ringkasan memuat tepat satu insight, 1–2 kalimat, diawali label "Yang menarik:". Faktanya dipilih dan dihitung kode: tren sektor minggu ini dibanding minggu lalu bila ada sektor dengan minimal 3 proposal; bila tidak, fakta pertama yang berlaku dari urutan tetap: berapa proposal baru yang masuk grade teratas, rata-rata skor kualitas minggu ini dibanding minggu lalu, jumlah proposal yang perlu perhatian (mis. Perlu dicek manual) yang belum ditanggapi, proposal belum ditanggapi dengan skor tertinggi, lalu berapa proposal yang sudah ditanggapi. Insight hanya kosong bila belum ada proposal sama sekali.
 
 > _Selamat pagi, Pak Budi. Sejak Senin pukul 17.00 masuk 100 proposal baru. Ada 100 proposal yang belum Pak tanggapi._
 >
-> _**Sangat cocok (4)**_
+> _**Sangat layak (4)**_
 > _1. Tani Maju (agritech, Rp5 M) · 93. Pendapatannya tumbuh tiap kuartal dan timnya berpengalaman._
 > _…_
-> _**Cocok (8):** SawahKu (66), …_
-> _**Kurang cocok (41)**_
-> _**Tidak cocok (45)**_
-> _**Berkualitas, di luar fokus (2):** Kopi Rakyat (79) · F&B di luar sektor fokus …_
+> _**Layak bersyarat (8):** SawahKu (78), Kopi Rakyat (79) (di luar fokus), …_
+> _**Perlu penyesuaian (20)**_
+> _**Risiko tinggi (21)**_
+> _**Tidak layak (45)**_
 > _**Perlu dicek manual (2):** Bengkel Online, Rumah Belajar_
 >
 > _Yang menarik: proposal agritech naik 76% dibanding minggu lalu._
@@ -87,22 +89,22 @@ Salam pembuka mengikuti jam kirim (Selamat pagi/siang/sore/malam), dengan nama m
 
 Manajer menandai proposal lewat WhatsApp atau dashboard:
 
-| Perintah                                              | Hasil                                     |
-| ----------------------------------------------------- | ----------------------------------------- |
-| `undang <nama>` · `pantau <nama>` · `arsipkan <nama>` | Status proposal berubah                   |
-| `arsipkan semua tidak cocok`                          | Tanggapan massal per kategori             |
-| `pindahkan <nama> ke cocok karena …`                  | Koreksi kategori; skor AI tetap tersimpan |
-| `STOP` · `LANJUT`                                     | Menjeda dan melanjutkan pekerjaan AI      |
+| Perintah                                              | Hasil                                  |
+| ----------------------------------------------------- | -------------------------------------- |
+| `undang <nama>` · `pantau <nama>` · `arsipkan <nama>` | Status proposal berubah                |
+| `arsipkan semua tidak layak`                          | Tanggapan massal per grade             |
+| `pindahkan <nama> ke layak bersyarat karena …`        | Koreksi grade; skor AI tetap tersimpan |
+| `STOP` · `LANJUT`                                     | Menjeda dan melanjutkan pekerjaan AI   |
 
 **STOP** berhenti di antara langkah: panggilan model yang sedang berjalan diselesaikan, lalu hasilnya dibuang. Proposal baru menunggu sampai `LANJUT`, dan selama dijeda Asisten tidak menjawab; pesan selain perintah dibalas "AISA sedang dijeda".
 
 ### 6. Asisten
 
-Contoh: "Fintech yang sangat cocok", "Yang berkualitas tapi di luar fokus", "Kenapa skor Panen Kita segitu?", "Bandingkan Tani Maju dan SawahKu", "Buatkan pertanyaan untuk founder Tani Maju", "Berapa yang minta di bawah Rp3 M?". Jawaban data hanya dari data AISA: setiap angka, nama, dan kutipan disalin dari hasil tool pada giliran itu, tanpa menaksir atau menghitung angka baru. Prioritas, penilaian risiko, rekomendasi, dan draft pesan adalah saran, dan seluruh bagian itu berada di bawah label "💡 Saran AI". AISA tidak mengirim pesan ke founder.
+Contoh: "Fintech yang sangat layak", "Yang skornya tinggi tapi di luar fokus", "Kenapa skor Panen Kita segitu?", "Bandingkan Tani Maju dan SawahKu", "Buatkan pertanyaan untuk founder Tani Maju", "Berapa yang minta di bawah Rp3 M?". Jawaban data hanya dari data AISA: setiap angka, nama, dan kutipan disalin dari hasil tool pada giliran itu, tanpa menaksir atau menghitung angka baru. Prioritas, penilaian risiko, rekomendasi, dan draft pesan adalah saran, dan seluruh bagian itu berada di bawah label "💡 Saran AI". AISA tidak mengirim pesan ke founder.
 
 ### 7. Dashboard
 
-**Dashboard** · **Proposal** (filter, detail Tahap 1 dan Tahap 2, kutipan halaman, token per proposal) · **Tren** · **Aktivitas AI** · **Biaya AI** · **Riwayat** · **Aturan penilaian** (lihat dan ubah bobot, patokan nilai, cek kecocokan, batas kategori, dan model, dengan pratinjau dampak sebelum disimpan; dasar baseline; kalibrasi) · **Pengaturan** (profil, tampilan, ringkasan WhatsApp, integrasi dengan STOP/LANJUT, privasi dan retensi). Panel **Tanya AISA** di setiap halaman bertanya ke Asisten yang sama dengan WhatsApp, dengan tools baca saja. Tombol **Unggah pitch deck** (PDF) memasukkan proposal lewat alur penilaian yang sama dengan Form. Tombol **Hapus data** di detail proposal menghapusnya atas permintaan founder, dengan alasan wajib.
+**Dashboard** · **Proposal** (filter, detail Tahap 1 dan Tahap 2, kutipan halaman, token per proposal) · **Tren** · **Aktivitas AI** · **Biaya AI** · **Riwayat** · **Aturan penilaian** (lihat dan ubah bobot, patokan nilai, cek kecocokan, batas skor grade, dan model, dengan pratinjau dampak sebelum disimpan; dasar baseline; kalibrasi) · **Pengaturan** (profil, tampilan, ringkasan WhatsApp, integrasi dengan STOP/LANJUT, privasi dan retensi). Panel **Tanya AISA** di setiap halaman bertanya ke Asisten yang sama dengan WhatsApp, dengan tools baca saja. Tombol **Unggah pitch deck** (PDF) memasukkan proposal lewat alur penilaian yang sama dengan Form. Tombol **Hapus data** di detail proposal menghapusnya atas permintaan founder, dengan alasan wajib.
 
 ---
 
@@ -127,7 +129,7 @@ Prinsip yang tetap berlaku sejak awal: setiap deck dinilai sekali, dan semua ang
 | Agent             | Tugas                                                        | Model awal       |
 | ----------------- | ------------------------------------------------------------ | ---------------- |
 | Penilai           | Menilai 5 kriteria kualitas dengan kutipan halaman           | gemini-3.8-flash |
-| Pembuat ringkasan | Menyusun teks ringkasan per kategori                         | gemini-3.8-flash |
+| Pembuat ringkasan | Menyusun teks ringkasan per grade                            | gemini-3.8-flash |
 | Insight           | Menulis insight 1–2 kalimat dari angka yang dihitung kode    | gemini-3.8-flash |
 | Asisten           | Menjawab pertanyaan dan memberi saran dengan tools baca data | gemini-3.8-flash |
 | Orchestrator      | Perintah dikenali kode, tanpa model; pesan lain ke Asisten   | (kode)           |
@@ -136,20 +138,12 @@ Prinsip yang tetap berlaku sejak awal: setiap deck dinilai sekali, dan semua ang
 
 ## Dasar bobot (baseline)
 
-Bobot berasal dari **rata-rata dua benchmark**, dengan rujukan tambahan dari survei Gompers dkk. (885 VC, 47% menyebut tim sebagai faktor terpenting):
-
-| Kriteria                | Scorecard Method               | Hustle Fund (pre-seed)                        | Baseline  |
-| ----------------------- | ------------------------------ | --------------------------------------------- | --------- |
-| Tim                     | Tim 30                         | Tim 25                                        | **27,5%** |
-| Pasar & masalah         | Peluang 25                     | Pasar 25 + insight 10                         | **30%**   |
-| Produk & keunggulan     | Produk 15 + persaingan 10      | Produk 10 + keunggulan 5                      | **20%**   |
-| Traksi                  | Kanal penjualan & kemitraan 10 | Traksi 10 + go-to-market 5                    | **12,5%** |
-| Model bisnis & keuangan | Kebutuhan dana 5 + lainnya 5   | Unit economics 5 + kesiapan dana 3 + risiko 2 | **10%**   |
+Lima kriteria A–E dan bobot bawaannya mengikuti **panduan scorecard bergaya Arunami** yang diadopsi tim: A Tim manajemen 25, B Kinerja bisnis saat ini 20, C Risiko bisnis & tren makro 20, D Rencana bisnis & potensi imbal hasil 25, E Potensi dampak 10. Pembagian lima grade menurut rentang skor juga mengikuti panduan yang sama.
 
 - **Penyesuaian:** manajer bisa mengubah bobot di halaman **Aturan penilaian** dashboard sesuai tesis dananya; setiap perubahan dicatat dengan alasan dan versinya di Riwayat.
-- **Kalibrasi dari koreksi manajer:** proposal dihitung "ditinjau manajer" setelah diberi tanggapan atau koreksi kategori. AI "sepakat" bila manajer membiarkan kategori AI. Halaman Aturan penilaian menampilkan tingkat kesepakatan ("AI sepakat dengan manajer pada X dari Y proposal yang ditinjau") dan daftar koreksi beserta arahnya (naik/turun) dan alasannya, sebagai bahan untuk menyesuaikan bobot dan patokan. Koreksi tidak pernah mengubah kategori atau skor AI yang tersimpan.
+- **Kalibrasi dari koreksi manajer:** proposal dihitung "ditinjau manajer" setelah diberi tanggapan atau koreksi grade. AI "sepakat" bila manajer membiarkan grade AI. Halaman Aturan penilaian menampilkan tingkat kesepakatan ("AI sepakat dengan manajer pada X dari Y proposal yang ditinjau") dan daftar koreksi beserta arahnya (naik/turun) dan alasannya, sebagai bahan untuk menyesuaikan bobot dan patokan. Koreksi tidak pernah mengubah grade atau skor AI yang tersimpan.
 - **Kalibrasi analis:** 10–20 deck lama dinilai 2–3 analis dengan matriks yang sama, lalu dashboard menampilkan tingkat kesepakatan AI dengan analis. Bagian ini masih kosong karena datanya belum ada.
-- **Keterbatasan:** kedua sumber adalah metode angel dan investor tahap awal, bukan standar resmi VC, dan pemetaan ke 5 kriteria AISA adalah interpretasi tim.
+- **Keterbatasan:** panduan scorecard ini bukan standar resmi VC, dan cara Penilai menerapkan tiap kriteria pada isi deck adalah interpretasi tim.
 
 ---
 

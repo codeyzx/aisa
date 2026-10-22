@@ -1,5 +1,12 @@
 # Pengujian AISA
 
+> **Skala penilaian lama.** Putaran uji di dokumen ini yang dijalankan sebelum 22 Oktober 2026
+> memakai skala lama: empat kategori (Sangat cocok, Cocok, Kurang cocok, Tidak cocok; proposal di
+> luar fokus selalu Tidak cocok, dengan tanda "Berkualitas, di luar fokus") dan kriteria lama
+> (Tim, Pasar & masalah, Produk & keunggulan, Traksi, Model bisnis & keuangan). Hasilnya dibiarkan
+> apa adanya sebagai catatan. Skala yang berlaku sekarang (kriteria A–E, lima grade, label Di luar
+> fokus) ada di [`overview-project.md`](../overview-project.md) §3.
+
 Dokumen ini mencatat **hasil aktual** pengujian AISA: unit test dan skenario T01–T11 dari
 `tech.md` §12. Setiap hasil skenario diambil dari respons API, dokumen Firestore, log Cloud
 Run, dan pesan yang benar-benar terkirim lewat GOWA — bukan karangan. ID bukti (proposal,

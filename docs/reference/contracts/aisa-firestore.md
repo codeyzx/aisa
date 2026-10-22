@@ -13,20 +13,29 @@ WIB is a display concern. Money is an integer number of rupiah.
 
 ## Enums
 
-| Name             | Values                                                                   |
-| ---------------- | ------------------------------------------------------------------------ |
-| `Criterion`      | `tim`, `pasar`, `produk`, `traksi`, `bisnis`                             |
-| `Category`       | `sangat_cocok`, `cocok`, `kurang_cocok`, `tidak_cocok`                   |
-| `ProposalStatus` | `antre`, `dinilai_proses`, `dinilai`, `perlu_dicek_manual`, `dihentikan` |
-| `ResponseKind`   | `undang`, `pantau`, `arsipkan`                                           |
-| `Via`            | `wa`, `dashboard`, `sistem`                                              |
-| `SourceKind`     | `form`, `upload`                                                         |
-| `JobKind`        | `penilaian`, `ringkasan`, `asisten`, `perintah`                          |
-| `JobStatus`      | `berjalan`, `selesai`, `gagal`, `dihentikan`                             |
-| `StepActor`      | `model`, `kode`                                                          |
+| Name             | Values                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| `Criterion`      | `manajemen`, `kinerja`, `risiko`, `rencana`, `dampak` (A–E)                            |
+| `Category`       | `sangat_layak`, `layak_bersyarat`, `perlu_penyesuaian`, `risiko_tinggi`, `tidak_layak` |
+| `ProposalStatus` | `antre`, `dinilai_proses`, `dinilai`, `perlu_dicek_manual`, `dihentikan`               |
+| `ResponseKind`   | `undang`, `pantau`, `arsipkan`                                                         |
+| `Via`            | `wa`, `dashboard`, `sistem`                                                            |
+| `SourceKind`     | `form`, `upload`                                                                       |
+| `JobKind`        | `penilaian`, `ringkasan`, `asisten`, `perintah`                                        |
+| `JobStatus`      | `berjalan`, `selesai`, `gagal`, `dihentikan`                                           |
+| `StepActor`      | `model`, `kode`                                                                        |
 
 `ProposalStatus` and `Category` are separate axes: only `dinilai` proposals carry a
-category; `perlu_dicek_manual` never carries a score or category.
+category; `perlu_dicek_manual` never carries a score or category. A `Category` is the grade
+and depends on the score only. "Di luar fokus" is not a category and has no field of its
+own: it is `fit.passed == false`.
+
+Legacy values: before the 5-grade scale, `Category` was `sangat_cocok`, `cocok`,
+`kurang_cocok`, `tidak_cocok` and `Criterion` was `tim`, `pasar`, `produk`, `traksi`,
+`bisnis`. The grade migration (`aisa migrate-grades`) re-grades every `dinilai` proposal,
+so no proposal keeps the old criteria keys, but old values stay unrewritten in
+`history.before`/`after` and in old `digests` (text and `counts` keys). Readers must
+tolerate them.
 
 ## `proposals/{proposalId}`
 
@@ -47,8 +56,7 @@ category; `perlu_dicek_manual` never carries a score or category.
 | `assessment`                            | `Assessment?`                                                   | see below                                                           |
 | `fit`                                   | `{passed, checks: {sector, stage, funding: {passed, reason}}}?` | code                                                                |
 | `category`                              | `Category?`                                                     | computed by code                                                    |
-| `qualityOutsideFocus`                   | bool                                                            | the "Berkualitas, di luar fokus" mark                               |
-| `correction`                            | `{category, reason, at, via}?`                                  | koreksi kategori; does not touch `category`                         |
+| `correction`                            | `{category, reason, at, via}?`                                  | koreksi grade; does not touch `category`                            |
 | `effectiveCategory`                     | `Category?`                                                     | `correction.category` if set, else `category`                       |
 | `response`                              | `{kind: ResponseKind, at, via, note?}?`                         | `null` = belum ditanggapi                                           |
 | `responded`                             | bool                                                            | `response != null`, kept for queries                                |
@@ -73,8 +81,8 @@ page 1). Kept apart so list queries never load deck text.
 
 `Rules`: `{version: int, weights: {<Criterion>: float}` (sum 1.0), `anchors: {<Criterion>:
 {1, 3, 5: string}}`, `fit: {sectors: [string], stages: [string], fundingMinIdr,
-fundingMaxIdr}`, `thresholds: {sangatCocok: 80, cocok: 65, kurangCocok: 45,
-qualityOutsideFocus: 65}`, `models: {penilai, ringkasan, insight, asisten}`,
+fundingMaxIdr}`, `thresholds: {sangatLayak: 85, layakBersyarat: 75, perluPenyesuaian: 65,
+risikoTinggi: 50}` (strictly descending, each in (0, 100]), `models: {penilai, ringkasan, insight, asisten}`,
 `minCharsPerPage: int, retentionDays: int, changedAt, reason}`. `retentionDays` defaults
 to 90.
 
@@ -118,11 +126,13 @@ An `asisten` job writes one step per tool call. The daily retention run is a job
 
 Audit trail (Riwayat): `{at, via: Via, action, proposalId?, proposalName?, before?, after?,
 reason?, detail}` where `action` ∈ `tanggapan`, `tanggapan_massal`, `koreksi`,
-`aturan_diubah`, `stop`, `lanjut`, `ringkasan_terkirim`, `proposal_masuk`, `proposal_dihapus`.
+`aturan_diubah`, `stop`, `lanjut`, `ringkasan_terkirim`, `proposal_masuk`, `proposal_dihapus`,
+`dinilai_ulang`. `dinilai_ulang` is written only by the grade migration: `before` is the old
+category value, `after` the new grade.
 
 ## `digests/{digestId}`
 
-`{slot: "09.00" | "17.00", windowStart?, sentAt, text, insight: string | null, counts: {<Category>, kualitasLuarFokus,
+`{slot: "09.00" | "17.00", windowStart?, sentAt, text, insight: string | null, counts: {<Category>, luarFokus,
 perluDicekManual, belumDitanggapi, baruMasuk}, proposalIds, usedTemplate: bool, jobId,
 gowaMessageIds: [string]}`. `windowStart` is null for the first digest ever sent.
 `insight` is the 1–2 sentence insight used in the message, stored without its "Yang

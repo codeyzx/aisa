@@ -1,11 +1,15 @@
 'use client'
 
 import {
-  Area,
-  AreaChart,
+  Bar,
+  BarChart,
+  type BarShapeProps,
+  BarStack,
   CartesianGrid,
+  Rectangle,
   ResponsiveContainer,
   Tooltip,
+  type TooltipContentProps,
   XAxis,
   YAxis,
 } from 'recharts'
@@ -21,15 +25,40 @@ import { fromFirstValue } from '../../_components/daily-window'
 import type { DayRow, TokenDay, TrendData } from '../trend-data'
 
 const INITIAL = { width: 320, height: 200 }
-const MANUAL_COLOR = 'var(--muted-foreground)'
 const MANUAL_LABEL = 'Perlu dicek manual'
 
-const TOOLTIP_STYLE = {
-  background: 'var(--popover)',
-  border: '1px solid var(--border)',
-  borderRadius: 10,
-  fontSize: 12,
+/** How a series is shown: its name and its fill. */
+interface SeriesStyle {
+  label: string
+  color: string
 }
+
+/** A charted series: the datum field it reads, and how it is shown. */
+interface Series<Row> extends SeriesStyle {
+  key: keyof Row & string
+}
+
+/**
+ * Grades bottom-up from Sangat layak, then the ungraded "perlu dicek manual"
+ * in neutral grey on top, so the stack reads in the legend's order.
+ */
+const PROPOSAL_SERIES: readonly Series<DayRow>[] = [
+  ...CATEGORIES.map((category) => ({
+    key: category,
+    label: CATEGORY_LABEL[category],
+    color: CATEGORY_FILL[category],
+  })),
+  {
+    key: 'manual' as const,
+    label: MANUAL_LABEL,
+    color: 'var(--muted-foreground)',
+  },
+]
+const TOKEN_SERIES: readonly Series<TokenDay>[] = [
+  { key: 'input', label: 'Token masuk', color: 'var(--chart-2)' },
+  { key: 'output', label: 'Token keluar', color: 'var(--chart-1)' },
+]
+const SCORE_COLOR = 'var(--chart-2)'
 
 const compact = new Intl.NumberFormat(LOCALE, {
   notation: 'compact',
@@ -37,33 +66,174 @@ const compact = new Intl.NumberFormat(LOCALE, {
 })
 const oneDecimal = (value: number) => formatDecimal(value, { min: 1, max: 1 })
 
-type Payload = readonly { payload?: { full?: string } }[] | undefined
-const fullLabel = (_: unknown, payload: Payload) =>
-  payload?.[0]?.payload?.full ?? ''
-
 const noProposal = (day: DayRow) =>
   day.total === 0 &&
   day.manual === 0 &&
   CATEGORIES.every((category) => day[category] === 0)
 const noToken = (day: TokenDay) => day.input === 0 && day.output === 0
 
+/** Shared by every chart so the four read as one set. */
+const CHART_MARGIN = { top: 8, right: 4, bottom: 0, left: -12 }
+/** Columns stay thin however few days are shown; the rest of the slot is air. */
+const MAX_BAR = 24
+/** A 4px rounded top on the column (the whole stack), square at the baseline. */
+const TOP_RADIUS: [number, number, number, number] = [4, 4, 0, 0]
+const HOVER_BAND = { fill: 'var(--muted)', opacity: 0.6 }
+const GAP = 2
+
 /**
- * A one-day area draws nothing and a two-day one reads as a bare slope, so
- * with so few days a dot marks each of them.
+ * A stacked segment that gives up its bottom 2px, so neighbouring grades are
+ * split by a gap of whatever is behind the chart rather than an outline drawn
+ * in a guessed surface colour. The segment sitting on the baseline keeps its
+ * full height, so the column still starts at zero; a sliver too thin to spare
+ * 2px keeps its height too rather than vanishing.
  */
-const fewPointDot = (count: number, color: string) =>
-  count < 3 ? { r: 3, fill: color, strokeWidth: 0 } : false
+function GappedSegment(props: BarShapeProps) {
+  const { x, y, width, height, fill, stackedBarStart } = props
+  if (!height || height <= 0) return null
+  const onBaseline = Math.abs(y + height - stackedBarStart) < 0.5
+  const gap = onBaseline || height <= GAP + 1 ? 0 : GAP
+  return (
+    <Rectangle x={x} y={y} width={width} height={height - gap} fill={fill} />
+  )
+}
 
-/** Room at both ends, so the first and last day's label are not cut off. */
-const EDGE_PAD = { left: 16, right: 16 }
+interface TipRow {
+  label: string
+  value: string
+  color?: string
+}
 
-const PROPOSAL_SERIES: readonly string[] = [...CATEGORIES, 'manual']
-const TOKEN_SERIES: readonly string[] = ['input', 'output']
-/** The tooltip lists series in legend order, not alphabetically by name. */
-const inOrder =
-  (series: readonly string[]) =>
-  ({ dataKey }: { dataKey?: unknown }) =>
-    series.indexOf(String(dataKey))
+/** One tooltip for every chart: the full day, then one row per series. */
+function TipBox({
+  title,
+  rows,
+  note,
+}: {
+  title: string
+  rows: TipRow[]
+  note?: string
+}) {
+  return (
+    <div className="min-w-44 rounded-lg border bg-popover px-3 py-2 text-xs text-popover-foreground shadow-md">
+      <p className="mb-1.5 font-medium">{title}</p>
+      {rows.length ? (
+        <ul className="flex flex-col gap-1">
+          {rows.map((row) => (
+            <li key={row.label} className="flex items-center gap-2">
+              {row.color ? (
+                <span
+                  aria-hidden
+                  className="a-sw"
+                  style={{ background: row.color }}
+                />
+              ) : null}
+              <span className="text-muted-foreground">{row.label}</span>
+              <span className="ml-auto pl-3 font-mono tabular-nums">
+                {row.value}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {note ? <p className="mt-1.5 text-muted-foreground">{note}</p> : null}
+    </div>
+  )
+}
+
+/** The datum under the pointer, or nothing while the tooltip is idle. */
+function hovered<Row>({ active, payload }: TooltipContentProps): Row | null {
+  return active && payload[0]?.payload ? (payload[0].payload as Row) : null
+}
+
+/**
+ * Series rows for a stacked column, top segment first so the list reads in
+ * the order the eye meets the column; a series with nothing that day is left
+ * out instead of listed as a zero.
+ */
+const stackRows = <Row,>(
+  series: readonly Series<Row>[],
+  row: Row,
+  unit: string,
+): TipRow[] =>
+  series
+    .filter(({ key }) => Number(row[key]) > 0)
+    .map(({ key, label, color }) => ({
+      label,
+      color,
+      value: `${formatNumber(Number(row[key]))}${unit}`,
+    }))
+    .toReversed()
+
+function Legend({ series }: { series: readonly SeriesStyle[] }) {
+  return (
+    <div className="a-legend">
+      {series.map(({ label, color }) => (
+        <span key={label}>
+          <span className="a-sw" style={{ background: color }} />
+          {label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/** The axis styling every chart here shares. */
+const axisProps = { tickLine: false, axisLine: false, fontSize: 11 } as const
+
+/** The day's total, then each grade it got, top of the column first. */
+function ProposalTip(props: TooltipContentProps) {
+  const day = hovered<DayRow>(props)
+  if (!day) return null
+  const rows = stackRows(PROPOSAL_SERIES, day, '')
+  return (
+    <TipBox
+      title={day.full}
+      rows={[
+        {
+          label: 'Total masuk',
+          value: `${formatNumber(day.total)} proposal`,
+        },
+        ...rows,
+      ]}
+      note={rows.length ? undefined : 'Belum ada yang dinilai'}
+    />
+  )
+}
+
+/** The day's mean score, or that nothing was scored that day. */
+function ScoreTip(props: TooltipContentProps) {
+  const day = hovered<DayRow>(props)
+  if (!day) return null
+  return day.avg === null ? (
+    <TipBox title={day.full} rows={[]} note="Belum ada proposal yang dinilai" />
+  ) : (
+    <TipBox
+      title={day.full}
+      rows={[
+        {
+          label: 'Rata-rata skor',
+          value: oneDecimal(day.avg),
+          color: SCORE_COLOR,
+        },
+      ]}
+    />
+  )
+}
+
+/** The day's tokens in and out. */
+function TokenTip(props: TooltipContentProps) {
+  const day = hovered<TokenDay>(props)
+  if (!day) return null
+  const rows = stackRows(TOKEN_SERIES, day, ' token')
+  return (
+    <TipBox
+      title={day.full}
+      rows={rows}
+      note={rows.length ? undefined : 'Tidak ada pemakaian'}
+    />
+  )
+}
 
 /** " · grafik mulai 21 Okt" when the chart starts after the window does. */
 const sinceNote = (shown: { label: string }[], window: unknown[]) =>
@@ -102,80 +272,31 @@ export function TrendCharts({
           {dailySub}
           {sinceNote(days, data.days)}
         </div>
-        <div className="a-legend">
-          {CATEGORIES.map((category) => (
-            <span key={category}>
-              <span
-                className="a-sw"
-                style={{ background: CATEGORY_FILL[category] }}
-              />
-              {CATEGORY_LABEL[category]}
-            </span>
-          ))}
-          <span>
-            <span className="a-sw" style={{ background: MANUAL_COLOR }} />
-            {MANUAL_LABEL}
-          </span>
-        </div>
+        <Legend series={PROPOSAL_SERIES} />
         <div className="h-[240px] w-full">
           <ResponsiveContainer
             width="100%"
             height="100%"
             initialDimension={INITIAL}
           >
-            <AreaChart
-              data={days}
-              margin={{ top: 8, right: 8, bottom: 0, left: -18 }}
-            >
+            <BarChart data={days} margin={CHART_MARGIN}>
               <CartesianGrid vertical={false} stroke="var(--border)" />
-              <XAxis
-                dataKey="label"
-                tickLine={false}
-                axisLine={false}
-                fontSize={11}
-                padding={EDGE_PAD}
-              />
-              <YAxis
-                tickLine={false}
-                axisLine={false}
-                fontSize={11}
-                allowDecimals={false}
-              />
-              <Tooltip
-                cursor={{ stroke: 'var(--border)' }}
-                contentStyle={TOOLTIP_STYLE}
-                labelFormatter={fullLabel}
-                itemSorter={inOrder(PROPOSAL_SERIES)}
-                formatter={(value) => `${formatNumber(Number(value))} proposal`}
-              />
-              {CATEGORIES.map((category) => (
-                <Area
-                  key={category}
-                  type="monotone"
-                  dataKey={category}
-                  name={CATEGORY_LABEL[category]}
-                  stackId="proposal"
-                  stroke={CATEGORY_FILL[category]}
-                  fill={CATEGORY_FILL[category]}
-                  fillOpacity={0.55}
-                  strokeWidth={1.5}
-                  dot={fewPointDot(days.length, CATEGORY_FILL[category])}
-                  activeDot={{ r: 3 }}
-                />
-              ))}
-              <Area
-                type="monotone"
-                dataKey="manual"
-                name={MANUAL_LABEL}
-                stackId="proposal"
-                stroke={MANUAL_COLOR}
-                fill={MANUAL_COLOR}
-                fillOpacity={0.3}
-                strokeWidth={1.5}
-                dot={fewPointDot(days.length, MANUAL_COLOR)}
-                activeDot={{ r: 3 }}
-              />
-            </AreaChart>
+              <XAxis dataKey="label" {...axisProps} minTickGap={8} />
+              <YAxis {...axisProps} allowDecimals={false} />
+              <Tooltip cursor={HOVER_BAND} content={ProposalTip} />
+              <BarStack radius={TOP_RADIUS}>
+                {PROPOSAL_SERIES.map(({ key, label, color }) => (
+                  <Bar
+                    key={key}
+                    dataKey={key}
+                    name={label}
+                    fill={color}
+                    maxBarSize={MAX_BAR}
+                    shape={GappedSegment}
+                  />
+                ))}
+              </BarStack>
+            </BarChart>
           </ResponsiveContainer>
         </div>
         <details>
@@ -272,43 +393,23 @@ export function TrendCharts({
             height="100%"
             initialDimension={INITIAL}
           >
-            <AreaChart
-              data={days}
-              margin={{ top: 8, right: 8, bottom: 0, left: -18 }}
-            >
+            <BarChart data={days} margin={CHART_MARGIN}>
               <CartesianGrid vertical={false} stroke="var(--border)" />
-              <XAxis
-                dataKey="label"
-                tickLine={false}
-                axisLine={false}
-                fontSize={11}
-                interval={1}
-              />
+              <XAxis dataKey="label" {...axisProps} minTickGap={8} />
               <YAxis
+                {...axisProps}
                 domain={[0, 100]}
-                tickLine={false}
-                axisLine={false}
-                fontSize={11}
+                ticks={[0, 25, 50, 75, 100]}
               />
-              <Tooltip
-                contentStyle={TOOLTIP_STYLE}
-                labelFormatter={fullLabel}
-                formatter={(value) => [
-                  oneDecimal(Number(value)),
-                  'Rata-rata skor',
-                ]}
-              />
-              <Area
-                type="monotone"
+              <Tooltip cursor={HOVER_BAND} content={ScoreTip} />
+              <Bar
                 dataKey="avg"
-                stroke="var(--chart-2)"
-                fill="var(--chart-2)"
-                fillOpacity={0.12}
-                strokeWidth={2}
-                connectNulls={false}
-                dot={{ r: 2.5, fill: 'var(--chart-2)' }}
+                name="Rata-rata skor"
+                fill={SCORE_COLOR}
+                radius={TOP_RADIUS}
+                maxBarSize={MAX_BAR}
               />
-            </AreaChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -321,72 +422,34 @@ export function TrendCharts({
           {compact.format(tokenTotals.output)}
           {sinceNote(tokens, data.tokens)}
         </div>
-        <div className="a-legend">
-          <span>
-            <span className="a-sw" style={{ background: 'var(--chart-2)' }} />
-            Token masuk
-          </span>
-          <span>
-            <span className="a-sw" style={{ background: 'var(--chart-1)' }} />
-            Token keluar
-          </span>
-        </div>
+        <Legend series={TOKEN_SERIES} />
         <div className="h-[200px] w-full">
           <ResponsiveContainer
             width="100%"
             height="100%"
             initialDimension={INITIAL}
           >
-            <AreaChart
-              data={tokens}
-              margin={{ top: 8, right: 8, bottom: 0, left: -6 }}
-            >
+            <BarChart data={tokens} margin={{ ...CHART_MARGIN, left: -2 }}>
               <CartesianGrid vertical={false} stroke="var(--border)" />
-              <XAxis
-                dataKey="label"
-                tickLine={false}
-                axisLine={false}
-                fontSize={11}
-                padding={EDGE_PAD}
-              />
+              <XAxis dataKey="label" {...axisProps} minTickGap={8} />
               <YAxis
-                tickLine={false}
-                axisLine={false}
-                fontSize={11}
+                {...axisProps}
                 tickFormatter={(value) => compact.format(Number(value))}
               />
-              <Tooltip
-                cursor={{ stroke: 'var(--border)' }}
-                contentStyle={TOOLTIP_STYLE}
-                labelFormatter={fullLabel}
-                itemSorter={inOrder(TOKEN_SERIES)}
-                formatter={(value) => `${formatNumber(Number(value))} token`}
-              />
-              <Area
-                type="monotone"
-                dataKey="input"
-                name="Token masuk"
-                stackId="token"
-                stroke="var(--chart-2)"
-                fill="var(--chart-2)"
-                fillOpacity={0.35}
-                strokeWidth={2}
-                dot={fewPointDot(tokens.length, 'var(--chart-2)')}
-                activeDot={{ r: 3 }}
-              />
-              <Area
-                type="monotone"
-                dataKey="output"
-                name="Token keluar"
-                stackId="token"
-                stroke="var(--chart-1)"
-                fill="var(--chart-1)"
-                fillOpacity={0.35}
-                strokeWidth={2}
-                dot={fewPointDot(tokens.length, 'var(--chart-1)')}
-                activeDot={{ r: 3 }}
-              />
-            </AreaChart>
+              <Tooltip cursor={HOVER_BAND} content={TokenTip} />
+              <BarStack radius={TOP_RADIUS}>
+                {TOKEN_SERIES.map(({ key, label, color }) => (
+                  <Bar
+                    key={key}
+                    dataKey={key}
+                    name={label}
+                    fill={color}
+                    maxBarSize={MAX_BAR}
+                    shape={GappedSegment}
+                  />
+                ))}
+              </BarStack>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>

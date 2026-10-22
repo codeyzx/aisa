@@ -48,6 +48,15 @@ STATUS_LABEL = {
     "perlu_dicek_manual": "Perlu dicek manual",
     "dihentikan": "Dihentikan",
 }
+# The manager's decision; kept equal to aisa.models RESPONSE_LABEL / LEGACY_RESPONSE_LABEL
+# by a test. The legacy words only appear in history rows and unmigrated proposals.
+RESPONSE_LABEL = {"setuju": "Setuju", "tolak": "Tolak"}
+LEGACY_RESPONSE_LABEL = {
+    "undang": "Undang (lama)",
+    "pantau": "Pantau (lama)",
+    "arsipkan": "Arsipkan (lama)",
+}
+AWAITING = "menunggu keputusan"
 GROUP_FIELDS = ("category", "sector", "stage", "status", "response", "outside_focus")
 
 log = logging.getLogger(__name__)
@@ -91,6 +100,27 @@ def _norm_status(value: Optional[str]) -> Optional[str]:
     raise ValueError(f"status '{value}' tidak dikenal; pilih salah satu: {', '.join(STATUS_LABEL)}")
 
 
+def _decision_label(kind: Optional[str]) -> str:
+    return RESPONSE_LABEL.get(kind) or LEGACY_RESPONSE_LABEL.get(kind) or kind or AWAITING
+
+
+def _decision(p: dict) -> str:
+    """Setuju, Tolak, or "menunggu keputusan" when the manager has not decided."""
+    return _decision_label((p.get("response") or {}).get("kind"))
+
+
+def _norm_decision(value: Optional[str]) -> Optional[str]:
+    """setuju / tolak / menunggu, from the value or its label in any case."""
+    if not value:
+        return None
+    k = _key(value)
+    if k in RESPONSE_LABEL:
+        return k
+    if k in ("menunggu", "menunggu_keputusan", "belum", "belum_ditanggapi"):
+        return "menunggu"
+    raise ValueError(f"keputusan '{value}' tidak dikenal; pilih salah satu: setuju, tolak, menunggu")
+
+
 def _score(p: dict) -> Optional[float]:
     return (p.get("assessment") or {}).get("score")
 
@@ -122,7 +152,7 @@ def _summary(p: dict) -> dict:
         "danaDiminta": profile.get("fundingAskIdr"),
         "ringkas": _cut(profile.get("oneLiner"), 140),
         "status": STATUS_LABEL.get(p.get("status"), p.get("status")),
-        "tanggapan": (p.get("response") or {}).get("kind") or "belum ditanggapi",
+        "keputusan": _decision(p),
     }
     if _outside_focus(p):
         row["diLuarFokus"] = True
@@ -141,8 +171,10 @@ def _filter(
     outside_focus: Optional[bool] = None,
     status: Optional[str] = None,
     min_score: Optional[float] = None,
+    decision: Optional[str] = None,
 ) -> list[dict]:
     cat = _norm_category(category)
+    dec = _norm_decision(decision)
     st = _norm_status(status)
     sector_q = (sector or "").strip().lower()
     stage_q = (stage or "").strip().lower()
@@ -162,6 +194,9 @@ def _filter(
         if outside_focus is not None and _outside_focus(p) != outside_focus:
             continue
         if min_score is not None and (_score(p) is None or _score(p) < min_score):
+            continue
+        kind = (p.get("response") or {}).get("kind")
+        if dec and (kind is not None if dec == "menunggu" else kind != dec):
             continue
         out.append(p)
     return out
@@ -228,7 +263,7 @@ def _overview_row(p: dict) -> dict:
         "grade": CATEGORY_LABEL.get(eff, eff),
         "aksi": CATEGORY_ACTION.get(eff),
         "status": STATUS_LABEL.get(p.get("status"), p.get("status")),
-        "tanggapan": (p.get("response") or {}).get("kind") or "belum",
+        "keputusan": _decision(p),
     }
     if _outside_focus(p):
         row["diLuarFokus"] = True
@@ -237,20 +272,23 @@ def _overview_row(p: dict) -> dict:
 
 def get_overview() -> dict:
     """Gambaran ringkas SEMUA proposal dalam satu panggilan: jumlah per grade efektif, jumlah
-    di luar fokus, jumlah belum ditanggapi, dan satu baris per proposal (nama, sektor,
-    danaDiminta dalam rupiah bila disebut, skor kualitas, grade efektif, aksi, status,
-    tanggapan, diLuarFokus), urut menurut grade, lalu yang sesuai fokus dulu, lalu skor
+    di luar fokus, jumlah per keputusan (Setuju, Tolak, menunggu keputusan), dan satu baris
+    per proposal (nama, sektor, danaDiminta dalam rupiah bila disebut, skor kualitas, grade
+    efektif, aksi, status, keputusan, diLuarFokus), urut menurut grade, lalu yang sesuai fokus dulu, lalu skor
     tertinggi, maksimal 50 baris. Pakai ini untuk pertanyaan umum ("ringkas semua proposal",
     "bagaimana kondisi proposal", "mana yang menonjol")."""
     proposals = store.list_proposals()
     proposals.sort(key=_rank)
     per_grade: dict[str, int] = {}
+    per_decision: dict[str, int] = {}
     for p in proposals:
         k = CATEGORY_LABEL.get(p.get("effectiveCategory"), NO_GRADE)
         per_grade[k] = per_grade.get(k, 0) + 1
+        per_decision[_decision(p)] = per_decision.get(_decision(p), 0) + 1
     return {
         "total": len(proposals),
         "belumDitanggapi": sum(1 for p in proposals if not p.get("responded")),
+        "perKeputusan": per_decision,
         "perGrade": per_grade,
         "diLuarFokus": sum(1 for p in proposals if _outside_focus(p)),
         "artiDiLuarFokus": OUT_OF_FOCUS_MEANING,
@@ -269,6 +307,7 @@ def search_proposals(
     min_score: Optional[float] = None,
     min_funding_idr: int | None = None,
     max_funding_idr: int | None = None,
+    decision: Optional[str] = None,
     limit: int = 10,
 ) -> dict:
     """Cari proposal di data AISA, diurutkan menurut grade, lalu yang sesuai fokus dulu, lalu
@@ -279,7 +318,7 @@ def search_proposals(
             layak_bersyarat, perlu_penyesuaian, risiko_tinggi, atau tidak_layak.
         sector: Sektor, dicocokkan sebagian dan tanpa beda huruf besar/kecil (mis. "fintech").
         stage: Tahap pendanaan, dicocokkan sebagian (mis. "seed").
-        responded: true = sudah ditanggapi (undang/pantau/arsipkan), false = belum ditanggapi.
+        responded: true = sudah diputuskan (Setuju atau Tolak), false = menunggu keputusan.
         outside_focus: true = hanya yang di luar fokus investasi (gagal cek sektor, tahap,
             atau dana); false = hanya yang sesuai fokus. Di luar fokus tidak mengubah grade.
         status: antre, dinilai_proses, dinilai, perlu_dicek_manual, atau dihentikan.
@@ -290,6 +329,7 @@ def search_proposals(
             (mis. "di bawah Rp3 M" = 2999999999; "paling banyak Rp3 M" = 3000000000).
             Dengan filter dana, proposal yang tidak menyebut dana tidak ikut dan jumlahnya
             dilaporkan di `danaTidakDisebut`.
+        decision: Keputusan manajer: setuju, tolak, atau menunggu (belum diputuskan).
         limit: Jumlah maksimal hasil (default 10, maks 50). Untuk daftar lengkap, isi sebesar
             totalCocok yang diharapkan.
     """
@@ -303,6 +343,7 @@ def search_proposals(
             outside_focus=outside_focus,
             status=status,
             min_score=min_score,
+            decision=decision,
         )
     except ValueError as e:
         return {"error": str(e)}
@@ -325,27 +366,31 @@ def count_proposals(
     status: Optional[str] = None,
     min_funding_idr: int | None = None,
     max_funding_idr: int | None = None,
+    decision: Optional[str] = None,
 ) -> dict:
     """Hitung jumlah proposal, dikelompokkan menurut satu atribut.
 
     Args:
-        group_by: category (grade efektif), sector, stage, status, response (jenis tanggapan),
+        group_by: category (grade efektif), sector, stage, status, response (keputusan
+            manajer: Setuju, Tolak, menunggu keputusan),
             atau outside_focus (di luar fokus investasi atau sesuai fokus).
         category: Filter grade efektif sebelum dihitung (opsional).
         sector: Filter sektor sebelum dihitung (opsional).
-        responded: Filter sudah (true) / belum (false) ditanggapi (opsional).
+        responded: Filter sudah diputuskan (true) / menunggu keputusan (false) (opsional).
         status: Filter status proposal (opsional).
         min_funding_idr: Dana diminta minimal dalam rupiah penuh, inklusif (opsional; lihat
             search_proposals).
         max_funding_idr: Dana diminta maksimal dalam rupiah penuh, inklusif (opsional). Dengan
             filter dana, proposal tanpa dana tidak dihitung di `total` dan jumlahnya ada di
             `danaTidakDisebut`.
+        decision: Filter keputusan: setuju, tolak, atau menunggu (opsional).
     """
     if group_by not in GROUP_FIELDS:
         return {"error": f"group_by harus salah satu dari: {', '.join(GROUP_FIELDS)}"}
     try:
         rows = _filter(
-            store.list_proposals(), category=category, sector=sector, responded=responded, status=status
+            store.list_proposals(), category=category, sector=sector, responded=responded,
+            status=status, decision=decision,
         )
     except ValueError as e:
         return {"error": str(e)}
@@ -362,7 +407,7 @@ def count_proposals(
         elif group_by == "status":
             k = STATUS_LABEL.get(p.get("status"), p.get("status") or "-")
         elif group_by == "response":
-            k = (p.get("response") or {}).get("kind") or "belum ditanggapi"
+            k = _decision(p)
         else:
             k = "di luar fokus" if _outside_focus(p) else "sesuai fokus"
         counts[k] = counts.get(k, 0) + 1
@@ -413,7 +458,10 @@ def _detail(p: dict) -> dict:
         }
         if p.get("correction")
         else None,
-        "tanggapanDetail": {k: _cut(v) for k, v in (p.get("response") or {}).items()} or None,
+        "keputusanDetail": {"keputusan": _decision(p),
+                            **{k: _cut(v) for k, v in (p.get("response") or {}).items()
+                               if k != "kind"}}
+        if p.get("response") else None,
         "masuk": p.get("createdAt"),
         "dinilaiPada": p.get("assessedAt"),
     }
@@ -422,7 +470,7 @@ def _detail(p: dict) -> dict:
 
 def get_proposal_detail(name_or_id: str) -> dict:
     """Ambil detail satu proposal: nilai tiap kriteria (A-E) beserta alasan dan kutipan halaman,
-    hasil cek kecocokan (fokus), koreksi grade, dan tanggapan manajer. Kontak founder tidak pernah
+    hasil cek kecocokan (fokus), koreksi grade, dan keputusan manajer. Kontak founder tidak pernah
     disertakan.
 
     Args:
@@ -475,9 +523,11 @@ def compare_proposals(names: list[str]) -> dict:
 
 
 def get_history(proposal: Optional[str] = None, limit: int = 10) -> dict:
-    """Ambil Riwayat (jejak audit): tanggapan, koreksi grade, penilaian ulang, perubahan aturan,
-    ringkasan terkirim, STOP/LANJUT. Nilai lama sangat_cocok/cocok/kurang_cocok/tidak_cocok di
-    riwayat berasal dari skala lama. Tanpa `proposal`, mengembalikan riwayat terbaru.
+    """Ambil Riwayat (jejak audit): keputusan (tanggapan), koreksi grade, penilaian ulang,
+    perubahan aturan, ringkasan terkirim, STOP/LANJUT. Nilai lama sangat_cocok/cocok/
+    kurang_cocok/tidak_cocok di riwayat berasal dari skala lama; keputusan lama ditampilkan
+    sebagai "Undang (lama)", "Pantau (lama)", "Arsipkan (lama)". Tanpa `proposal`,
+    mengembalikan riwayat terbaru.
 
     Args:
         proposal: Nama atau ID proposal (opsional).
@@ -492,7 +542,14 @@ def get_history(proposal: Optional[str] = None, limit: int = 10) -> dict:
     else:
         rows = store.recent_history(limit)
     keep = ("at", "via", "action", "proposalName", "before", "after", "reason", "detail")
-    compact = [{k: _cut(r.get(k), 160) for k in keep if r.get(k) is not None} for r in rows]
+    compact = []
+    for r in rows:
+        row = {k: _cut(r.get(k), 160) for k in keep if r.get(k) is not None}
+        if r.get("action") in ("tanggapan", "tanggapan_massal"):
+            for k in ("before", "after"):
+                if isinstance(row.get(k), str):
+                    row[k] = _decision_label(row[k])
+        compact.append(row)
     return {"riwayat": store.plain(compact)}
 
 
@@ -551,7 +608,8 @@ def get_trends(days: int = 7) -> dict:
 
 def get_rules() -> dict:
     """Aturan penilaian yang aktif: bobot kriteria A-E, aturan cek kecocokan (sektor, tahap,
-    rentang dana), skor minimal tiap grade, versi, dan alasan perubahan terakhir."""
+    rentang dana), skor minimal tiap grade, berapa hari proposal Tolak disimpan sebelum
+    dihapus otomatis, versi, dan alasan perubahan terakhir."""
     r = store.get_doc("settings/rules")
     if not r:
         return {"error": "aturan penilaian tidak tersedia di data AISA"}
@@ -564,6 +622,8 @@ def get_rules() -> dict:
             CRITERION_LABEL.get(k, k): {str(n): _cut(t, 120) for n, t in (v or {}).items()}
             for k, v in (r.get("anchors") or {}).items()
         },
+        # Proposals decided Tolak are deleted this many days after the decision.
+        "retensiTolakHari": r.get("retentionDays", 90),
         "diubahPada": r.get("changedAt"),
         "alasanPerubahan": _cut(r.get("reason")),
     }

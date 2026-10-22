@@ -47,7 +47,7 @@ SEED = [
                  "kinerja": {"value": 1, "notMentioned": True, "reason": "tidak ada"}},
        fit=PASS),
     _p("p2", "Kelas Kode Rakyat", score=71.0, eff="perlu_penyesuaian", sector="Edtech",
-       stage="Pre-seed", responded=True, response={"kind": "undang", "via": "wa"},
+       stage="Pre-seed", responded=True, response={"kind": "setuju", "via": "wa"},
        fit={"passed": False, "checks": {"stage": {"passed": False, "reason": "tahap"},
                                         "sector": {"passed": True, "reason": "ok"}}}),
     # No fit stored: not marked out of focus.
@@ -165,7 +165,7 @@ def test_ast11_search_limit_clamped(afs, monkeypatch):
 def test_ast11_summary_trims_one_liner(afs):
     row = tools.search_proposals(category="sangat_layak")["proposal"][0]
     assert len(row["ringkas"]) == 140 and row["ringkas"].endswith("…")
-    assert row["tanggapan"] == "belum ditanggapi"
+    assert row["keputusan"] == "menunggu keputusan"
 
 
 # ---------- AST-11: funding filters ----------
@@ -227,7 +227,7 @@ def test_ast11_overview_rows_carry_funding(funded):
     ("sector", {"f&b": 2, "edtech": 2, "agritech": 1, "tidak disebut": 1}),
     ("stage", {"seed": 3, "pre-seed": 1, "series a": 1, "tidak disebut": 1}),
     ("status", {"Dinilai": 5, "Perlu dicek manual": 1}),
-    ("response", {"belum ditanggapi": 5, "undang": 1}),
+    ("response", {"menunggu keputusan": 5, "Setuju": 1}),
     ("outside_focus", {"sesuai fokus": 4, "di luar fokus": 2}),
 ])
 def test_ast11_count_group_by(afs, group_by, expected):
@@ -295,7 +295,7 @@ def test_ast12_detail_correction_and_response(afs):
     assert roti["grade"] == "Layak bersyarat" and roti["gradeAsliAI"] == "Perlu penyesuaian"
     assert roti["koreksi"] == {"ke": "Layak bersyarat", "alasan": "fokus baru",
                                "pada": "2026-10-21 08:00 WIB", "via": "wa"}
-    assert tools.get_proposal_detail("Kelas Kode Rakyat")["tanggapanDetail"]["kind"] == "undang"
+    assert tools.get_proposal_detail("Kelas Kode Rakyat")["keputusanDetail"] == {"keputusan": "Setuju", "via": "wa"}
     assert "skorDetail" not in tools.get_proposal_detail("Arsip Pindaian")
 
 
@@ -407,6 +407,7 @@ def test_ast11_rules(afs):
                                        "Tidak layak": "di bawah 50"}
     assert len(out["patokanNilai"]["A. Tim manajemen"]["1"]) == 120
     assert out["diubahPada"] == "2026-10-21 09:00 WIB"
+    assert out["retensiTolakHari"] == 90  # absent from the doc: the model's default
 
 
 # ---------- AST-11: get_overview ----------
@@ -424,7 +425,8 @@ def test_ast11_overview_counts_and_marks(afs):
     assert rows["Kopi Teras Senja"]["aksi"] == "Lanjutkan investasi"
     assert "diLuarFokus" not in rows["Roti Lembah"]
     assert out["proposal"][-1]["nama"] == "Arsip Pindaian" and "skor" not in out["proposal"][-1]
-    assert rows["Kelas Kode Rakyat"]["tanggapan"] == "undang"
+    assert rows["Kelas Kode Rakyat"]["keputusan"] == "Setuju"
+    assert out["perKeputusan"] == {"Setuju": 1, "menunggu keputusan": 5}
 
 
 # ---------- "Di luar fokus" is a failed fit, nothing else ----------
@@ -441,6 +443,40 @@ def test_ast11_outside_focus_is_failed_fit(fit, shows):
 
 
 # ---------- the deployed package's labels match the API's ----------
+
+def test_decision_labels_match_models():
+    from aisa.models import LEGACY_RESPONSE_LABEL, RESPONSE_LABEL
+
+    assert tools.RESPONSE_LABEL == {k.value: v for k, v in RESPONSE_LABEL.items()}
+    assert tools.LEGACY_RESPONSE_LABEL == LEGACY_RESPONSE_LABEL
+
+
+@pytest.mark.parametrize(("decision", "names"), [
+    ("setuju", ["Kelas Kode Rakyat"]),
+    ("Tolak", []),
+])
+def test_search_by_decision(afs, decision, names):
+    assert _names(tools.search_proposals(decision=decision)) == names
+
+
+def test_search_waiting_decision_and_unknown_decision(afs):
+    assert "Kelas Kode Rakyat" not in _names(tools.search_proposals(decision="menunggu", limit=50))
+    assert len(_names(tools.search_proposals(decision="menunggu keputusan", limit=50))) == 5
+    assert "error" in tools.search_proposals(decision="undang")
+    assert tools.count_proposals(group_by="category", decision="setuju")["total"] == 1
+
+
+def test_history_shows_old_decisions_as_legacy(afs):
+    afs.document("history/old").set({"at": datetime(2026, 10, 1, tzinfo=UTC), "via": "wa",
+                                     "action": "tanggapan", "before": "pantau", "after": "undang",
+                                     "detail": "Undang X"})
+    afs.document("history/new").set({"at": datetime(2026, 10, 2, tzinfo=UTC), "via": "sistem",
+                                     "action": "tanggapan", "before": "arsipkan", "after": "tolak",
+                                     "detail": "d"})
+    rows = tools.get_history()["riwayat"]
+    assert (rows[0]["before"], rows[0]["after"]) == ("Arsipkan (lama)", "Tolak")
+    assert (rows[1]["before"], rows[1]["after"]) == ("Pantau (lama)", "Undang (lama)")
+
 
 def test_grade_labels_and_actions_match_models():
     from aisa.models import CATEGORY_ACTION, CATEGORY_LABEL

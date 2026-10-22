@@ -44,9 +44,9 @@ def jobs(fs):
 
 
 def test_pwa_o01_exact_name_is_recorded(seeded, asked):
-    assert handle("Undang tani maju") == "Tercatat: Tani Maju → undang."
+    assert handle("Setuju tani maju") == "Tercatat: Tani Maju → setuju."
     p = seeded.get("proposals/p1")
-    assert p["responded"] and p["response"]["kind"] == "undang" and p["response"]["via"] == "wa"
+    assert p["responded"] and p["response"]["kind"] == "setuju" and p["response"]["via"] == "wa"
     (h,) = seeded.all("history").values()
     assert h["action"] == "tanggapan" and h["via"] == "wa" and h["proposalId"] == "p1"
     (j,) = jobs(seeded)
@@ -56,14 +56,14 @@ def test_pwa_o01_exact_name_is_recorded(seeded, asked):
 
 def test_pwa_o02_name_not_found_changes_nothing(seeded, asked):
     before = seeded.all("proposals")
-    assert handle("undang Startup Fiktif Zzz") == \
+    assert handle("setuju Startup Fiktif Zzz") == \
         'Proposal "Startup Fiktif Zzz" tidak ditemukan. Tidak ada yang diubah.'
     assert unchanged(seeded, before) and seeded.all("history") == {}
 
 
 def test_pwa_o03_ambiguous_name_lists_numbered_candidates(seeded, asked):
     before = seeded.all("proposals")
-    reply = handle("arsipkan Tani")
+    reply = handle("tolak Tani")
     assert reply == ('Ada beberapa proposal yang mirip "Tani":\n'
                      "1. Tani Maju\n2. Tani Makmur\n"
                      "Tidak ada yang diubah. Kirim ulang perintah dengan nama lengkap.")
@@ -125,23 +125,43 @@ def test_pwa_o07_ya_with_nothing_pending(seeded, asked):
 
 
 def test_pwa_o08_bulk_then_ya_responds_to_listed_proposals(seeded, asked):
-    reply = handle("arsipkan semua tidak layak")
+    reply = handle("tolak semua tidak layak")
     assert reply == ("Ada 1 proposal Tidak layak yang belum ditanggapi: Kopi Rakyat\n"
-                     "Balas YA dalam 10 menit untuk arsipkan semuanya.")
+                     "Balas YA dalam 10 menit untuk menolak semuanya.")
     pc = seeded.get(f"pendingConfirmations/{MANAGER}")
-    assert pc["proposalIds"] == ["p3"] and pc["command"] == "arsipkan semua tidak layak"
+    assert pc["proposalIds"] == ["p3"] and pc["command"] == "tolak semua tidak layak"
     assert timedelta(minutes=9) < pc["expiresAt"] - db.now() <= timedelta(minutes=10)
     assert seeded.get("proposals/p3")["responded"] is False  # nothing before YA
-    assert handle("ya") == "Selesai: 1 proposal ditandai arsipkan."
-    assert seeded.get("proposals/p3")["response"]["kind"] == "arsipkan"
+    assert handle("ya") == "Selesai: 1 proposal ditolak."
+    assert seeded.get("proposals/p3")["response"]["kind"] == "tolak"
     assert seeded.get(f"pendingConfirmations/{MANAGER}") is None
     # a second YA has nothing left to confirm
     assert handle("YA") == "Tidak ada perintah yang menunggu konfirmasi."
 
 
+def test_bulk_setuju_then_ya_records_setuju(seeded, asked):
+    seeded.document("proposals/p1").update({"effectiveCategory": "sangat_layak"})
+    assert handle("setuju semua sangat layak").endswith(
+        "Balas YA dalam 10 menit untuk menyetujui semuanya.")
+    assert handle("ya") == "Selesai: 1 proposal disetujui."
+    assert seeded.get("proposals/p1")["response"]["kind"] == "setuju"
+    (h,) = [h for h in seeded.all("history").values() if h["action"] == "tanggapan_massal"]
+    assert h["after"] == "setuju" and h["detail"].startswith("Setuju semua sangat layak: 1 proposal")
+
+
+@pytest.mark.parametrize("text", ["undang Tani Maju", "Pantau tani maju", "arsipkan semua tidak layak",
+                                  "undang"])
+def test_old_decision_words_get_the_new_commands_not_the_asisten(seeded, asked, text):
+    before = seeded.all("proposals")
+    assert handle(text) == "Perintah sekarang: setuju <nama> atau tolak <nama>."
+    assert unchanged(seeded, before) and asked == []
+    assert seeded.all("history") == {} and jobs(seeded) == []
+    assert seeded.get(f"pendingConfirmations/{MANAGER}") is None
+
+
 def test_pwa_o09_ya_after_ten_minutes_has_expired(seeded, asked):
     seeded.document(f"pendingConfirmations/{MANAGER}").set({
-        "command": "arsipkan semua tidak layak", "proposalIds": ["p3"],
+        "command": "tolak semua tidak layak", "proposalIds": ["p3"],
         "expiresAt": db.now() - timedelta(minutes=1)})
     before = seeded.all("proposals")
     assert handle("YA") == "Konfirmasi sudah kedaluwarsa (lebih dari 10 menit). Kirim ulang perintahnya."
@@ -150,7 +170,7 @@ def test_pwa_o09_ya_after_ten_minutes_has_expired(seeded, asked):
 
 
 def test_pwa_o10_bulk_on_empty_category(seeded, asked):
-    assert handle("pantau semua risiko tinggi") == "Tidak ada proposal Risiko tinggi yang belum ditanggapi."
+    assert handle("setuju semua risiko tinggi") == "Tidak ada proposal Risiko tinggi yang belum ditanggapi."
     assert seeded.get(f"pendingConfirmations/{MANAGER}") is None
 
 
@@ -172,7 +192,7 @@ def test_pwa_o12_paused_question_is_not_sent_to_the_asisten(seeded, asked):
 
 def test_pwa_o13_commands_still_run_while_paused(seeded, asked):
     handle("stop")
-    assert handle("undang Tani Maju") == "Tercatat: Tani Maju → undang."
+    assert handle("tolak Tani Maju") == "Tercatat: Tani Maju → tolak."
 
 
 def test_pwa_o14_lanjut_resumes_keeps_last_stop_and_runs_queue(seeded, env):

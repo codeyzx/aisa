@@ -11,6 +11,7 @@ from . import assistant_client, db, domain, intake
 from .commands import (
     Confirm,
     Correct,
+    LegacyWord,
     Resume,
     Respond,
     RespondBulk,
@@ -20,10 +21,22 @@ from .commands import (
 )
 from .digest import fmt_score
 from .jobs import JobLog
-from .models import CATEGORY_LABEL, JobKind, JobStatus, PendingConfirmation, Via, to_doc
+from .models import (
+    CATEGORY_LABEL,
+    JobKind,
+    JobStatus,
+    PendingConfirmation,
+    ResponseKind,
+    Via,
+    to_doc,
+)
 
 CONFIRM_TTL = timedelta(minutes=10)
 PAUSED_REPLY = "AISA sedang dijeda (STOP). Kirim LANJUT untuk melanjutkan."
+LEGACY_REPLY = "Perintah sekarang: setuju <nama> atau tolak <nama>."
+# "… untuk menyetujui semuanya" / "Selesai: 3 proposal disetujui."
+VERB = {ResponseKind.setuju: "menyetujui", ResponseKind.tolak: "menolak"}
+DONE = {ResponseKind.setuju: "disetujui", ResponseKind.tolak: "ditolak"}
 
 
 def stop_reply(answer_cancelled: bool) -> str:
@@ -129,7 +142,7 @@ def _execute(phone: str, cmd, job: JobLog | None = None) -> str:
         _pending_ref(phone).set(to_doc(pc))
         names = ", ".join(n for _, n in found[:15]) + ("…" if len(found) > 15 else "")
         return (f"Ada {len(found)} proposal {label} yang belum ditanggapi: {names}\n"
-                f"Balas YA dalam 10 menit untuk {cmd.kind.value} semuanya.")
+                f"Balas YA dalam 10 menit untuk {VERB[cmd.kind]} semuanya.")
     if isinstance(cmd, Confirm):
         ref = _pending_ref(phone)
         snap = ref.get()
@@ -144,12 +157,15 @@ def _execute(phone: str, cmd, job: JobLog | None = None) -> str:
             return "Perintah yang menunggu tidak dikenali. Tidak ada yang diubah."
         link(proposal_ids=pc.proposalIds)
         n = domain.respond_bulk(bulk.category, bulk.kind, Via.wa, pc.proposalIds)
-        return f"Selesai: {n} proposal ditandai {bulk.kind.value}."
+        return f"Selesai: {n} proposal {DONE[bulk.kind]}."
     raise AssertionError(cmd)
 
 
 def handle(phone: str, text: str) -> str | None:
     cmd = parse(text)
+    if isinstance(cmd, LegacyWord):
+        # Nothing is run, so no job is logged; the Asisten would only guess at the old word.
+        return LEGACY_REPLY
     if cmd is None:
         # STOP pauses all AI work, the Asisten included; commands still run.
         if db.is_paused():

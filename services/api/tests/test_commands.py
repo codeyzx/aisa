@@ -1,19 +1,30 @@
 import pytest
 
-from aisa.commands import Confirm, Correct, Respond, RespondBulk, Resume, Stop, match_name, parse
+from aisa.commands import (
+    Confirm,
+    Correct,
+    LegacyWord,
+    Respond,
+    RespondBulk,
+    Resume,
+    Stop,
+    match_name,
+    parse,
+)
 from aisa.models import Category, ResponseKind as K
 
 
 @pytest.mark.parametrize("text,expected", [
     ("STOP", Stop()), ("stop", Stop()), ("Lanjut", Resume()), ("YA", Confirm()), ("ya.", Confirm()),
-    ("undang Tani Maju", Respond(K.undang, "Tani Maju")),
-    ("Pantau  sawahku", Respond(K.pantau, "sawahku")),
-    ("arsipkan Kopi Rakyat", Respond(K.arsipkan, "Kopi Rakyat")),
-    ("arsipkan semua tidak layak", RespondBulk(K.arsipkan, Category.tidak_layak)),
-    ("Undang semua Sangat Layak", RespondBulk(K.undang, Category.sangat_layak)),
-    ("pantau semua layak  bersyarat", RespondBulk(K.pantau, Category.layak_bersyarat)),
-    ("arsipkan semua perlu penyesuaian", RespondBulk(K.arsipkan, Category.perlu_penyesuaian)),
-    ("arsipkan semua RISIKO TINGGI", RespondBulk(K.arsipkan, Category.risiko_tinggi)),
+    ("setuju Tani Maju", Respond(K.setuju, "Tani Maju")),
+    ("Setuju  sawahku", Respond(K.setuju, "sawahku")),
+    ("tolak Kopi Rakyat", Respond(K.tolak, "Kopi Rakyat")),
+    ("TOLAK Kopi Rakyat.", Respond(K.tolak, "Kopi Rakyat")),
+    ("tolak semua tidak layak", RespondBulk(K.tolak, Category.tidak_layak)),
+    ("Setuju semua Sangat Layak", RespondBulk(K.setuju, Category.sangat_layak)),
+    ("setuju semua layak  bersyarat", RespondBulk(K.setuju, Category.layak_bersyarat)),
+    ("tolak semua perlu penyesuaian", RespondBulk(K.tolak, Category.perlu_penyesuaian)),
+    ("tolak semua RISIKO TINGGI", RespondBulk(K.tolak, Category.risiko_tinggi)),
     ("pindahkan Kopi Rakyat ke layak bersyarat karena tim kuat",
      Correct("Kopi Rakyat", Category.layak_bersyarat, "tim kuat")),
     ("Pindahkan Tani Maju ke sangat layak karena kinerja bagus sekali",
@@ -24,7 +35,12 @@ from aisa.models import Category, ResponseKind as K
     ("pindahkan Layak Jaya ke perlu penyesuaian karena dana belum jelas",
      Correct("Layak Jaya", Category.perlu_penyesuaian, "dana belum jelas")),
     # "layak" alone is not a grade word: this is a response to a proposal named "semua layak".
-    ("arsipkan semua layak", Respond(K.arsipkan, "semua layak")),
+    ("tolak semua layak", Respond(K.tolak, "semua layak")),
+    # The old decision words are recognised only to answer with the new commands.
+    ("undang Tani Maju", LegacyWord("undang")),
+    ("Pantau  sawahku", LegacyWord("pantau")),
+    ("ARSIPKAN semua tidak layak", LegacyWord("arsipkan")),
+    ("undang", LegacyWord("undang")),
 ])
 def test_parse_commands(text, expected):
     assert parse(text) == expected
@@ -32,7 +48,7 @@ def test_parse_commands(text, expected):
 
 @pytest.mark.parametrize("text", [
     "Fintech yang sangat layak", "pindahkan Tani Maju ke layak karena bagus", "Kenapa skor Panen Kita segitu?", "Bandingkan Tani Maju dan SawahKu",
-    "stop dulu ya", "undang", "",
+    "stop dulu ya", "setuju", "tolak", "", "undangan founder minggu ini?",
 ])
 def test_non_commands_go_to_assistant(text):
     assert parse(text) is None

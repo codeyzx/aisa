@@ -123,10 +123,10 @@ def test_pwa_w08_cancelled_answer_sends_nothing(client, sent, env):
 
 def test_pwa_w09_command_end_to_end_through_the_webhook(client, sent, fs):
     seed_proposal(fs, "p1", "Tani Maju")
-    assert post_hook(client, event(body="undang tani maju")).json() == {"accepted": True}
-    assert sent == [(MANAGER, "Tercatat: Tani Maju → undang.")]
+    assert post_hook(client, event(body="setuju tani maju")).json() == {"accepted": True}
+    assert sent == [(MANAGER, "Tercatat: Tani Maju → setuju.")]
     p = fs.get("proposals/p1")
-    assert p["responded"] is True and p["response"]["kind"] == "undang" and p["response"]["via"] == "wa"
+    assert p["responded"] is True and p["response"]["kind"] == "setuju" and p["response"]["via"] == "wa"
 
 
 # ---------- /intake/form ----------
@@ -269,9 +269,9 @@ def test_kam_u07_unset_key_is_503(client, env, uploads):
 # ---------- dashboard API ----------
 
 DASHBOARD_ROUTES = [
-    ("POST", "/api/proposals/p1/response", {"kind": "undang"}),
+    ("POST", "/api/proposals/p1/response", {"kind": "setuju"}),
     ("POST", "/api/proposals/p1/correction", {"category": "layak_bersyarat", "reason": "r"}),
-    ("POST", "/api/proposals/bulk-response", {"category": "layak_bersyarat", "kind": "arsipkan"}),
+    ("POST", "/api/proposals/bulk-response", {"category": "layak_bersyarat", "kind": "tolak"}),
     ("DELETE", "/api/proposals/p1", {"reason": "r"}),
     ("PUT", "/api/rules", {"rules": {}, "reason": "r"}),
     ("POST", "/api/runtime/stop", None),
@@ -318,8 +318,8 @@ def test_dsb_rute04_delete_removes_everything_derived(client, fs, env):
     fs.document("jobs/job1").set({"proposalId": "p1"})
     fs.document("jobs/job1/steps/001").set({"seq": 1})
     fs.document(f"pendingConfirmations/{MANAGER}").set({"proposalIds": ["p1"]})
-    fs.document("history/h1").set({"proposalId": "p1", "proposalName": "Tani Maju", "detail": "Undang Tani Maju",
-                                   "action": "tanggapan", "before": None, "after": "undang", "reason": None})
+    fs.document("history/h1").set({"proposalId": "p1", "proposalName": "Tani Maju", "detail": "Setuju Tani Maju",
+                                   "action": "tanggapan", "before": None, "after": "setuju", "reason": None})
     fs.document("digests/d1").set({"text": "1. Tani Maju · 80", "proposalIds": ["p1", "p2"]})
     r = api(client, "DELETE", "/api/proposals/p1", {"reason": "permintaan founder (uji)"})
     assert r.status_code == 200 and r.json()["deleted"] is True
@@ -337,16 +337,17 @@ def test_dsb_rute04_delete_removes_everything_derived(client, fs, env):
 
 def test_dsb_rute05_response_writes_proposal_and_history(client, fs):
     seed_proposal(fs, "p1", "Tani Maju")
-    r = api(client, "POST", "/api/proposals/p1/response", {"kind": "pantau", "note": "  "})
-    assert r.status_code == 200 and r.json()["response"]["kind"] == "pantau"
+    r = api(client, "POST", "/api/proposals/p1/response", {"kind": "tolak", "note": "  "})
+    assert r.status_code == 200 and r.json()["response"]["kind"] == "tolak"
     p = fs.get("proposals/p1")
     assert p["responded"] is True and p["response"]["via"] == "dashboard" and p["response"]["note"] is None
     (h,) = fs.all("history").values()
-    assert h["action"] == "tanggapan" and h["after"] == "pantau" and h["via"] == "dashboard"
+    assert h["action"] == "tanggapan" and h["after"] == "tolak" and h["via"] == "dashboard"
+    assert h["detail"] == "Tolak Tani Maju"
 
 
 def test_dsb_rute06_response_on_missing_proposal_is_404(client, fs):
-    r = api(client, "POST", "/api/proposals/tidak-ada/response", {"kind": "undang"})
+    r = api(client, "POST", "/api/proposals/tidak-ada/response", {"kind": "setuju"})
     assert r.status_code == 404
 
 
@@ -376,9 +377,9 @@ def test_dsb_rute10_bulk_response_counts_only_unresponded_in_category(client, fs
     seed_proposal(fs, "a", "A", category="tidak_layak", score=30.0)
     seed_proposal(fs, "b", "B", category="tidak_layak", score=30.0, responded=True)
     seed_proposal(fs, "c", "C", category="perlu_penyesuaian")
-    r = api(client, "POST", "/api/proposals/bulk-response", {"category": "tidak_layak", "kind": "arsipkan"})
+    r = api(client, "POST", "/api/proposals/bulk-response", {"category": "tidak_layak", "kind": "tolak"})
     assert r.status_code == 200 and r.json() == {"count": 1}
-    assert fs.get("proposals/a")["response"]["kind"] == "arsipkan"
+    assert fs.get("proposals/a")["response"]["kind"] == "tolak"
     assert fs.get("proposals/c")["responded"] is False
 
 
@@ -431,8 +432,8 @@ def test_dsb_rute11c_valid_new_scale_rules_bump_the_version(client, fs, rules):
 @pytest.mark.parametrize("path,body", [
     ("/api/proposals/p1/correction", {"category": "cocok", "reason": "r"}),
     ("/api/proposals/p1/correction", {"category": "sangat_cocok", "reason": "r"}),
-    ("/api/proposals/bulk-response", {"category": "cocok", "kind": "arsipkan"}),
-    ("/api/proposals/bulk-response", {"category": "tidak_cocok", "kind": "arsipkan"}),
+    ("/api/proposals/bulk-response", {"category": "cocok", "kind": "tolak"}),
+    ("/api/proposals/bulk-response", {"category": "tidak_cocok", "kind": "tolak"}),
 ])
 def test_dsb_rute13_old_category_values_are_422(client, fs, path, body):
     seed_proposal(fs, "p1", "Tani Maju")
@@ -513,3 +514,16 @@ def test_upload_deck_url_is_signed_inline_pdf_and_doubles_as_preview(client, fs,
 ])
 def test_inline_pdf_disposition_is_header_safe(name, want):
     assert storage.inline_pdf_disposition(name) == want
+
+
+@pytest.mark.parametrize("path,body", [
+    ("/api/proposals/p1/response", {"kind": "undang"}),
+    ("/api/proposals/p1/response", {"kind": "pantau"}),
+    ("/api/proposals/bulk-response", {"category": "perlu_penyesuaian", "kind": "arsipkan"}),
+])
+def test_old_decision_words_are_422(client, fs, path, body):
+    seed_proposal(fs, "p1", "Tani Maju")
+    before = fs.all("proposals")
+    r = api(client, "POST", path, body)
+    assert r.status_code == 422
+    assert fs.all("proposals") == before and fs.all("history") == {}

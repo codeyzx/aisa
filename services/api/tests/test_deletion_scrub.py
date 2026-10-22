@@ -49,38 +49,38 @@ def test_correction_without_reason_is_still_linked(seeded):
 
 
 def test_respond_job_uses_the_stored_name(seeded):
-    handle("undang qa tambak")
+    handle("setuju qa tambak")
     j = only_job(seeded)
-    assert j["title"] == f"Perintah: undang {NAME}" and j["proposalId"] == "p1"
+    assert j["title"] == f"Perintah: setuju {NAME}" and j["proposalId"] == "p1"
 
 
 def test_unresolved_name_is_not_linked(seeded):
-    handle("undang Xqzpt Vlombr")
+    handle("setuju Xqzpt Vlombr")
     j = only_job(seeded)
-    assert j["proposalId"] is None and j["title"] == "Perintah: undang Xqzpt Vlombr"
+    assert j["proposalId"] is None and j["title"] == "Perintah: setuju Xqzpt Vlombr"
 
 
 def test_bulk_and_confirmation_jobs_record_every_proposal(seeded):
-    handle("pantau semua risiko tinggi")
+    handle("tolak semua risiko tinggi")
     handle("YA")
     by_title = {j["title"]: j for j in jobs(seeded).values()}
-    assert sorted(by_title["Perintah: pantau semua risiko tinggi"]["proposalIds"]) == ["p3", "p4"]
+    assert sorted(by_title["Perintah: tolak semua risiko tinggi"]["proposalIds"]) == ["p3", "p4"]
     assert sorted(by_title["Perintah: YA"]["proposalIds"]) == ["p3", "p4"]
 
 
 def test_delete_removes_single_target_command_jobs_with_their_steps(seeded):
-    handle(f"undang {NAME}")
+    handle(f"setuju {NAME}")
     handle(f"pindahkan {NAME} ke sangat layak karena uji")
-    handle("undang Roti Lembah")
+    handle("setuju Roti Lembah")
     assert len(jobs(seeded)) == 3
     domain.delete_proposal("p1", "QA cleanup", Via.dashboard)
     left = jobs(seeded)
-    assert [j["title"] for j in left.values()] == ["Perintah: undang Roti Lembah"]
+    assert [j["title"] for j in left.values()] == ["Perintah: setuju Roti Lembah"]
     assert all(not p.startswith("jobs/") or p.split("/")[1] in left for p in seeded.docs)
 
 
 def test_delete_scrubs_a_shared_bulk_job_and_keeps_it_for_the_others(seeded):
-    handle("pantau semua risiko tinggi")
+    handle("tolak semua risiko tinggi")
     handle("YA")
     domain.delete_proposal("p3", "QA cleanup", Via.dashboard)
     left = list(jobs(seeded).values())
@@ -100,7 +100,7 @@ def test_delete_scrubs_name_in_unlinked_job_titles_and_steps(seeded):
     seeded.document("jobs/twin").set({"kind": "penilaian", "title": f"Menilai proposal {NAME}",
                                       "proposalId": "p9"})
     seeded.document("jobs/twin/steps/001").set({"action": f"Nilai {NAME}"})
-    seeded.document("jobs/longer").set({"kind": "perintah", "title": f"Perintah: undang {NAME}2"})
+    seeded.document("jobs/longer").set({"kind": "perintah", "title": f"Perintah: setuju {NAME}2"})
 
     domain.delete_proposal("p1", "QA cleanup", Via.dashboard)
 
@@ -108,7 +108,7 @@ def test_delete_scrubs_name_in_unlinked_job_titles_and_steps(seeded):
     assert seeded.get("jobs/ask/steps/001")["read"] == "nama=(dihapus)"
     assert seeded.get("jobs/twin")["title"] == f"Menilai proposal {NAME}"
     assert seeded.get("jobs/twin/steps/001")["action"] == f"Nilai {NAME}"
-    assert seeded.get("jobs/longer")["title"] == f"Perintah: undang {NAME}2"
+    assert seeded.get("jobs/longer")["title"] == f"Perintah: setuju {NAME}2"
 
 
 def test_deleting_the_same_id_again_keeps_the_earlier_deletion_reason(seeded):

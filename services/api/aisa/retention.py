@@ -1,5 +1,6 @@
-"""Retention: archived proposals are deleted `rules.retentionDays` after the archive
-response, through the same `domain.delete_proposal` a founder's request uses."""
+"""Retention: proposals decided `tolak` are deleted `rules.retentionDays` after that
+decision, through the same `domain.delete_proposal` a founder's request uses. `setuju` is
+never deleted automatically."""
 
 from __future__ import annotations
 
@@ -14,11 +15,11 @@ from .models import JobKind, JobStatus, ResponseKind, Via
 
 
 def due(rows: list[tuple[str, dict[str, Any] | None]], now: datetime, days: int) -> list[str]:
-    """Ids whose response is `arsipkan` and was given strictly more than `days` days ago."""
+    """Ids whose response is `tolak` and was given strictly more than `days` days ago."""
     cutoff = now - timedelta(days=days)
     out = []
     for pid, response in rows:
-        if not response or response.get("kind") != ResponseKind.arsipkan.value:
+        if not response or response.get("kind") != ResponseKind.tolak.value:
             continue
         at = response.get("at")
         if isinstance(at, datetime) and at < cutoff:
@@ -27,16 +28,16 @@ def due(rows: list[tuple[str, dict[str, Any] | None]], now: datetime, days: int)
 
 
 def run() -> dict:
-    """Delete every archived proposal past retention, logged as one job."""
+    """Delete every `tolak` proposal past retention, logged as one job."""
     days = db.load_rules().retentionDays
     reason = f"retensi otomatis {days} hari"
     job = JobLog(JobKind.perintah, "Retensi", f"Retensi otomatis {days} hari")
     try:
-        with job.code_step(f"Cari proposal diarsipkan lebih dari {days} hari", "firestore",
+        with job.code_step(f"Cari proposal ditolak lebih dari {days} hari", "firestore",
                            read="proposals"):
             # Equality on one field only, then the date in code: no composite index needed.
             q = db.client().collection("proposals").where(
-                filter=FieldFilter("response.kind", "==", ResponseKind.arsipkan.value))
+                filter=FieldFilter("response.kind", "==", ResponseKind.tolak.value))
             ids = due([(s.id, s.to_dict().get("response")) for s in q.stream()], db.now(), days)
         deleted = []
         for pid in ids:

@@ -248,6 +248,19 @@ class FakeFirestore:
 
 # ---------- fixtures ----------
 
+@pytest.fixture(autouse=True)
+def _no_real_google_clients(monkeypatch):
+    """A test that forgets `fs` must fail, not quietly read or write the real project with
+    the developer's ADC. Same for a model call that a test forgot to script."""
+    def refuse(*_a, **_k):
+        raise RuntimeError("test tried to open a real Google client; use the fs fixture or a fake")
+
+    monkeypatch.setattr(gfs.Client, "__init__", refuse)
+    from google import genai
+    monkeypatch.setattr(genai.Client, "__init__", refuse)
+    from aisa import llm
+    llm.client.cache_clear()
+
 @pytest.fixture
 def env(monkeypatch):
     monkeypatch.setenv("MANAGER_PHONES", MANAGER)

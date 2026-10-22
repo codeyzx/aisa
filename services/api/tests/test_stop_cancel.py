@@ -185,4 +185,4 @@ def test_get_overview_is_compact(monkeypatch):
     assert out["belumDitanggapi"] == 30 and out["perGrade"] == {"Layak bersyarat": 60}
     assert out["proposal"][0]["nama"] == "S59"
     assert set(out["proposal"][0]) <= {"nama", "sektor", "skor", "grade", "aksi", "status",
-                                       "tanggapan", "diLuarFokus"}
+                                       "keputusan", "diLuarFokus"}

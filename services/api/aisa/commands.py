@@ -14,7 +14,9 @@ CATEGORY_WORDS: dict[str, Category] = {label.lower(): c for c, label in CATEGORY
 # Longest phrase first, so a shorter word can never win over a longer one it is part of.
 _CAT = "(" + "|".join(r"\s+".join(map(re.escape, w.split()))
                       for w in sorted(CATEGORY_WORDS, key=len, reverse=True)) + ")"
-_KIND = r"(undang|pantau|arsipkan)"
+_KIND = r"(setuju|tolak)"
+# Decision words of the earlier scale: recognised only to answer with the new commands.
+_LEGACY = r"(undang|pantau|arsipkan)"
 
 
 @dataclass(frozen=True)
@@ -42,13 +44,19 @@ class RespondBulk:
 
 
 @dataclass(frozen=True)
+class LegacyWord:
+    """A message that starts with an old decision word (`undang`, `pantau`, `arsipkan`)."""
+    word: str
+
+
+@dataclass(frozen=True)
 class Correct:
     name: str
     category: Category
     reason: str | None  # None = manager omitted "karena …"; caller must ask for it
 
 
-Command = Stop | Resume | Confirm | Respond | RespondBulk | Correct
+Command = Stop | Resume | Confirm | Respond | RespondBulk | Correct | LegacyWord
 
 
 def _cat(s: str) -> Category:
@@ -71,6 +79,8 @@ def parse(text: str) -> Command | None:
         return Correct(m[1].strip(), _cat(m[2]), reason)
     if m := re.fullmatch(rf"{_KIND} (.+)", t, re.I):
         return Respond(ResponseKind(m[1].lower()), m[2].strip())
+    if m := re.fullmatch(rf"{_LEGACY}(?: .*)?", t, re.I):
+        return LegacyWord(m[1].lower())
     return None
 
 

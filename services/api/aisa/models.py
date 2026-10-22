@@ -74,9 +74,24 @@ class ProposalStatus(StrEnum):
 
 
 class ResponseKind(StrEnum):
-    undang = "undang"
-    pantau = "pantau"
-    arsipkan = "arsipkan"
+    """The manager's decision on a proposal."""
+
+    setuju = "setuju"
+    tolak = "tolak"
+
+
+RESPONSE_LABEL: dict[ResponseKind, str] = {
+    ResponseKind.setuju: "Setuju",
+    ResponseKind.tolak: "Tolak",
+}
+
+# Decisions of the earlier scale. They are no longer accepted anywhere, but history rows
+# written before `aisa migrate-responses` still carry them.
+LEGACY_RESPONSE_LABEL: dict[str, str] = {
+    "undang": "Undang (lama)",
+    "pantau": "Pantau (lama)",
+    "arsipkan": "Arsipkan (lama)",
+}
 
 
 class Via(StrEnum):
@@ -126,6 +141,8 @@ HistoryAction = Literal[
 ]
 
 Slot = Literal["09.00", "17.00"]
+# 09.00 is the daily digest; 17.00 is always the weekly summary.
+DigestPeriod = Literal["harian", "mingguan"]
 
 
 # ---------- proposals ----------
@@ -289,7 +306,7 @@ class Rules(_M):
     thresholds: Thresholds
     models: ModelNames
     minCharsPerPage: int = 200
-    # Archived proposals are deleted this many days after the archive response.
+    # Proposals decided `tolak` are deleted this many days after that decision.
     retentionDays: int = Field(90, ge=1)
     changedAt: datetime
     reason: str
@@ -380,17 +397,61 @@ class DigestCounts(_M):
     baruMasuk: int = 0
 
 
+class WeekRange(_M):
+    """WIB dates (YYYY-MM-DD): the Monday the week starts and the day the summary was sent."""
+
+    start: str
+    end: str
+
+
+class SectorShare(_M):
+    sector: str  # the stored sector, lowercased
+    label: str  # as the dashboard shows it ("f&b" → "F&B")
+    count: int
+    percent: int  # of `WeeklyStats.proposalsIn`, rounded half up
+
+
+class WeeklyStats(_M):
+    """Every number the weekly summary states, counted by code. "This week" is Monday 00:00
+    WIB → send time, "last week" the full Monday–Sunday before it; proposals are placed in a
+    week by `createdAt`, decisions by `response.at`. Deleted proposals are not counted."""
+
+    proposalsIn: int
+    proposalsInLastWeek: int
+    topSectors: list[SectorShare] = []  # at most 3, most proposals first
+    noSector: int = 0  # proposals in this week with no sector read yet
+    assessed: int = 0  # this week's proposals with status `dinilai`
+    byCategory: dict[Category, int] = {}  # of those, per effective grade
+    good: int = 0  # Sangat layak + Layak bersyarat
+    outOfFocus: int = 0
+    outOfFocusPercent: int | None = None  # of `assessed`; None when nothing was assessed
+    avgScore: float | None = None  # one decimal
+    avgScoreLastWeek: float | None = None
+    setuju: int = 0
+    tolak: int = 0
+    waiting: int = 0  # every proposal awaiting a decision now, whatever week it came in
+    oldestWaitingDays: int | None = None
+    perluDicekManual: int = 0  # this week's proposals with status `perlu_dicek_manual`
+
+
 class Digest(_M):
     slot: Slot
+    # Absent on docs written before the weekly summary existed: those are all daily.
+    period: DigestPeriod = "harian"
     windowStart: datetime | None = None
     sentAt: datetime
     text: str
+    # Daily and weekly alike: the unresponded proposals at send time, per grade, plus
+    # `baruMasuk`, the proposals that came in during the window.
     counts: DigestCounts
+    # The proposals the message names (weekly: its top 3, best first).
     proposalIds: list[str]
     usedTemplate: bool
     insight: str | None = None  # the insight sentence used, without the "Yang menarik:" label
     jobId: str
     gowaMessageIds: list[str] = []
+    week: WeekRange | None = None  # weekly only
+    weekly: WeeklyStats | None = None  # weekly only
 
 
 class TokenPair(_M):

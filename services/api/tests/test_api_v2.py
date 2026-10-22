@@ -26,24 +26,25 @@ def test_scrubbed_history_drops_name_and_details():
 
 
 def test_scrub_name_whole_word_case_insensitive():
-    detail = "Arsipkan semua tidak layak: 3 proposal (Kopi Rakyat, kopi rakyat, Kopi Rakyatku)"
+    detail = "Tolak semua tidak layak: 3 proposal (Kopi Rakyat, kopi rakyat, Kopi Rakyatku)"
     assert scrub_name(detail, "Kopi Rakyat") == \
-        "Arsipkan semua tidak layak: 3 proposal ((dihapus), (dihapus), Kopi Rakyatku)"
+        "Tolak semua tidak layak: 3 proposal ((dihapus), (dihapus), Kopi Rakyatku)"
     assert scrub_name("a.b (x)", "a.b") == "(dihapus) (x)"  # regex characters are literal
     assert scrub_name("teks", "  ") == "teks"
 
 
 # ---------- retention ----------
 
-def test_retention_selects_only_archived_past_the_window():
+def test_retention_selects_only_tolak_past_the_window():
     old, recent = NOW - timedelta(days=91), NOW - timedelta(days=89)
     rows = [
-        ("a", {"kind": "arsipkan", "at": old}),
-        ("b", {"kind": "arsipkan", "at": recent}),
-        ("c", {"kind": "undang", "at": old}),
+        ("a", {"kind": "tolak", "at": old}),
+        ("b", {"kind": "tolak", "at": recent}),
+        ("c", {"kind": "setuju", "at": old}),  # setuju is never deleted automatically
         ("d", None),
-        ("e", {"kind": "arsipkan", "at": NOW - timedelta(days=90)}),  # exactly 90: kept
-        ("f", {"kind": "arsipkan"}),
+        ("e", {"kind": "tolak", "at": NOW - timedelta(days=90)}),  # exactly 90: kept
+        ("f", {"kind": "tolak"}),
+        ("g", {"kind": "arsipkan", "at": old}),  # an old word left unmigrated is not deleted
     ]
     assert due(rows, NOW, 90) == ["a"]
     assert due(rows, NOW, 1) == ["a", "b", "e"]

@@ -277,7 +277,7 @@ export function DashboardOverview({
           icon={CheckCircle2Icon}
           label="Sudah ditanggapi"
           value={responded.length}
-          hint="Diundang, dipantau, atau diarsipkan"
+          hint="Disetujui atau ditolak"
         />
         <StatCard
           href="/proposal"
@@ -524,7 +524,7 @@ export function DashboardOverview({
                 </li>
               ) : null}
             </ul>
-            <div className="mt-auto grid grid-cols-3 gap-2 border-t pt-4 text-center">
+            <div className="mt-auto grid grid-cols-2 gap-2 border-t pt-4 text-center">
               {RESPONSE_KINDS.map((kind) => (
                 <Link
                   key={kind}

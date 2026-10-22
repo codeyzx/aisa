@@ -98,10 +98,10 @@ test('DSB-92 a retention change needs a reason, then sends the stored rules with
 }) => {
   const stored = await storedRules()
   await page.goto('/pengaturan?tab=privasi')
-  const retention = panel(page, 'Berapa lama arsip disimpan')
+  const retention = panel(page, 'Berapa lama proposal yang ditolak disimpan')
 
   // Only whole days are offered: there is no field to type a fraction or 0 into.
-  await retention.getByLabel('Hapus arsip setelah').click()
+  await retention.getByLabel('Hapus yang ditolak setelah').click()
   await expect(page.getByRole('option')).toHaveText([
     /^30 hari/u,
     /^90 hari/u,
@@ -326,4 +326,45 @@ test('DSB-98 a STOP aisa-api refuses shows its message verbatim', async ({
   // The confirmation stays open so the refusal can be read where it was asked.
   await expect(alertIn(confirm, 'INTERNAL_API_KEY belum diatur')).toBeVisible()
   await expect(toast(page, 'AI dijeda (STOP).')).toHaveCount(0)
+})
+
+test('DSB-99 Pengaturan Ringkasan names both schedules and previews the daily and the weekly message', async ({
+  page,
+}) => {
+  await page.goto('/pengaturan?tab=ringkasan')
+  const jadwal = panel(page, 'Jadwal kirim')
+  await expect(jadwal).toContainText('09.00 setiap hari')
+  await expect(jadwal).toContainText(
+    'Proposal baru sejak ringkasan pagi sebelumnya',
+  )
+  await expect(jadwal).toContainText('17.00 setiap Jumat')
+  await expect(jadwal).toContainText('Ringkasan minggu ini')
+  await expect(jadwal).toContainText(
+    /Berikutnya (hari ini|besok) pukul (09\.00 WIB \(harian\)|17\.00 WIB \(mingguan\))/u,
+  )
+  await expect(panel(page, 'Isi ringkasan mingguan')).toBeVisible()
+
+  const preview = page.getByRole('complementary', {
+    name: 'Pratinjau pesan WhatsApp',
+  })
+  await preview.getByRole('button', { name: 'Harian' }).click()
+  // The daily window starts at the seed's 09.00 ringkasan.
+  await expect(preview).toContainText(
+    /Selamat pagi, Pak\. Sejak ringkasan \S+ pukul 09\.00 masuk \d+ proposal baru\./u,
+  )
+  await expect(preview).toContainText('Sangat layak (3)')
+
+  await preview.getByRole('button', { name: 'Mingguan' }).click()
+  await expect(preview).toContainText(
+    /Selamat sore, Pak\. Ini ringkasan mingguan AISA, \d{1,2}/u,
+  )
+  for (const heading of [
+    'Proposal masuk',
+    'Sektor',
+    'Rata-rata skor',
+    'Keputusan minggu ini',
+    'Perlu dicek manual',
+  ])
+    await expect(preview.locator('b', { hasText: heading })).toBeVisible()
+  await expect(preview).toContainText(/Setuju \d+ · Tolak \d+/u)
 })

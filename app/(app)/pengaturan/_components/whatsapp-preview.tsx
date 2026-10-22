@@ -3,11 +3,14 @@
 import { CheckCheckIcon } from 'lucide-react'
 import { Fragment, useState } from 'react'
 
-import { MANAGER_SALUTATION } from '@/lib/app-config'
-
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 
-type Slot = '09.00' | '17.00'
+type Period = 'harian' | 'mingguan'
+
+const PERIOD: Record<Period, { time: string; day: string; toggle: string }> = {
+  harian: { time: '09.00', day: 'Hari ini', toggle: 'Harian' },
+  mingguan: { time: '17.00', day: 'Jumat', toggle: 'Mingguan' },
+}
 
 /** WhatsApp's `*bold*` as <b>, the only markup the ringkasan uses. */
 function Line({ text }: { text: string }) {
@@ -34,22 +37,20 @@ function Line({ text }: { text: string }) {
 }
 
 /**
- * A chat bubble built from the real unanswered proposals. Theme tokens, not
- * WhatsApp green, so it reads as a preview rather than a screenshot.
+ * A chat bubble built from the real proposals, for the daily or the weekly
+ * ringkasan. Theme tokens, not WhatsApp green, so it reads as a preview rather
+ * than a screenshot.
  */
 export function WhatsappPreview({
-  lines,
-  pending,
-  since,
-  initialSlot,
+  messages,
+  initialPeriod,
 }: {
-  lines: string[]
-  pending: number
-  /** The opening's middle sentence, built on the server from the last ringkasan. */
-  since: string
-  initialSlot: Slot
+  /** Each message's lines, opening first, built on the server. */
+  messages: Record<Period, string[]>
+  initialPeriod: Period
 }) {
-  const [slot, setSlot] = useState<Slot>(initialSlot)
+  const [period, setPeriod] = useState<Period>(initialPeriod)
+  const meta = PERIOD[period]
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -58,19 +59,18 @@ export function WhatsappPreview({
           size="sm"
           variant="outline"
           spacing={0}
-          value={[slot]}
+          value={[period]}
           onValueChange={(value) => {
-            const next = value[0] as Slot | undefined
-            if (next) setSlot(next)
+            const next = value[0] as Period | undefined
+            if (next) setPeriod(next)
           }}
           aria-label="Pratinjau ringkasan"
         >
-          <ToggleGroupItem value="09.00" className="px-3 text-xs">
-            Pagi
-          </ToggleGroupItem>
-          <ToggleGroupItem value="17.00" className="px-3 text-xs">
-            Sore
-          </ToggleGroupItem>
+          {(Object.keys(PERIOD) as Period[]).map((key) => (
+            <ToggleGroupItem key={key} value={key} className="px-3 text-xs">
+              {PERIOD[key].toggle}
+            </ToggleGroupItem>
+          ))}
         </ToggleGroup>
       </div>
       <div className="overflow-hidden rounded-2xl border shadow-sm">
@@ -89,23 +89,18 @@ export function WhatsappPreview({
         <div className="max-h-[34rem] overflow-y-auto bg-muted/70 px-3 py-4">
           <p className="mb-3 text-center">
             <span className="rounded-md bg-card px-2 py-0.5 text-[11px] text-muted-foreground shadow-xs">
-              Hari ini
+              {meta.day}
             </span>
           </p>
           <div
-            key={slot}
+            key={period}
             className="relative max-w-[94%] animate-in space-y-2 rounded-xl rounded-tl-sm bg-card px-3.5 py-2.5 text-[13px] leading-relaxed text-card-foreground shadow-xs duration-300 fade-in"
           >
-            <p>
-              {slot === '09.00' ? 'Selamat pagi' : 'Selamat sore'},{' '}
-              {MANAGER_SALUTATION}. {since} Ada {pending} proposal yang belum{' '}
-              {MANAGER_SALUTATION} tanggapi.
-            </p>
-            {lines.map((line) => (
+            {messages[period].map((line) => (
               <Line key={line} text={line} />
             ))}
             <p className="-mt-1 flex items-center justify-end gap-1 text-[10.5px] text-muted-foreground">
-              {slot}
+              {meta.time}
               <CheckCheckIcon className="size-3.5 text-primary" />
             </p>
           </div>

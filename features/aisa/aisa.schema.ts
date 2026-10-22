@@ -56,9 +56,17 @@ export const PROPOSAL_STATUSES = [
 export const ProposalStatusSchema = z.enum(PROPOSAL_STATUSES)
 export type ProposalStatus = z.infer<typeof ProposalStatusSchema>
 
-export const RESPONSE_KINDS = ['undang', 'pantau', 'arsipkan'] as const
+export const RESPONSE_KINDS = ['setuju', 'tolak'] as const
 export const ResponseKindSchema = z.enum(RESPONSE_KINDS)
 export type ResponseKind = z.infer<typeof ResponseKindSchema>
+
+/**
+ * Decisions of the earlier scale. No longer accepted anywhere, but history rows
+ * written before the `migrate-responses` run still carry them in
+ * `before`/`after`, which `HistorySchema` keeps as `unknown`.
+ */
+export const LEGACY_RESPONSE_KINDS = ['undang', 'pantau', 'arsipkan'] as const
+export type LegacyResponseKind = (typeof LEGACY_RESPONSE_KINDS)[number]
 
 /**
  * An enum the Python side may extend before the dashboard is redeployed: a known
@@ -379,9 +387,54 @@ export const HistorySchema = z.object({
 })
 export type History = z.infer<typeof HistorySchema>
 
+/** 09.00 is the daily ringkasan; 17.00 is always the weekly summary. */
+export const DIGEST_PERIODS = ['harian', 'mingguan'] as const
+export type DigestPeriod = (typeof DIGEST_PERIODS)[number]
+
+/** WIB dates (YYYY-MM-DD): the Monday the week starts and the day it was sent. */
+export const WeekRangeSchema = z.object({ start: z.string(), end: z.string() })
+
+/**
+ * Every number the weekly summary states, counted by `aisa-api`. "This week" is
+ * Monday 00:00 WIB → send time; "last week" is the full Monday–Sunday before it.
+ * `.loose()` keeps a field the API adds later instead of failing the read.
+ */
+export const WeeklyStatsSchema = z
+  .object({
+    proposalsIn: z.number(),
+    proposalsInLastWeek: z.number(),
+    topSectors: z
+      .array(
+        z.object({
+          sector: z.string(),
+          label: z.string(),
+          count: z.number(),
+          percent: z.number(),
+        }),
+      )
+      .default([]),
+    noSector: z.number().default(0),
+    assessed: z.number().default(0),
+    byCategory: z.record(z.string(), z.number()).default({}),
+    good: z.number().default(0),
+    outOfFocus: z.number().default(0),
+    outOfFocusPercent: z.number().nullish(),
+    avgScore: z.number().nullish(),
+    avgScoreLastWeek: z.number().nullish(),
+    setuju: z.number().default(0),
+    tolak: z.number().default(0),
+    waiting: z.number().default(0),
+    oldestWaitingDays: z.number().nullish(),
+    perluDicekManual: z.number().default(0),
+  })
+  .loose()
+export type WeeklyStats = z.infer<typeof WeeklyStatsSchema>
+
 export const DigestSchema = z.object({
   id: z.string(),
   slot: z.enum(['09.00', '17.00']),
+  /** Absent on ringkasan written before the weekly summary existed: all daily. */
+  period: z.enum(DIGEST_PERIODS).default('harian'),
   windowStart: TimestampSchema,
   sentAt: TimestampSchema,
   text: z.string(),
@@ -407,6 +460,8 @@ export const DigestSchema = z.object({
   insight: z.string().nullish(),
   jobId: z.string().nullish(),
   gowaMessageIds: z.array(z.string()).default([]),
+  week: WeekRangeSchema.nullish(),
+  weekly: WeeklyStatsSchema.nullish(),
 })
 export type Digest = z.infer<typeof DigestSchema>
 

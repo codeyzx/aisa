@@ -350,7 +350,7 @@ describe('buildAssessmentLog', () => {
         via: 'dashboard',
         action: 'tanggapan',
         proposalId: 'upload-1',
-        detail: 'Tani Maju: undang',
+        detail: 'Tani Maju: setuju',
       },
       {
         id: 'a',

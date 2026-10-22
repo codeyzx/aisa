@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { greeting, nextDigestSlot, routeHeading } from './shell-routes'
+import { greeting, nextDigest, routeHeading } from './shell-routes'
 
 // Instants are UTC; WIB is UTC+7.
 const wib = (hhmm: string) => new Date(`2026-10-21T${hhmm}:00+07:00`)
@@ -36,12 +36,36 @@ describe('routeHeading', () => {
   })
 })
 
-describe('nextDigestSlot', () => {
-  it('names the slot the scheduler sends next, in WIB', () => {
-    expect(nextDigestSlot(wib('08:59'))).toBe('09.00')
-    expect(nextDigestSlot(wib('09:00'))).toBe('17.00')
-    expect(nextDigestSlot(wib('16:59'))).toBe('17.00')
-    expect(nextDigestSlot(wib('17:00'))).toBe('09.00')
+// 2026-10-21 is a Wednesday, 2026-10-23 a Friday, 2026-10-24 a Saturday.
+const at = (day: string, hhmm: string) =>
+  nextDigest(new Date(`2026-10-${day}T${hhmm}:00+07:00`)).label
+
+describe('nextDigest', () => {
+  it('sends 09.00 every day and 17.00 only on Fridays, in WIB', () => {
+    expect(at('21', '08:59')).toBe('09.00')
+    expect(at('21', '09:00')).toBe('Besok 09.00')
+    expect(at('21', '10:00')).toBe('Besok 09.00')
+    expect(at('21', '17:30')).toBe('Besok 09.00')
+    expect(at('23', '08:00')).toBe('09.00')
+    expect(at('23', '10:00')).toBe('17.00 (mingguan)')
+    expect(at('23', '16:59')).toBe('17.00 (mingguan)')
+    expect(at('23', '18:00')).toBe('Besok 09.00')
+    expect(at('24', '10:00')).toBe('Besok 09.00')
+  })
+
+  it('reads the WIB weekday, not the host one', () => {
+    // Thursday 23:30 UTC is already Friday 06:30 WIB, and Friday 11:00 UTC is
+    // Friday 18:00 WIB.
+    expect(nextDigest(new Date('2026-10-22T23:30:00Z')).label).toBe('09.00')
+    expect(nextDigest(new Date('2026-10-23T03:00:00Z'))).toEqual({
+      slot: '17.00',
+      period: 'mingguan',
+      tomorrow: false,
+      label: '17.00 (mingguan)',
+    })
+    expect(nextDigest(new Date('2026-10-23T11:00:00Z')).label).toBe(
+      'Besok 09.00',
+    )
   })
 })
 

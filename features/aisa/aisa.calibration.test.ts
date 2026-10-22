@@ -35,7 +35,7 @@ const correction = (category: Category, iso: string) => ({
   via: 'dashboard' as const,
 })
 const response = {
-  kind: 'undang' as const,
+  kind: 'setuju' as const,
   at: at('2026-10-02T00:00:00Z'),
   via: 'wa' as const,
 }

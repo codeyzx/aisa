@@ -16,10 +16,12 @@ test('the manager edits retention, sees Asisten read-only and no Orchestrator', 
   await signIn(page)
   await page.goto('/pengaturan?tab=privasi')
 
-  await expect(page.getByLabel('Hapus arsip setelah')).toHaveText(/90 hari/u)
+  await expect(page.getByLabel('Hapus yang ditolak setelah')).toHaveText(
+    /90 hari/u,
+  )
   await expect(
     page.getByText(
-      /^Proposal yang diarsipkan dihapus otomatis setelah 90 hari \(setiap hari 02\.00 WIB\)\./u,
+      /^Proposal yang ditolak dihapus otomatis setelah 90 hari \(setiap hari 02\.00 WIB\)\./u,
     ),
   ).toBeVisible()
 
@@ -53,9 +55,11 @@ test('a read-only seat sees every rule but no form', async ({ page }) => {
 
   await page.goto('/pengaturan?tab=privasi')
   await expect(
-    page.getByRole('heading', { name: 'Berapa lama arsip disimpan' }),
+    page.getByRole('heading', {
+      name: 'Berapa lama proposal yang ditolak disimpan',
+    }),
   ).toBeVisible()
-  await expect(page.getByLabel('Hapus arsip setelah')).toHaveCount(0)
+  await expect(page.getByLabel('Hapus yang ditolak setelah')).toHaveCount(0)
   await expect(
     page.getByRole('button', { name: 'Simpan', exact: true }),
   ).toHaveCount(0)

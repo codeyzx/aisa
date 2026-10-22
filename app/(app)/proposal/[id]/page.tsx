@@ -63,7 +63,6 @@ import { formatDecimal, formatNumber, formatScore } from '@/lib/format/number'
 import { cn } from '@/lib/utils'
 
 import {
-  DECISION_LABEL,
   DecisionBadge,
   GradeBadge,
   OutsideFocusBadge,
@@ -658,14 +657,14 @@ export default async function ProposalDetailPage({
                 <CardTitle>
                   {canRespond ? 'Keputusan Anda' : 'Keputusan'}
                 </CardTitle>
-                <CardDescription>
-                  Sekarang:{' '}
-                  <span className="font-medium text-foreground">
-                    {DECISION_LABEL[decision ?? 'baru']}
-                  </span>
-                  {proposal.response
-                    ? ` · ${dateTime(proposal.response.at)} via ${VIA_LABEL[proposal.response.via]}`
-                    : ''}
+                <CardDescription className="flex flex-wrap items-center gap-x-1.5 gap-y-1">
+                  Sekarang: <DecisionBadge decision={decision} />
+                  {proposal.response ? (
+                    <span className="basis-full text-xs">
+                      {dateTime(proposal.response.at)} via{' '}
+                      {VIA_LABEL[proposal.response.via]}
+                    </span>
+                  ) : null}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -679,6 +678,7 @@ export default async function ProposalDetailPage({
                     proposalId={proposal.id}
                     proposalName={proposal.name}
                     current={decision}
+                    retentionDays={rules?.retentionDays ?? null}
                   />
                 ) : (
                   <p className="text-xs text-muted-foreground">

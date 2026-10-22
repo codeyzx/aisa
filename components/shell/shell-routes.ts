@@ -4,7 +4,7 @@
  * the client header and the unit test all read the same rules.
  *
  * Clock facts are computed in WIB (`TIME_ZONE`), not the host zone: the
- * ringkasan runs at 09.00 and 17.00 Jakarta time, and a browser or a server in
+ * ringkasan runs at 09.00 every day and 17.00 on Fridays, Jakarta time, and a browser or a server in
  * another zone must still name the slot the manager will actually receive.
  */
 import { MANAGER_SALUTATION } from '@/lib/app-config'
@@ -97,12 +97,46 @@ function wibHour(date: Date): number {
   return Number(hourFormatter.format(date))
 }
 
+const weekdayFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: TIME_ZONE,
+  weekday: 'short',
+})
+
 export type DigestSlot = '09.00' | '17.00'
 
-/** The next ringkasan the scheduler sends: 09.00 until 9, 17.00 until 17, then tomorrow's 09.00. */
-export function nextDigestSlot(date: Date): DigestSlot {
+/** The ringkasan the scheduler sends next, as the sidebar and Pengaturan name it. */
+export interface NextDigest {
+  slot: DigestSlot
+  /** 09.00 is the daily ringkasan; 17.00 is always the weekly summary. */
+  period: 'harian' | 'mingguan'
+  /** `false` when it goes out today, `true` when tomorrow. */
+  tomorrow: boolean
+  /** "09.00", "Besok 09.00" or "17.00 (mingguan)". */
+  label: string
+}
+
+/**
+ * The next send in WIB: 09.00 every day and 17.00 on Fridays only. Before 09.00
+ * that is today's 09.00; on a Friday between 09.00 and 17.00 the weekly 17.00;
+ * any other time tomorrow's 09.00 — a slot's own hour counts as already sent.
+ */
+export function nextDigest(date: Date): NextDigest {
   const hour = wibHour(date)
-  return hour >= 9 && hour < 17 ? '17.00' : '09.00'
+  if (hour < 9)
+    return { slot: '09.00', period: 'harian', tomorrow: false, label: '09.00' }
+  if (weekdayFormatter.format(date) === 'Fri' && hour < 17)
+    return {
+      slot: '17.00',
+      period: 'mingguan',
+      tomorrow: false,
+      label: '17.00 (mingguan)',
+    }
+  return {
+    slot: '09.00',
+    period: 'harian',
+    tomorrow: true,
+    label: 'Besok 09.00',
+  }
 }
 
 /** `Selamat pagi, Pak · Rabu, 21 Oktober` — pagi before 12, siang before 15, sore after. */

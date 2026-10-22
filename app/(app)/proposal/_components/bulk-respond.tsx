@@ -5,7 +5,6 @@ import { useState } from 'react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { bulkRespondAction } from '@/features/aisa/aisa.action'
-import { RESPONSE_LABEL } from '@/features/aisa/aisa.labels'
 import {
   RESPONSE_KINDS,
   type Category,
@@ -14,9 +13,26 @@ import {
 
 import { useApiAction } from '../../_components/use-api-action'
 
+/** The bulk button's words and the question it asks before sending. */
+const BULK: Record<
+  ResponseKind,
+  { button: string; ask: (count: number) => string; done: string }
+> = {
+  setuju: {
+    button: 'Setujui semua',
+    ask: (count) => `Setujui ${count} proposal?`,
+    done: 'Disetujui',
+  },
+  tolak: {
+    button: 'Tolak semua',
+    ask: (count) => `Tolak ${count} proposal?`,
+    done: 'Ditolak',
+  },
+}
+
 /**
  * Tanggapan massal for the filtered grade — the dashboard twin of
- * "arsipkan semua tidak layak". Asks once more before sending, since it touches
+ * "tolak semua tidak layak". Asks once more before sending, since it touches
  * every unresponded proposal in the grade.
  */
 export function BulkRespond({
@@ -39,19 +55,17 @@ export function BulkRespond({
       </span>
       {confirming ? (
         <>
-          <span className="font-medium">
-            {RESPONSE_LABEL[confirming]} {count} proposal?
-          </span>
+          <span className="font-medium">{BULK[confirming].ask(count)}</span>
           <Button
             size="sm"
-            variant={confirming === 'arsipkan' ? 'destructive' : 'default'}
+            variant={confirming === 'tolak' ? 'destructive' : 'default'}
             disabled={pending}
             onClick={() =>
               run(() => bulkRespondAction(category, confirming), {
                 // The API's count, not the page's: proposals answered over
                 // WhatsApp since this page rendered are not counted again.
                 success: ({ count: done }) =>
-                  `${RESPONSE_LABEL[confirming]}: ${done} proposal ${categoryLabel}.`,
+                  `${BULK[confirming].done}: ${done} proposal ${categoryLabel}.`,
                 onSuccess: () => setConfirming(null),
               })
             }
@@ -68,9 +82,14 @@ export function BulkRespond({
             key={kind}
             size="sm"
             variant="outline"
+            className={
+              kind === 'tolak'
+                ? 'border-destructive/40 text-destructive hover:bg-destructive/5 hover:text-destructive'
+                : undefined
+            }
             onClick={() => setConfirming(kind)}
           >
-            {RESPONSE_LABEL[kind]} semua
+            {BULK[kind].button}
           </Button>
         ))
       )}

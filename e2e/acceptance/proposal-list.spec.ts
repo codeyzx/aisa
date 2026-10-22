@@ -109,7 +109,7 @@ test('DSB-11 kategori filters the effective grade, so a correction moves the row
   await page.goto('/proposal?urut=masuk&kategori=tidak_layak')
   await expectRows(page, only('Ternak Pintar', 'Fashionista', 'AplikasiX'))
   await expect(
-    row(page, 'AplikasiX').getByText('Tolak', { exact: true }),
+    row(page, 'AplikasiX').getByText('Sebaiknya ditolak', { exact: true }),
   ).toBeVisible()
 
   // "Sangat layak + Layak bersyarat" is both top grades at once.
@@ -206,11 +206,19 @@ test('DSB-14 tanggapan splits responded from not yet responded', async ({
   await page.goto('/proposal?urut=masuk&tanggapan=sudah')
   await expectRows(page, only('Panen Kita', 'AplikasiX'))
   await expect(
-    row(page, 'Panen Kita').getByText('Diundang', { exact: true }),
+    row(page, 'Panen Kita').getByText('Disetujui', { exact: true }),
   ).toBeVisible()
   await expect(
-    row(page, 'AplikasiX').getByText('Diarsipkan', { exact: true }),
+    row(page, 'AplikasiX').getByText('Ditolak', { exact: true }),
   ).toBeVisible()
+  // Every tab names its count, over the same filters as the table.
+  await expect(page.getByRole('tab')).toHaveText([
+    /^Semua\s*14$/u,
+    /^Belum ditanggapi\s*12$/u,
+    /^Sudah ditanggapi\s*2$/u,
+    /^Disetujui\s*1$/u,
+    /^Ditolak\s*1$/u,
+  ])
 
   await page.goto('/proposal?urut=masuk&tanggapan=belum')
   await expectRows(
@@ -218,14 +226,24 @@ test('DSB-14 tanggapan splits responded from not yet responded', async ({
     ALL.filter((name) => !['Panen Kita', 'AplikasiX'].includes(name)),
   )
 
-  // One response kind at a time, as the Diundang / Diarsipkan tabs show it.
-  await page.goto('/proposal?urut=masuk&tanggapan=undang')
+  // One decision at a time, as the Disetujui / Ditolak tabs show it.
+  await page.goto('/proposal?urut=masuk&tanggapan=setuju')
   await expectRows(page, only('Panen Kita'))
-  await page.goto('/proposal?urut=masuk&tanggapan=arsipkan')
+  await page.goto('/proposal?urut=masuk&tanggapan=tolak')
   await expectRows(page, only('AplikasiX'))
   await expect(
-    page.getByRole('tab', { name: /^Diarsipkan/u, selected: true }),
+    page.getByRole('tab', { name: /^Ditolak/u, selected: true }),
   ).toBeVisible()
+
+  // A saved link with a decision of the earlier scale shows Semua, not an
+  // error and not an empty table.
+  for (const old of ['undang', 'pantau', 'arsipkan']) {
+    await page.goto(`/proposal?urut=masuk&tanggapan=${old}`)
+    await expectRows(page, ALL)
+    await expect(
+      page.getByRole('tab', { name: /^Semua/u, selected: true }),
+    ).toBeVisible()
+  }
 })
 
 test('DSB-15 the focus filter splits proposals that fit the focus from those that do not', async ({

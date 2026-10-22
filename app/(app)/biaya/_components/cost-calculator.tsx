@@ -156,8 +156,8 @@ export function CostCalculator({
       <h3 id="biaya-banding">AISA vs cek manual</h3>
       <div className="a-sub">
         Biaya penyaringan awal per bulan. AISA menilai dan mengurutkan proposal;
-        keputusan undang, pantau, atau arsipkan tetap di tangan manajer, jadi
-        yang dibandingkan hanya waktu menyaring.
+        keputusan setuju atau tolak tetap di tangan manajer, jadi yang
+        dibandingkan hanya waktu menyaring.
       </div>
 
       {proposalUsd === null ? (
@@ -380,7 +380,7 @@ export function CostCalculator({
               dinilai, dihitung ulang dengan tarif terpilih.
               {digestUsd === null
                 ? ' Ringkasan belum ikut dihitung karena belum ada ringkasan yang ditulis model.'
-                : ` Ringkasan dihitung ${DIGESTS_PER_MONTH} kali sebulan (09.00 dan 17.00 setiap hari) dengan rata-rata ${rupiah(result.aisa.digestsMonthIdr / DIGESTS_PER_MONTH)} per ringkasan.`}{' '}
+                : ` Ringkasan dihitung ${DIGESTS_PER_MONTH} kali sebulan (09.00 setiap hari dan 17.00 setiap Jumat) dengan rata-rata ${rupiah(result.aisa.digestsMonthIdr / DIGESTS_PER_MONTH)} per ringkasan.`}{' '}
               Asisten tidak ikut dihitung karena dipakai sesuai pertanyaan,
               bukan per proposal.
             </p>

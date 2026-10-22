@@ -122,8 +122,7 @@ export function HowItWorks({
           </span>{' '}
           <span className="text-muted-foreground">
             Grade dihitung sistem dari aturan di halaman ini. Aksi di samping
-            grade hanya saran; keputusan undang, pantau, atau arsipkan tetap di
-            tangan Anda.
+            grade hanya saran; keputusan setuju atau tolak tetap di tangan Anda.
           </span>
         </p>
       </div>

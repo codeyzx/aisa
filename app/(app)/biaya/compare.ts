@@ -23,8 +23,11 @@ export const COMPARE_DEFAULTS: Omit<CompareInputs, 'proposalsPerMonth'> = {
   hoursPerMonth: 173,
 }
 
-/** The scheduler sends a ringkasan at 09.00 and 17.00 WIB: at most 60 a month. */
-export const DIGESTS_PER_MONTH = 60
+/**
+ * The scheduler sends a ringkasan at 09.00 WIB every day and 17.00 WIB every
+ * Friday: at most 31 + 5 = 36 a month.
+ */
+export const DIGESTS_PER_MONTH = 36
 
 export interface CompareResult {
   hourlyIdr: number

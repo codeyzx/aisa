@@ -4,10 +4,12 @@ import { adminDb } from '@/lib/firebase/admin-db'
 import { requireEmulatorOrSkip } from '@/test/emulator'
 import { seedAisa } from '@/scripts/_seed-aisa'
 
+import { digestsCollection } from '@/features/aisa/aisa.collection'
 import { isOutsideFocus } from '@/features/aisa/aisa.schema'
 import {
   getLatestDigest,
   getLatestInsightDigest,
+  getLatestMorningDigest,
   getProposal,
   getRules,
   getRuntime,
@@ -15,6 +17,8 @@ import {
   listHistory,
   listJobsWithSteps,
   listProposalHistory,
+  listProposalsCreatedSince,
+  listProposalsDecidedSince,
   listRecentProposals,
   listUnrespondedProposals,
 } from '@/features/aisa/aisa.repo'
@@ -103,6 +107,43 @@ describe.skipIf(!reachable)('aisa repo', () => {
     expect(history.find((row) => row.action === 'dinilai_ulang')).toMatchObject(
       { before: 'sangat_cocok', after: 'sangat_layak' },
     )
+  })
+
+  it('reads Setuju/Tolak decisions and the rows of the earlier scale', async () => {
+    const byName = new Map(
+      (await listRecentProposals()).map((p) => [p.name, p]),
+    )
+    expect(byName.get('Panen Kita')?.response?.kind).toBe('setuju')
+    expect(byName.get('AplikasiX')?.response?.kind).toBe('tolak')
+    expect(byName.get('SawahKu')?.responded).toBe(false)
+    const history = await listHistory(200)
+    expect(
+      history.find((row) => row.id === 'seed-migrasi-tanggapan-panenkita'),
+    ).toMatchObject({ via: 'sistem', before: 'undang', after: 'setuju' })
+    expect(
+      history.find((row) => row.id === 'seed-migrasi-tanggapan-sawahku'),
+    ).toMatchObject({ before: 'pantau', after: null })
+    const decided = await listProposalsDecidedSince(new Date(0))
+    expect(decided.map((p) => p.name).toSorted()).toEqual([
+      'AplikasiX',
+      'Panen Kita',
+    ])
+    expect(
+      (await listProposalsCreatedSince(new Date(0))).length,
+    ).toBeGreaterThanOrEqual(14)
+  })
+
+  it('reads the weekly ringkasan beside the daily one', async () => {
+    const morning = await getLatestMorningDigest()
+    expect(morning).toMatchObject({ slot: '09.00', period: 'harian' })
+    const snap = await digestsCollection()
+      .where('period', '==', 'mingguan')
+      .get()
+    expect(snap.size).toBeGreaterThanOrEqual(1)
+    const weekly = snap.docs[0]!.data()
+    expect(weekly.slot).toBe('17.00')
+    expect(weekly.week?.start).toMatch(/^\d{4}-\d{2}-\d{2}$/u)
+    expect(weekly.weekly).toMatchObject({ proposalsIn: 10, setuju: 2 })
   })
 
   it('reads one proposal’s history newest first', async () => {

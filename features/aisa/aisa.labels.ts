@@ -13,6 +13,7 @@ import {
   type Category,
   type Criterion,
   type LegacyCategory,
+  type LegacyResponseKind,
   type Proposal,
   type Thresholds,
   type HistoryAction,
@@ -38,7 +39,7 @@ export const CATEGORY_ACTION: Record<Category, string> = {
   layak_bersyarat: 'Investasi dengan syarat',
   perlu_penyesuaian: 'Sesuaikan dulu sebelum lanjut',
   risiko_tinggi: 'Pertimbangkan menolak',
-  tidak_layak: 'Tolak',
+  tidak_layak: 'Sebaiknya ditolak',
 }
 
 /** What each grade means, in one plain sentence. */
@@ -151,9 +152,31 @@ export const STATUS_LABEL: Record<ProposalStatus, string> = {
 }
 
 export const RESPONSE_LABEL: Record<ResponseKind, string> = {
-  undang: 'Undang',
-  pantau: 'Pantau',
-  arsipkan: 'Arsipkan',
+  setuju: 'Setuju',
+  tolak: 'Tolak',
+}
+
+/** What each decision means for the proposal, shown beside its button. */
+export const RESPONSE_MEANING: Record<ResponseKind, string> = {
+  setuju: 'Lanjut ke tahap berikutnya (mis. ajak founder berdiskusi)',
+  tolak: 'Tidak dilanjutkan',
+}
+
+/** The earlier scale's decisions, as history rows written before the move show them. */
+export const LEGACY_RESPONSE_LABEL: Record<LegacyResponseKind, string> = {
+  undang: 'Undang (lama)',
+  pantau: 'Pantau (lama)',
+  arsipkan: 'Arsipkan (lama)',
+}
+
+/**
+ * A stored decision value as words, for rows written at any time: a current
+ * decision, an old-scale one marked "(lama)", or an unknown value as-is.
+ */
+export function responseText(value: string): string {
+  if (Object.hasOwn(RESPONSE_LABEL, value))
+    return RESPONSE_LABEL[value as ResponseKind]
+  return labelOf(LEGACY_RESPONSE_LABEL, value)
 }
 
 export const VIA_LABEL: Record<Via, string> = {

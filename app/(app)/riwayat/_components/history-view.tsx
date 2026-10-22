@@ -82,7 +82,7 @@ function StatTile({
 }) {
   const { icon: Icon, tone } = eventTone({
     kind: stat.kind,
-    decision: 'undang',
+    decision: 'setuju',
   })
   const max = Math.max(1, ...stat.daily.map((d) => d.count))
   const diff = stat.value - stat.previous
@@ -157,7 +157,7 @@ function Insights({ events }: { events: RiwayatEvent[] }) {
     .filter((a) => a.count > 0)
     .toSorted((a, b) => b.count - a.count)
   const max = Math.max(1, ...actors.map((a) => a.count))
-  const decisions = events.filter((e) => e.kind === 'keputusan')
+  const decisions = events.filter((e) => e.kind === 'keputusan' && !e.migrated)
   const viaWhatsapp = decisions.filter((e) => e.via === 'wa').length
   const share = decisions.length ? (viaWhatsapp / decisions.length) * 100 : 0
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { ArchiveIcon, EyeIcon, MailIcon, XIcon } from 'lucide-react'
+import { BanIcon, ThumbsUpIcon, XIcon } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { toast } from 'sonner'
 
@@ -16,10 +16,10 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { respondToProposalAction } from '@/features/aisa/aisa.action'
-import { RESPONSE_LABEL } from '@/features/aisa/aisa.labels'
 import { type ResponseKind } from '@/features/aisa/aisa.schema'
 import { settleAction } from '@/lib/data/action.contract'
 
+import { DECISION_LABEL } from '../../_components/badges'
 import { type ProposalRow } from './proposal-row'
 
 /**
@@ -41,7 +41,7 @@ export function SelectionBar({
   onClear: () => void
 }) {
   const [pending, startTransition] = useTransition()
-  const [confirmArchive, setConfirmArchive] = useState(false)
+  const [confirmReject, setConfirmReject] = useState(false)
 
   function act(kind: ResponseKind) {
     const targets = rows
@@ -64,9 +64,9 @@ export function SelectionBar({
         else failure ??= message
       }
       onDone(done)
-      setConfirmArchive(false)
+      setConfirmReject(false)
       if (done.length)
-        toast.success(`${RESPONSE_LABEL[kind]}: ${done.length} proposal.`)
+        toast.success(`${DECISION_LABEL[kind]}: ${done.length} proposal.`)
       if (failure)
         toast.error(
           `${targets.length - done.length} dari ${targets.length} proposal gagal: ${failure}`,
@@ -89,28 +89,19 @@ export function SelectionBar({
             className="a-bulk-btn"
             type="button"
             disabled={pending}
-            onClick={() => act('undang')}
+            onClick={() => act('setuju')}
           >
-            <MailIcon className="size-4" />
-            Undang
+            <ThumbsUpIcon className="size-4" aria-hidden />
+            Setujui
           </button>
           <button
             className="a-bulk-btn"
             type="button"
             disabled={pending}
-            onClick={() => act('pantau')}
+            onClick={() => setConfirmReject(true)}
           >
-            <EyeIcon className="size-4" />
-            Pantau
-          </button>
-          <button
-            className="a-bulk-btn"
-            type="button"
-            disabled={pending}
-            onClick={() => setConfirmArchive(true)}
-          >
-            <ArchiveIcon className="size-4" />
-            Arsipkan
+            <BanIcon className="size-4" aria-hidden />
+            Tolak
           </button>
         </>
       ) : null}
@@ -125,17 +116,15 @@ export function SelectionBar({
       </button>
 
       <AlertDialog
-        open={confirmArchive}
-        onOpenChange={(next) => !pending && setConfirmArchive(next)}
+        open={confirmReject}
+        onOpenChange={(next) => !pending && setConfirmReject(next)}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              Arsipkan {rows.length} proposal?
-            </AlertDialogTitle>
+            <AlertDialogTitle>Tolak {rows.length} proposal?</AlertDialogTitle>
             <AlertDialogDescription>
-              Proposal yang dipilih tidak akan muncul sebagai perlu ditanggapi,
-              tetapi riwayatnya tetap tersimpan.
+              Proposal yang dipilih tidak dilanjutkan dan nanti dihapus otomatis
+              sesuai masa retensi. Riwayatnya tetap tersimpan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -143,10 +132,10 @@ export function SelectionBar({
             <AlertDialogAction
               variant="destructive"
               disabled={pending}
-              onClick={() => act('arsipkan')}
+              onClick={() => act('tolak')}
             >
               {pending ? <Spinner /> : null}
-              Arsipkan
+              Ya, tolak
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

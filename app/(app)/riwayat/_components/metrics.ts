@@ -1,10 +1,9 @@
 import {
-  ArchiveIcon,
+  ArrowRightLeftIcon,
+  BanIcon,
   CircleHelpIcon,
-  EyeIcon,
   FileInputIcon,
   FileWarningIcon,
-  MailIcon,
   MessageCircleIcon,
   PauseIcon,
   PencilLineIcon,
@@ -12,6 +11,7 @@ import {
   RefreshCwIcon,
   SlidersHorizontalIcon,
   SparklesIcon,
+  ThumbsUpIcon,
   Trash2Icon,
   type LucideIcon,
 } from 'lucide-react'
@@ -67,7 +67,10 @@ export const KIND_LABEL: Record<EventKind, string> = {
 
 /** Icon and colour (a CSS token) per event; a decision takes its response's colour. */
 export function eventTone(
-  event: Pick<RiwayatEvent, 'kind' | 'decision' | 'paused' | 'manual'>,
+  event: Pick<
+    RiwayatEvent,
+    'kind' | 'decision' | 'paused' | 'manual' | 'migrated'
+  >,
 ): { icon: LucideIcon; tone: string } {
   switch (event.kind) {
     case 'penilaian':
@@ -93,11 +96,13 @@ export function eventTone(
     case 'lainnya':
       return { icon: CircleHelpIcon, tone: 'var(--muted-foreground)' }
     case 'keputusan':
-      if (event.decision === 'undang')
-        return { icon: MailIcon, tone: 'var(--success)' }
-      if (event.decision === 'pantau')
-        return { icon: EyeIcon, tone: 'var(--primary)' }
-      return { icon: ArchiveIcon, tone: 'var(--muted-foreground)' }
+      if (event.migrated)
+        return { icon: ArrowRightLeftIcon, tone: 'var(--muted-foreground)' }
+      if (event.decision === 'setuju')
+        return { icon: ThumbsUpIcon, tone: 'var(--success)' }
+      if (event.decision === 'tolak')
+        return { icon: BanIcon, tone: 'var(--danger)' }
+      return { icon: CircleHelpIcon, tone: 'var(--muted-foreground)' }
   }
 }
 
@@ -127,6 +132,10 @@ export interface EventStat {
   hint: string
 }
 
+// A migration row moved an old decision onto the new scale; nobody decided
+// anything, so it is not counted as a keputusan.
+const counted = (e: RiwayatEvent) => !e.migrated
+
 /** Rolling 7 days (not calendar) against the 7 days before. */
 export function eventStats(events: RiwayatEvent[], now: number): EventStat[] {
   const start = now - 7 * DAY_MS
@@ -137,7 +146,7 @@ export function eventStats(events: RiwayatEvent[], now: number): EventStat[] {
   )
 
   const build = (kind: StatKind, hint: string): EventStat => {
-    const of = events.filter((e) => e.kind === kind)
+    const of = events.filter((e) => e.kind === kind && counted(e))
     return {
       kind,
       value: of.filter((e) => e.at.getTime() >= start).length,
@@ -152,10 +161,11 @@ export function eventStats(events: RiwayatEvent[], now: number): EventStat[] {
     }
   }
 
-  const decisions = recent.filter((e) => e.kind === 'keputusan')
+  const decisions = recent.filter((e) => e.kind === 'keputusan' && counted(e))
   const by = (kind: string) =>
     decisions.filter((e) => e.decision === kind).length
   const unknown = decisions.filter((e) => e.decision === undefined).length
+  const legacy = decisions.length - by('setuju') - by('tolak') - unknown
   const viaWhatsapp = decisions.filter((e) => e.via === 'wa').length
   const assessed = recent.filter((e) => e.kind === 'penilaian')
   const scores = assessed
@@ -168,9 +178,9 @@ export function eventStats(events: RiwayatEvent[], now: number): EventStat[] {
       'keputusan',
       decisions.length
         ? [
-            `${by('undang')} diundang`,
-            `${by('pantau')} dipantau`,
-            `${by('arsipkan')} diarsip`,
+            `${by('setuju')} disetujui`,
+            `${by('tolak')} ditolak`,
+            ...(legacy ? [`${legacy} skala lama`] : []),
             // Deleting a proposal blanks its rows' before/after, so their kind
             // is gone; counting them keeps the breakdown summing to the total.
             ...(unknown ? [`${unknown} tanpa rincian`] : []),

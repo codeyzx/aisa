@@ -3,14 +3,16 @@
  * docs/reference/contracts/aisa-firestore.md: proposals in every grade, a
  * "perlu dicek manual" pair, three "di luar fokus" ones, a queued
  * upload, penilaian + ringkasan jobs with steps, history, 14 days of
- * dailyStats, the latest digest, and `settings/rules` v1 with the guide's
- * weights.
+ * dailyStats, the latest daily digest and a weekly one, and `settings/rules`
+ * v1 with the guide's weights.
  *
  * Scores and grades are COMPUTED here with the overview's formula
  * (`skor = Σ bobot × (nilai − 1) / 4`, grade bands 85/75/65/50) rather than typed
  * in, so the seed cannot contradict the rules it ships with. History also keeps
  * rows from before the grade scale changed (old kategori values and a
- * `dinilai_ulang` row), so the dashboard's legacy rendering is exercised.
+ * `dinilai_ulang` row) and decisions of the earlier Undang/Pantau/Arsipkan
+ * scale with the system rows that moved them onto Setuju/Tolak, so the
+ * dashboard's legacy rendering is exercised.
  *
  * NO SAFETY GATE HERE and no top-level side effects: the only `firebase-admin`
  * import is `import type`. It writes to whatever `Firestore` the caller hands
@@ -49,6 +51,11 @@ type Category =
   | 'perlu_penyesuaian'
   | 'risiko_tinggi'
   | 'tidak_layak'
+
+const capitalize = (word: string) =>
+  word.charAt(0).toUpperCase() + word.slice(1)
+/** The reason `aisa migrate-responses` writes on every row it moves. */
+const RESPONSE_MIGRATION_REASON = 'Skala tanggapan baru: Setuju / Tolak'
 
 const GRADE_LABEL: Record<Category, string> = {
   sangat_layak: 'Sangat layak',
@@ -117,6 +124,10 @@ const wibDate = new Intl.DateTimeFormat('en-CA', {
   month: '2-digit',
   day: '2-digit',
 })
+const wibWeekday = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Asia/Jakarta',
+  weekday: 'short',
+})
 
 interface Seed {
   key: string
@@ -130,7 +141,12 @@ interface Seed {
   source: 'form' | 'upload'
   manualReason?: string
   queued?: boolean
-  response?: { kind: 'undang' | 'pantau' | 'arsipkan'; note?: string }
+  response?: { kind: 'setuju' | 'tolak'; note?: string }
+  /**
+   * The earlier-scale word the manager originally answered with; its history
+   * row keeps that word, and a system row records the move to `response.kind`.
+   */
+  legacyResponse?: 'undang' | 'arsipkan'
   correction?: { category: Category; reason: string }
   /** Criteria whose value the API capped at 2 because no quote verified. */
   unverified?: Criterion[]
@@ -158,7 +174,8 @@ const SEEDS: Seed[] = [
     values: { manajemen: 5, kinerja: 4, risiko: 4, rencana: 4, dampak: 4 },
     hoursAgo: 30,
     source: 'form',
-    response: { kind: 'undang', note: 'Jadwalkan pitching minggu depan' },
+    response: { kind: 'setuju', note: 'Jadwalkan pitching minggu depan' },
+    legacyResponse: 'undang',
     correction: {
       category: 'perlu_penyesuaian',
       reason: 'Restoran yang dilayani baru di satu kota',
@@ -233,7 +250,7 @@ const SEEDS: Seed[] = [
     values: { manajemen: 2, kinerja: 2, risiko: 2, rencana: 1, dampak: 2 },
     hoursAgo: 70,
     source: 'form',
-    response: { kind: 'arsipkan' },
+    response: { kind: 'tolak' },
   },
   {
     key: 'kopirakyat',
@@ -550,7 +567,7 @@ export async function seedAisa(
       ? {
           ...seed.response,
           at: at(seed.hoursAgo - 6),
-          via: seed.response.kind === 'undang' ? 'wa' : 'dashboard',
+          via: seed.response.kind === 'setuju' ? 'wa' : 'dashboard',
         }
       : null
     const status = seed.queued
@@ -624,17 +641,31 @@ export async function seedAisa(
         reason: correction.reason,
         detail: `Grade ${seed.name} dipindahkan ke ${GRADE_LABEL[correction.category]}`,
       })
-    if (response)
+    if (response) {
+      const answered = seed.legacyResponse ?? response.kind
       history(`seed-tanggapan-${seed.key}`, {
         at: response.at,
         via: response.via,
         action: 'tanggapan',
         proposalId: id,
         proposalName: seed.name,
-        after: response.kind,
+        after: answered,
         reason: response.note ?? null,
-        detail: `${seed.name}: ${response.kind}`,
+        detail: `${capitalize(answered)} ${seed.name}`,
       })
+      if (seed.legacyResponse)
+        history(`seed-migrasi-tanggapan-${seed.key}`, {
+          at: at(2),
+          via: 'sistem',
+          action: 'tanggapan',
+          proposalId: id,
+          proposalName: seed.name,
+          before: seed.legacyResponse,
+          after: response.kind,
+          reason: RESPONSE_MIGRATION_REASON,
+          detail: `Tanggapan ${seed.name} dipindah ke skala baru: ${capitalize(seed.legacyResponse)} → ${capitalize(response.kind)}`,
+        })
+    }
 
     if (seed.queued) continue
     jobCount += 1
@@ -791,6 +822,97 @@ export async function seedAisa(
       gowaMessageIds: ['seed-gowa-0'],
     },
   )
+  // The weekly summary (17.00, Fridays): the latest Friday at least a day
+  // before the legacy 17.00 ringkasan above, so their one-per-slot-per-day ids
+  // never collide.
+  let weeklyAt = new Date(
+    `${wibDate.format(new Date(legacyDigestAt.getTime() - DAY))}T17:00:00+07:00`,
+  )
+  while (wibWeekday.format(weeklyAt) !== 'Fri')
+    weeklyAt = new Date(weeklyAt.getTime() - DAY)
+  const weeklyStart = new Date(
+    `${wibDate.format(new Date(weeklyAt.getTime() - 4 * DAY))}T00:00:00+07:00`,
+  )
+  const weeklyId = `seed-${wibDate.format(weeklyAt)}-1700`
+  batch.set(db.collection(DIGESTS_COLLECTION).doc(weeklyId), {
+    slot: '17.00',
+    period: 'mingguan',
+    windowStart: weeklyStart,
+    sentAt: weeklyAt,
+    text: [
+      'Selamat sore, Bu Rina. Ini ringkasan mingguan AISA.',
+      '',
+      '*Proposal masuk*: 10 (minggu lalu 7, naik 3)',
+      '*Sektor*: Agritech 40% (4 dari 10) · Fintech 30% (3 dari 10) · F&B 20% (2 dari 10) · tanpa sektor 1',
+      '*Grade* (8 dinilai): Sangat layak 2 · Layak bersyarat 1 · Perlu penyesuaian 2 · Risiko tinggi 2 · Tidak layak 1',
+      'Sangat layak + Layak bersyarat: 3 · di luar fokus: 25% (2 dari 8)',
+      '*Rata-rata skor*: 68,4 (minggu lalu 65,1, naik 3,3)',
+      '*Keputusan minggu ini*: Setuju 2 · Tolak 1',
+      'Menunggu keputusan: 9 (terlama 6 hari)',
+      '*Top 3 minggu ini*',
+      '1. Dana UMKM · Sangat layak · 90',
+      '2. Kopi Rakyat · Sangat layak · 85 (di luar fokus)',
+      '3. Klinik Desa · Layak bersyarat · 77,5',
+      '*Perlu dicek manual*: 1',
+      '',
+      'Yang menarik: minggu ini paling banyak Agritech: 40% (4 dari 10 proposal).',
+    ].join('\n'),
+    counts: {
+      sangat_layak: 2,
+      layak_bersyarat: 1,
+      perlu_penyesuaian: 2,
+      risiko_tinggi: 1,
+      tidak_layak: 2,
+      luarFokus: 2,
+      perluDicekManual: 1,
+      belumDitanggapi: 9,
+      baruMasuk: 10,
+    },
+    proposalIds: [],
+    usedTemplate: false,
+    insight: 'minggu ini paling banyak Agritech: 40% (4 dari 10 proposal).',
+    jobId: null,
+    gowaMessageIds: ['seed-gowa-mingguan'],
+    week: {
+      start: wibDate.format(weeklyStart),
+      end: wibDate.format(weeklyAt),
+    },
+    weekly: {
+      proposalsIn: 10,
+      proposalsInLastWeek: 7,
+      topSectors: [
+        { sector: 'agritech', label: 'Agritech', count: 4, percent: 40 },
+        { sector: 'fintech', label: 'Fintech', count: 3, percent: 30 },
+        { sector: 'f&b', label: 'F&B', count: 2, percent: 20 },
+      ],
+      noSector: 1,
+      assessed: 8,
+      byCategory: {
+        sangat_layak: 2,
+        layak_bersyarat: 1,
+        perlu_penyesuaian: 2,
+        risiko_tinggi: 2,
+        tidak_layak: 1,
+      },
+      good: 3,
+      outOfFocus: 2,
+      outOfFocusPercent: 25,
+      avgScore: 68.4,
+      avgScoreLastWeek: 65.1,
+      setuju: 2,
+      tolak: 1,
+      waiting: 9,
+      oldestWaitingDays: 6,
+      perluDicekManual: 1,
+    },
+  })
+  history(`seed-ringkasan-${weeklyId}`, {
+    at: new Date(weeklyAt.getTime() + 1_000),
+    via: 'sistem',
+    action: 'ringkasan_terkirim',
+    detail:
+      'Ringkasan mingguan terkirim (10 masuk minggu ini, 9 menunggu keputusan)',
+  })
   const digestSteps = [
     {
       action: 'Ambil proposal belum ditanggapi',
@@ -918,11 +1040,11 @@ export async function seedAisa(
     {
       seq: 1,
       at: retensiStart,
-      action: 'Hapus proposal diarsipkan lebih dari 90 hari',
+      action: 'Hapus proposal ditolak lebih dari 90 hari',
       tool: 'firestore.delete',
       actor: 'kode',
       model: null,
-      read: 'proposals (diarsipkan)',
+      read: 'proposals (ditolak)',
       wrote: '1 proposal dihapus',
       tokensIn: 0,
       tokensOut: 0,
@@ -951,7 +1073,7 @@ export async function seedAisa(
     proposalId: 'form-seedlamaarsip',
     proposalName: '(dihapus)',
     reason: 'retensi',
-    detail: 'Data proposal dihapus (diarsipkan lebih dari 90 hari)',
+    detail: 'Data proposal dihapus (ditolak lebih dari 90 hari)',
   })
 
   // --- history from before the grade scale changed ---
@@ -980,6 +1102,31 @@ export async function seedAisa(
     reason: 'Skala penilaian baru: 5 kriteria (A–E) dan 5 grade',
     detail:
       'Tani Maju dinilai ulang dengan skala baru: skor 92,5, Sangat layak',
+  })
+
+  // A Pantau answered on the earlier scale, and the system row that cleared it:
+  // SawahKu is back to waiting for a decision, as the migration leaves it.
+  history('seed-tanggapan-lama-sawahku', {
+    at: at(6),
+    via: 'dashboard',
+    action: 'tanggapan',
+    proposalId: 'form-seedsawahku',
+    proposalName: 'SawahKu',
+    after: 'pantau',
+    reason: null,
+    detail: 'Pantau SawahKu',
+  })
+  history('seed-migrasi-tanggapan-sawahku', {
+    at: at(2),
+    via: 'sistem',
+    action: 'tanggapan',
+    proposalId: 'form-seedsawahku',
+    proposalName: 'SawahKu',
+    before: 'pantau',
+    after: null,
+    reason: RESPONSE_MIGRATION_REASON,
+    detail:
+      'Tanggapan Pantau untuk SawahKu dikosongkan; proposal kembali menunggu keputusan',
   })
 
   // --- 14 days of dailyStats (deterministic, WIB dates) ---

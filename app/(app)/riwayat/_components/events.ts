@@ -11,6 +11,8 @@ import {
   type History,
   isOutsideFocus,
   LEGACY_CATEGORIES,
+  LEGACY_RESPONSE_KINDS,
+  type LegacyResponseKind,
   type Proposal,
   RESPONSE_KINDS,
   type ResponseKind,
@@ -56,6 +58,7 @@ export interface EventProposal {
 
 export interface EventDigest {
   slot: Digest['slot']
+  period: Digest['period']
   counts: Digest['counts']
   insight?: string
   text: string
@@ -77,10 +80,19 @@ export interface RiwayatEvent {
   detail: string
   reason?: string
   proposal?: EventProposal
-  /** A tanggapan's response, or a tanggapan massal's. */
-  decision?: ResponseKind
+  /**
+   * A tanggapan's response, or a tanggapan massal's: a current decision, or one
+   * of the earlier scale on rows written before the move. Render through
+   * `responseText`.
+   */
+  decision?: StoredDecision
   /** The response it replaced, when the manager changed their mind. */
-  previousDecision?: ResponseKind
+  previousDecision?: StoredDecision
+  /**
+   * The system moved an earlier-scale decision onto Setuju/Tolak (`decision`
+   * set) or cleared it back to waiting (`decision` undefined).
+   */
+  migrated?: boolean
   /**
    * A grade as the row stored it: a current grade, or a value of the old
    * four-step scale on rows written before the re-grade. Render through
@@ -104,8 +116,17 @@ const GRADE_VALUES: ReadonlySet<string> = new Set([
 /** A grade value of either scale: current, or legacy on older rows. */
 const isCategory = (v: unknown): v is string =>
   typeof v === 'string' && GRADE_VALUES.has(v)
-const isResponse = (v: unknown): v is ResponseKind =>
-  typeof v === 'string' && (RESPONSE_KINDS as readonly string[]).includes(v)
+/** A decision value as a history row may store it, of either scale. */
+export type StoredDecision = ResponseKind | LegacyResponseKind
+const DECISION_VALUES: ReadonlySet<string> = new Set([
+  ...RESPONSE_KINDS,
+  ...LEGACY_RESPONSE_KINDS,
+])
+const isResponse = (v: unknown): v is StoredDecision =>
+  typeof v === 'string' && DECISION_VALUES.has(v)
+const isLegacyResponse = (v: unknown): v is LegacyResponseKind =>
+  typeof v === 'string' &&
+  (LEGACY_RESPONSE_KINDS as readonly string[]).includes(v)
 
 /**
  * The digest a `ringkasan_terkirim` row announced. aisa-api writes the digest
@@ -229,6 +250,12 @@ export function toEvents(
         row.action === 'tanggapan' && isResponse(row.before)
           ? row.before
           : undefined,
+      migrated:
+        row.action === 'tanggapan' &&
+        row.via === 'sistem' &&
+        isLegacyResponse(row.before)
+          ? true
+          : undefined,
       categoryFrom:
         (kind === 'koreksi' || kind === 'nilai_ulang') && isCategory(row.before)
           ? row.before
@@ -250,6 +277,7 @@ export function toEvents(
       digest: digest
         ? {
             slot: digest.slot,
+            period: digest.period,
             counts: digest.counts,
             insight: digest.insight?.trim() || undefined,
             text: digest.text,

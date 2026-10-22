@@ -17,7 +17,7 @@ const response = (
   at: string,
   fields: Partial<NonNullable<Proposal['response']>> = {},
 ): Proposal['response'] => ({
-  kind: 'arsipkan',
+  kind: 'tolak',
   at: new Date(at),
   via: 'wa',
   ...fields,
@@ -52,7 +52,7 @@ describe('proposalHistoryEntries', () => {
       'Proposal masuk',
     ])
     expect(entries[0]).toMatchObject({
-      detail: 'Diarsipkan lewat tanggapan massal',
+      detail: 'Ditolak lewat tanggapan massal',
       via: 'wa',
       reason: null,
     })
@@ -66,7 +66,7 @@ describe('proposalHistoryEntries', () => {
           id: 't',
           action: 'tanggapan',
           at: new Date(at),
-          detail: 'Arsipkan Tani',
+          detail: 'Tolak Tani',
         }),
         row({}),
       ],
@@ -84,11 +84,11 @@ describe('proposalHistoryEntries', () => {
           at: new Date('2026-10-21T03:00:00Z'),
         }),
       ],
-      response('2026-10-22T02:00:00Z', { kind: 'undang', note: ' Hubungi ' }),
+      response('2026-10-22T02:00:00Z', { kind: 'setuju', note: ' Hubungi ' }),
     )
     expect(entries[0]).toMatchObject({
       title: 'Tanggapan massal',
-      detail: 'Diundang lewat tanggapan massal',
+      detail: 'Disetujui lewat tanggapan massal',
       reason: 'Hubungi',
     })
   })

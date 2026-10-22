@@ -4,8 +4,8 @@
  * a proposal is "ditinjau manajer" when it has a tanggapan or a koreksi, and the
  * AI agrees unless the koreksi moved it to another grade.
  *
- * The seed (`scripts/_seed-aisa.ts`) gives 3 reviewed — Panen Kita (undang,
- * corrected Layak bersyarat → Perlu penyesuaian), AplikasiX (arsipkan, no
+ * The seed (`scripts/_seed-aisa.ts`) gives 3 reviewed — Panen Kita (setuju,
+ * corrected Layak bersyarat → Perlu penyesuaian), AplikasiX (tolak, no
  * koreksi) and Pasar Ikan (corrected Risiko tinggi → Perlu penyesuaian) — so 1
  * of 3 agreed, one koreksi each way.
  */

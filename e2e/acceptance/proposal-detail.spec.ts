@@ -71,7 +71,7 @@ test('DSB-20 a scored, fitting proposal shows both stages, quotes and tokens', a
   await expect(guide.getByRole('row')).toHaveCount(6)
   await expect(
     guide.getByRole('row').filter({ hasText: '< 50' }),
-  ).toContainText('Tolak')
+  ).toContainText('Sebaiknya ditolak')
   await expect(
     card(page, 'Nilai per kriteria').getByText(
       'Aturan v1 · model gemini-3.8-flash.',
@@ -431,21 +431,25 @@ test('DSB-28 a responded proposal shows who responded, when, through what and th
   await page.goto('/proposal/form-seedpanenkita')
 
   const keputusan = card(page, 'Keputusan Anda')
-  await expect(
-    keputusan.getByText(
-      /^Sekarang: Diundang · \d{1,2} \S+ \d{4}, \d{2}\.\d{2} via WhatsApp$/u,
-    ),
-  ).toBeVisible()
+  const now = keputusan.locator('[data-slot="card-description"]')
+  await expect(now.locator('[data-decision="setuju"]')).toHaveText('Disetujui')
+  await expect(now).toContainText(
+    /\d{1,2} \S+ \d{4}, \d{2}\.\d{2} via WhatsApp$/u,
+  )
   await expect(
     keputusan.getByText('“Jadwalkan pitching minggu depan”', { exact: true }),
   ).toBeVisible()
   // The current response cannot be sent again.
   await expect(
-    keputusan.getByRole('button', { name: /^Undang/u }),
+    keputusan.getByRole('button', { name: /^Setuju/u }),
   ).toBeDisabled()
   await expect(
-    keputusan.getByRole('button', { name: /^Pantau/u }),
-  ).toBeEnabled()
+    keputusan.getByRole('button', { name: /^Setuju/u }),
+  ).toHaveAttribute('aria-pressed', 'true')
+  await expect(keputusan.getByRole('button', { name: /^Tolak/u })).toBeEnabled()
+  await expect(keputusan).toContainText(
+    'Bisa juga lewat WhatsApp: ketik “setuju Panen Kita” atau “tolak Panen Kita”.',
+  )
 })
 
 /**

@@ -73,9 +73,8 @@ const TABS: { value: Tanggapan; label: string }[] = [
   { value: null, label: 'Semua' },
   { value: 'belum', label: 'Belum ditanggapi' },
   { value: 'sudah', label: 'Sudah ditanggapi' },
-  { value: 'undang', label: DECISION_LABEL.undang },
-  { value: 'pantau', label: DECISION_LABEL.pantau },
-  { value: 'arsipkan', label: DECISION_LABEL.arsipkan },
+  { value: 'setuju', label: DECISION_LABEL.setuju },
+  { value: 'tolak', label: DECISION_LABEL.tolak },
 ]
 
 const TOP_GRADES_LABEL = 'Sangat layak + Layak bersyarat'

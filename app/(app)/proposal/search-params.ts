@@ -21,7 +21,8 @@ import {
  * bersyarat. A value of the old four-step scale (`cocok`, …) is unknown, so it
  * is no filter. `luarFokus=1` keeps proposals "di luar fokus" (`isOutsideFocus`),
  * `luarFokus=0` the ones that fit the focus. `tanggapan` is the tab row: belum /
- * sudah, or one response kind.
+ * sudah, or one decision (`setuju` / `tolak`); a link with a decision of the
+ * earlier scale (`undang`, `pantau`, `arsipkan`) is unknown, so it shows Semua.
  */
 export const KATEGORI_FILTERS = [...CATEGORIES, 'atas'] as const
 export const FOKUS_FILTERS = ['1', '0'] as const

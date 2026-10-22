@@ -72,6 +72,24 @@ export const listReviewedProposals = cache(async (): Promise<Proposal[]> => {
   return [...byId.values()]
 })
 
+/** Proposals created at or after `since`. A single-field range, no index. */
+export async function listProposalsCreatedSince(
+  since: Date,
+): Promise<Proposal[]> {
+  const snap = await proposalsCollection().where('createdAt', '>=', since).get()
+  return snap.docs.map((doc) => doc.data())
+}
+
+/** Proposals whose decision was given at or after `since`. A single-field range, no index. */
+export async function listProposalsDecidedSince(
+  since: Date,
+): Promise<Proposal[]> {
+  const snap = await proposalsCollection()
+    .where('response.at', '>=', since)
+    .get()
+  return snap.docs.map((doc) => doc.data())
+}
+
 /** Proposals created strictly after `since`. A single-field range, no index. */
 export async function countProposalsSince(since: Date): Promise<number> {
   const snap = await proposalsCollection()
@@ -88,6 +106,24 @@ export const getLatestDigest = cache(async (): Promise<Digest | null> => {
     .get()
   return snap.docs[0]?.data() ?? null
 })
+
+/**
+ * The newest 09.00 ringkasan — where the next daily window starts, as
+ * `previous_morning()` in digest.py reads it. Equality on `slot` alone with the
+ * newest picked here: an order on `sentAt` as well would need a composite index,
+ * and there is one 09.00 digest a day.
+ */
+export const getLatestMorningDigest = cache(
+  async (): Promise<Digest | null> => {
+    const snap = await digestsCollection().where('slot', '==', '09.00').get()
+    let latest: Digest | null = null
+    for (const doc of snap.docs) {
+      const digest = doc.data()
+      if (!latest || digest.sentAt > latest.sentAt) latest = digest
+    }
+    return latest
+  },
+)
 
 /**
  * How many recent digests the Tren page searches for an insight. A template

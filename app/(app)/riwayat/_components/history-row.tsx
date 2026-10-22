@@ -23,14 +23,13 @@ import {
   CATEGORY_LABEL,
   categoryText,
   LEGACY_CATEGORY_LABEL,
-  RESPONSE_LABEL,
+  responseText,
   VIA_LABEL,
 } from '@/features/aisa/aisa.labels'
 import {
   CATEGORIES,
   type Category,
   LEGACY_CATEGORIES,
-  type ResponseKind,
   type Rules,
 } from '@/features/aisa/aisa.schema'
 import { formatNumber, formatScore } from '@/lib/format/number'
@@ -42,7 +41,12 @@ import {
   OutsideFocusBadge,
   scoreTone,
 } from '../../_components/badges'
-import { ACTOR_LABEL, type ActorType, type RiwayatEvent } from './events'
+import {
+  ACTOR_LABEL,
+  type ActorType,
+  type RiwayatEvent,
+  type StoredDecision,
+} from './events'
 import { eventTone, formatClock, formatFull } from './metrics'
 
 export type Thresholds = Rules['thresholds'] | null
@@ -90,7 +94,10 @@ export function EventIcon({
   event,
   className,
 }: {
-  event: Pick<RiwayatEvent, 'kind' | 'decision' | 'paused' | 'manual'>
+  event: Pick<
+    RiwayatEvent,
+    'kind' | 'decision' | 'paused' | 'manual' | 'migrated'
+  >
   className?: string
 }) {
   const { icon: Icon, tone } = eventTone(event)
@@ -167,28 +174,70 @@ function Startup({ event }: { event: RiwayatEvent }) {
   )
 }
 
-const DECISION_VERB: Record<ResponseKind, string> = {
-  undang: 'diundang diskusi',
-  pantau: 'dipantau',
-  arsipkan: 'diarsipkan',
+const DECISION_VERB: Partial<Record<StoredDecision, string>> = {
+  setuju: 'disetujui',
+  tolak: 'ditolak',
 }
 
-const SLOT_WORD = { '09.00': 'pagi', '17.00': 'sore' } as const
+/** "disetujui", or for an earlier-scale row "ditanggapi: Undang (lama)". */
+const decisionVerb = (decision: StoredDecision | undefined) =>
+  decision
+    ? (DECISION_VERB[decision] ?? `ditanggapi: ${responseText(decision)}`)
+    : 'ditanggapi'
+
+/** A stored decision as a small badge; an earlier-scale one stays muted. */
+function StoredDecisionBadge({
+  value,
+  className,
+}: {
+  value: StoredDecision | null
+  className?: string
+}) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        value === 'setuju' && 'border-success/40 bg-success-soft text-success',
+        value === 'tolak' && 'border-destructive/40 text-destructive',
+        (value === null || !DECISION_VERB[value]) && 'text-muted-foreground',
+        className,
+      )}
+    >
+      {value === null ? 'Kosong (menunggu keputusan)' : responseText(value)}
+    </Badge>
+  )
+}
+
+/**
+ * "pagi", "mingguan", or "sore" for a 17.00 ringkasan sent before the weekly
+ * summary replaced it. Without its digest a 17.00 row could be either, so it
+ * gets no word.
+ */
+function digestWord(event: RiwayatEvent): string | null {
+  if (event.digest?.period === 'mingguan') return 'mingguan'
+  if (event.slot === '09.00') return 'pagi'
+  if (event.digest && event.slot === '17.00') return 'sore'
+  return null
+}
 
 function Title({ event }: { event: RiwayatEvent }) {
   switch (event.kind) {
     case 'keputusan':
-      if (event.action === 'tanggapan_massal')
-        return (
+      if (event.migrated)
+        return event.decision ? (
           <>
-            Tanggapan massal:{' '}
-            {event.decision ? DECISION_VERB[event.decision] : 'ditanggapi'}
+            Tanggapan <Startup event={event} /> dipindah ke skala baru
+          </>
+        ) : (
+          <>
+            Tanggapan <Startup event={event} /> dikosongkan
           </>
         )
+      if (event.action === 'tanggapan_massal')
+        return <>Tanggapan massal: {decisionVerb(event.decision)}</>
       return (
         <>
-          <Startup event={event} />{' '}
-          {event.decision ? DECISION_VERB[event.decision] : 'ditanggapi'}
+          <Startup event={event} /> {decisionVerb(event.decision)}
         </>
       )
     case 'penilaian':
@@ -209,7 +258,9 @@ function Title({ event }: { event: RiwayatEvent }) {
       )
     case 'whatsapp':
       return (
-        <>Ringkasan {event.slot ? `${SLOT_WORD[event.slot]} ` : ''}terkirim</>
+        <>
+          Ringkasan {digestWord(event) ? `${digestWord(event)} ` : ''}terkirim
+        </>
       )
     case 'koreksi':
       return (
@@ -422,11 +473,29 @@ function Details({
         return (
           <p className="text-[13px] text-muted-foreground">{event.detail}</p>
         )
+      if (event.migrated && event.previousDecision)
+        return (
+          <div className="space-y-1.5 text-[13px]">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <StoredDecisionBadge
+                value={event.previousDecision}
+                className="opacity-80"
+              />
+              <ArrowRightIcon
+                className="size-3.5 text-muted-foreground"
+                aria-label="menjadi"
+              />
+              <StoredDecisionBadge value={event.decision ?? null} />
+            </div>
+            <p className="text-muted-foreground">{event.detail}</p>
+            {event.reason ? <Quote text={event.reason} /> : null}
+          </div>
+        )
       return event.previousDecision || event.reason ? (
         <div className="space-y-1.5">
           {event.previousDecision ? (
             <p className="text-[13px] text-muted-foreground">
-              Sebelumnya: {RESPONSE_LABEL[event.previousDecision]}
+              Sebelumnya: {responseText(event.previousDecision)}
             </p>
           ) : null}
           {event.reason ? <Quote text={event.reason} /> : null}

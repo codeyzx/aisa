@@ -284,13 +284,31 @@ test('DSB-50 Riwayat lists every audit row, newest first, and leaves a deleted p
     'Aturan penilaian diperbarui ke versi 1',
   )
 
-  const panen = event('Panen Kita diundang diskusi')
+  // Panen Kita was answered on the earlier scale; the row keeps that word,
+  // marked as old, and the system row that moved it reads as such.
+  const panen = event('Panen Kita ditanggapi: Undang (lama)')
   await expect(panen).toContainText('“Jadwalkan pitching minggu depan”')
   await expect(panen).toContainText('Manajer')
   await expect(panen).toContainText('via WhatsApp')
   await expect(
     panen.getByRole('link', { name: 'Panen Kita', exact: true }),
   ).toHaveAttribute('href', '/proposal/form-seedpanenkita')
+
+  const moved = event('Tanggapan Panen Kita dipindah ke skala baru')
+  await expect(moved).toContainText('Undang (lama)')
+  await expect(moved).toContainText('Setuju')
+  await expect(moved).toContainText('Sistem')
+  await expect(moved).toContainText('“Skala tanggapan baru: Setuju / Tolak”')
+  await expect(event('SawahKu ditanggapi: Pantau (lama)')).toContainText(
+    'via Dashboard',
+  )
+  const cleared = event('Tanggapan SawahKu dikosongkan')
+  await expect(cleared).toContainText('Pantau (lama)')
+  await expect(cleared).toContainText('Kosong (menunggu keputusan)')
+  await expect(cleared).toContainText(
+    'Tanggapan Pantau untuk SawahKu dikosongkan; proposal kembali menunggu keputusan',
+  )
+  await expect(event('AplikasiX ditolak')).toContainText('Manajer')
 
   const pasar = event('Grade Pasar Ikan dikoreksi')
   await expect(pasar).toContainText(
@@ -322,11 +340,16 @@ test('DSB-50 Riwayat lists every audit row, newest first, and leaves a deleted p
 
   // The ringkasan row opens to the digest it announced.
   await tab('Ringkasan WA').click()
-  await expect(events).toHaveCount(1)
+  await expect(events).toHaveCount(2)
+  await expect(event('Ringkasan mingguan terkirim')).toContainText(
+    'Ke WhatsApp · 9 proposal menunggu keputusan',
+  )
   await expect(event('Ringkasan pagi terkirim')).toContainText(
     'Ke WhatsApp · 11 proposal menunggu keputusan',
   )
-  await page.getByRole('button', { name: 'Lihat isi' }).click()
+  await event('Ringkasan pagi terkirim')
+    .getByRole('button', { name: 'Lihat isi' })
+    .click()
   await expect(event('Ringkasan pagi terkirim')).toContainText(
     'Klinik Desa (77,5)',
   )
@@ -346,7 +369,7 @@ test('DSB-50 Riwayat lists every audit row, newest first, and leaves a deleted p
   await expect(events).toHaveCount(1)
   const deleted = event('Sebuah proposal dihapus')
   await expect(deleted).toContainText(
-    'Data proposal dihapus (diarsipkan lebih dari 90 hari)',
+    'Data proposal dihapus (ditolak lebih dari 90 hari)',
   )
   await expect(deleted).toContainText('“retensi”')
   await expect(deleted).toContainText('Sistem')

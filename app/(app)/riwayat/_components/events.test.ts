@@ -113,7 +113,7 @@ describe('toEvents', () => {
         row({
           action: 'tanggapan',
           via: 'dashboard',
-          after: 'undang',
+          after: 'setuju',
           proposalId: 'p1',
           proposalName: '(dihapus)',
         }),
@@ -124,9 +124,53 @@ describe('toEvents', () => {
     expect(e).toMatchObject({
       kind: 'keputusan',
       actor: 'manajer',
-      decision: 'undang',
+      decision: 'setuju',
     })
     expect(e!.proposal!.linkable).toBe(false)
+  })
+
+  it('keeps an earlier-scale decision on a manager row, not migrated', () => {
+    const [e] = toEvents(
+      [
+        row({
+          action: 'tanggapan',
+          via: 'wa',
+          before: 'pantau',
+          after: 'arsipkan',
+        }),
+      ],
+      [],
+      [],
+    )
+    expect(e).toMatchObject({
+      kind: 'keputusan',
+      decision: 'arsipkan',
+      previousDecision: 'pantau',
+    })
+    expect(e!.migrated).toBeUndefined()
+  })
+
+  it('reads the system move to the new scale as a migration row', () => {
+    const [moved, cleared] = toEvents(
+      [
+        row({ action: 'tanggapan', before: 'undang', after: 'setuju' }),
+        row({ id: 'b', action: 'tanggapan', before: 'pantau', after: null }),
+      ],
+      [],
+      [],
+    )
+    expect(moved).toMatchObject({
+      kind: 'keputusan',
+      actor: 'sistem',
+      migrated: true,
+      previousDecision: 'undang',
+      decision: 'setuju',
+    })
+    expect(cleared).toMatchObject({
+      migrated: true,
+      previousDecision: 'pantau',
+    })
+    expect(cleared!.decision).toBeUndefined()
   })
 
   it('reads the rules version from a number or a { version } object', () => {

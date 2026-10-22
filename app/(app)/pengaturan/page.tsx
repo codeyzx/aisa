@@ -5,8 +5,11 @@ import { VIA_LABEL } from '@/features/aisa/aisa.labels'
 import {
   countProposalsSince,
   getLatestDigest,
+  getLatestMorningDigest,
   getRules,
   getRuntime,
+  listProposalsCreatedSince,
+  listProposalsDecidedSince,
   listRecentProposals,
   listUnrespondedProposals,
 } from '@/features/aisa/aisa.repo'
@@ -24,6 +27,7 @@ import { PrivacyTab } from './_components/privacy-tab'
 import { ProfileTab } from './_components/profile-tab'
 import { settingsTabOf } from './_components/sections'
 import { SettingsView } from './_components/settings-view'
+import { buildWeeklyPreview, weekStart } from './_components/weekly-preview'
 
 export const metadata: Metadata = { title: 'Pengaturan' }
 
@@ -182,17 +186,34 @@ export default async function PengaturanPage({
       content = <AppearanceTab />
       break
     case 'ringkasan': {
-      const latest = await getLatestDigest()
-      const [unresponded, newCount] = await Promise.all([
+      const now = new Date()
+      const [latest, morning] = await Promise.all([
+        getLatestDigest(),
+        getLatestMorningDigest(),
+      ])
+      // The daily window starts at the previous 09.00 ringkasan (the last 24 h
+      // before the first one); the weekly summary compares with last week.
+      const windowStart =
+        morning?.sentAt ?? new Date(now.getTime() - 24 * 3_600_000)
+      const lastWeekStart = new Date(weekStart(now).getTime() - 7 * 86_400_000)
+      const [unresponded, recent, decided] = await Promise.all([
         listUnrespondedProposals(),
-        countProposalsSince(latest?.sentAt ?? new Date(0)),
+        listProposalsCreatedSince(
+          windowStart < lastWeekStart ? windowStart : lastWeekStart,
+        ),
+        listProposalsDecidedSince(weekStart(now)),
       ])
       content = (
         <DigestTab
           unresponded={unresponded}
           latest={latest}
-          newCount={newCount}
-          now={new Date()}
+          morning={morning}
+          newCount={recent.filter((p) => p.createdAt >= windowStart).length}
+          weekly={buildWeeklyPreview(
+            [...unresponded, ...recent, ...decided],
+            now,
+          )}
+          now={now}
         />
       )
       break

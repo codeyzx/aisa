@@ -166,6 +166,40 @@ const digest = {
   usedTemplate: true,
 }
 
+describe('weekly ringkasan', () => {
+  it('reads a digest without a period as harian', () => {
+    const parsed = DigestSchema.parse({ ...digest, counts: {} })
+    expect(parsed.period).toBe('harian')
+    expect(parsed.week ?? null).toBeNull()
+    expect(parsed.weekly ?? null).toBeNull()
+  })
+
+  it('reads a weekly digest with its week and stats', () => {
+    const parsed = DigestSchema.parse({
+      ...digest,
+      counts: {},
+      period: 'mingguan',
+      week: { start: '2026-10-19', end: '2026-10-23' },
+      weekly: {
+        proposalsIn: 10,
+        proposalsInLastWeek: 7,
+        topSectors: [{ sector: 'f&b', label: 'F&B', count: 4, percent: 40 }],
+        avgScore: 71.2,
+        avgScoreLastWeek: null,
+        setuju: 2,
+        tolak: 1,
+      },
+    })
+    expect(parsed.period).toBe('mingguan')
+    expect(parsed.week).toEqual({ start: '2026-10-19', end: '2026-10-23' })
+    expect(parsed.weekly).toMatchObject({
+      proposalsIn: 10,
+      waiting: 0,
+      topSectors: [{ label: 'F&B', percent: 40 }],
+    })
+  })
+})
+
 describe('grade scale change', () => {
   it('reads a ringkasan with the old count keys, current keys at 0', () => {
     const parsed = DigestSchema.parse({

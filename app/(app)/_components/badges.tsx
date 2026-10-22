@@ -1,12 +1,11 @@
 import {
-  ArchiveIcon,
   BadgeCheckIcon,
+  BanIcon,
   CircleCheckIcon,
   CircleXIcon,
   FileSearchIcon,
   Clock3Icon,
-  EyeIcon,
-  MailIcon,
+  ThumbsUpIcon,
   SlidersHorizontalIcon,
   TriangleAlertIcon,
   type LucideIcon,
@@ -120,7 +119,7 @@ export const CATEGORY_FILL: Record<Category, string> = Object.fromEntries(
 
 /**
  * A grade as a solid badge: its icon and word, and with `showAction` the
- * recommended next step after it ("Tolak").
+ * recommended next step after it ("Sebaiknya ditolak").
  */
 export function GradeBadge({
   category,
@@ -156,13 +155,10 @@ export function GradeBadge({
 /** A response, or `null` for a proposal nobody has answered yet. */
 export type Decision = ResponseKind | null
 
-// Decision badges carry no hue at all: every hue already means a grade in the
-// column beside them, so a decision tells itself apart by its
-// icon and its word. "Belum ditanggapi" — the one that needs the manager — is
-// the only one drawn with a dashed outline and bold text.
-const DECIDED =
-  'border-border bg-muted text-foreground [&>svg]:text-muted-foreground'
-
+// Decision badges are outlined and tinted, never the solid fill a grade badge
+// uses, and each carries its own icon and word, so a decision never reads as a
+// grade and colour is never the only cue. "Belum ditanggapi" — the one that needs
+// the manager — is the only one drawn with a dashed outline and bold text.
 const DECISION: Record<
   ResponseKind | 'baru',
   { icon: LucideIcon; label: string; className: string }
@@ -173,12 +169,15 @@ const DECISION: Record<
     className:
       'border-dashed border-muted-foreground bg-transparent font-semibold text-foreground',
   },
-  undang: { icon: MailIcon, label: 'Diundang', className: DECIDED },
-  pantau: { icon: EyeIcon, label: 'Dipantau', className: DECIDED },
-  arsipkan: {
-    icon: ArchiveIcon,
-    label: 'Diarsipkan',
-    className: 'border-border bg-transparent text-muted-foreground',
+  setuju: {
+    icon: ThumbsUpIcon,
+    label: 'Disetujui',
+    className: 'border-success/40 bg-success-soft text-success',
+  },
+  tolak: {
+    icon: BanIcon,
+    label: 'Ditolak',
+    className: 'border-destructive/40 bg-transparent text-destructive',
   },
 }
 
@@ -195,8 +194,12 @@ export function DecisionBadge({
 }) {
   const { icon: Icon, label, className: style } = DECISION[decision ?? 'baru']
   return (
-    <Badge variant="outline" className={cn(style, className)}>
-      <Icon />
+    <Badge
+      variant="outline"
+      data-decision={decision ?? 'baru'}
+      className={cn(style, className)}
+    >
+      <Icon aria-hidden />
       {label}
     </Badge>
   )

@@ -53,7 +53,7 @@ async function afterWrite<T>(outcome: AisaApiOutcome<T>) {
   return outcome
 }
 
-/** Undang / pantau / arsipkan one proposal. */
+/** Setuju / tolak one proposal. */
 export async function respondToProposalAction(
   proposalId: string,
   kind: ResponseKind,

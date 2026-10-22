@@ -8,6 +8,7 @@ import {
   gradeBands,
   gradeOf,
   historyDetailText,
+  responseText,
   sectorLabel,
 } from './aisa.labels'
 import { CRITERIA, type Thresholds } from './aisa.schema'
@@ -84,7 +85,7 @@ describe('grades', () => {
   })
 
   it('names the action for each grade', () => {
-    expect(CATEGORY_ACTION.tidak_layak).toBe('Tolak')
+    expect(CATEGORY_ACTION.tidak_layak).toBe('Sebaiknya ditolak')
     expect(CATEGORY_ACTION.sangat_layak).toBe('Lanjutkan investasi')
   })
 
@@ -113,5 +114,16 @@ describe('failedFitChecks', () => {
       }),
     ).toEqual(['Sektor: f&b di luar sektor fokus', 'Dana: tidak disebut'])
     expect(failedFitChecks(null)).toEqual([])
+  })
+})
+
+describe('responseText', () => {
+  it('names a current decision, marks an earlier-scale one, keeps an unknown raw', () => {
+    expect(responseText('setuju')).toBe('Setuju')
+    expect(responseText('tolak')).toBe('Tolak')
+    expect(responseText('undang')).toBe('Undang (lama)')
+    expect(responseText('pantau')).toBe('Pantau (lama)')
+    expect(responseText('arsipkan')).toBe('Arsipkan (lama)')
+    expect(responseText('nanti')).toBe('nanti')
   })
 })

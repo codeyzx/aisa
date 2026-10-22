@@ -713,19 +713,14 @@ button.a-tile:hover {
   color: var(--warning);
 }
 
-.a-resp[data-resp='diundang'] {
+.a-resp[data-resp='disetujui'] {
   background: var(--success-soft);
   color: var(--success);
 }
 
-.a-resp[data-resp='dipantau'] {
-  background: color-mix(in oklab, var(--primary) 12%, transparent);
-  color: var(--primary);
-}
-
-.a-resp[data-resp='diarsipkan'] {
+.a-resp[data-resp='ditolak'] {
   background: var(--muted);
-  color: var(--muted-foreground);
+  color: var(--destructive);
 }
 
 .a-resp[data-resp='dikoreksi'] {

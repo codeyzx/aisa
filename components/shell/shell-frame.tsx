@@ -29,9 +29,9 @@ import { type ShellData } from './shell-data'
 import {
   greeting,
   isRouteActive,
-  nextDigestSlot,
+  nextDigest,
   routeHeading,
-  type DigestSlot,
+  type NextDigest,
 } from './shell-routes'
 import { UserMenu } from './user-menu'
 
@@ -54,7 +54,7 @@ interface ShellFrameProps {
   /** Server-read cookie, so the first HTML already has the right layout. */
   sidebarOpen: boolean
   /** Server's view of the next slot; the browser re-reads its clock on mount. */
-  initialSlot: DigestSlot
+  initialNext: NextDigest
   mainId: string
   dock: ReactNode
   children: ReactNode
@@ -70,7 +70,7 @@ export function ShellFrame({
   pages,
   data,
   sidebarOpen: initialOpen,
-  initialSlot,
+  initialNext,
   mainId,
   dock,
   children,
@@ -100,7 +100,7 @@ export function ShellFrame({
 
   const heading = routeHeading(pathname, data.pending)
   const subtitle = heading.greets && now ? greeting(now) : heading.subtitle
-  const slot = now ? nextDigestSlot(now) : initialSlot
+  const next = now ? nextDigest(now) : initialNext
 
   return (
     <div className="a-app">
@@ -165,7 +165,9 @@ export function ShellFrame({
             <div className="a-next">
               <p className="a-next-label">Ringkasan WhatsApp</p>
               <p>
-                Berikutnya <b className="a-num">{slot}</b>
+                Berikutnya {next.tomorrow ? 'besok ' : ''}
+                <b className="a-num">{next.slot}</b>
+                {next.period === 'mingguan' ? ' (mingguan)' : ''}
               </p>
               <p>{data.pending} proposal menunggu keputusan</p>
             </div>

@@ -10,7 +10,7 @@ import { SettingsPanel } from './settings-panel'
 const STORED = [
   {
     title: 'Nama startup, nama dan email founder',
-    note: 'Untuk mengenali pengirim dan mengundang founder',
+    note: 'Untuk mengenali pengirim dan menghubungi founder',
   },
   {
     title: 'Berkas proposal dan teksnya per halaman',
@@ -60,7 +60,10 @@ export function PrivacyTab({
       value: formatNumber(proposalCount),
       label: 'proposal tersimpan saat ini',
     },
-    { value: `${rules.retentionDays} hari`, label: 'arsip lalu dihapus' },
+    {
+      value: `${rules.retentionDays} hari`,
+      label: 'proposal yang ditolak lalu dihapus',
+    },
     { value: 'Wajib', label: 'persetujuan founder di formulir' },
   ]
 
@@ -77,7 +80,8 @@ export function PrivacyTab({
             </h3>
             <p className="text-[13px] leading-relaxed text-muted-foreground">
               Proposal dari formulir hanya diproses bila founder memberi
-              persetujuan, dan arsip dihapus otomatis setelah batas retensi.
+              persetujuan, dan proposal yang ditolak dihapus otomatis setelah{' '}
+              {rules.retentionDays} hari.
             </p>
           </div>
         </div>

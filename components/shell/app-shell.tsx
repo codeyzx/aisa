@@ -5,7 +5,7 @@ import { type Session } from '@/lib/auth/session'
 import { filterNavByRole, type NavSection } from './nav-config'
 import { type ShellData } from './shell-data'
 import { ShellFrame } from './shell-frame'
-import { type DigestSlot } from './shell-routes'
+import { type NextDigest } from './shell-routes'
 
 /**
  * The `<main>` landmark's stable id — the skip link's target. Spelled once: an
@@ -20,7 +20,7 @@ interface AppShellProps {
   data: ShellData
   /** The sidebar's persisted state, read from the cookie by the server layout. */
   sidebarOpen: boolean
-  initialSlot: DigestSlot
+  initialNext: NextDigest
   /** Floating panel mounted beside the work area (the assistant). */
   dock?: ReactNode
   children: ReactNode
@@ -36,7 +36,7 @@ export function AppShell({
   sections,
   data,
   sidebarOpen,
-  initialSlot,
+  initialNext,
   dock,
   children,
 }: AppShellProps) {
@@ -75,7 +75,7 @@ export function AppShell({
         pages={pages}
         data={data}
         sidebarOpen={sidebarOpen}
-        initialSlot={initialSlot}
+        initialNext={initialNext}
         mainId={MAIN_CONTENT_ID}
         dock={dock}
       >

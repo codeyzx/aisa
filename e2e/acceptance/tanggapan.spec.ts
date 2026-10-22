@@ -30,29 +30,29 @@ test.beforeEach(async ({ page }) => {
   await signInAs(page)
 })
 
-test('DSB-70 Undang with a note sends kind and note, and says it was saved', async ({
+test('DSB-70 Setuju with a note sends kind and note, and says it was saved', async ({
   page,
   aisaApi,
 }) => {
   await page.goto('/proposal/form-seedtanimaju')
   const panel = card(page, 'Keputusan Anda')
   await panel.getByLabel('Catatan (opsional)').fill('  Ajak pitching Kamis  ')
-  await panel.getByRole('button', { name: /^Undang/u }).click()
+  await panel.getByRole('button', { name: /^Setuju/u }).click()
 
-  await expect(toast(page, 'Tanggapan tersimpan: Undang.')).toBeVisible()
+  await expect(toast(page, 'Keputusan tersimpan: Setuju.')).toBeVisible()
   expect(aisaApi.calls).toEqual([
     {
       method: 'POST',
       path: '/api/proposals/form-seedtanimaju/response',
       key: EXPECTED_KEY,
       contentType: 'application/json',
-      body: { kind: 'undang', note: 'Ajak pitching Kamis' },
+      body: { kind: 'setuju', note: 'Ajak pitching Kamis' },
     },
   ])
   await expect(panel.getByLabel('Catatan (opsional)')).toHaveValue('')
 })
 
-test('DSB-71 Pantau without a note sends no note at all', async ({
+test('DSB-71 Tolak asks inside the card first, then sends no note when it is blank', async ({
   page,
   aisaApi,
 }) => {
@@ -60,11 +60,24 @@ test('DSB-71 Pantau without a note sends no note at all', async ({
   const panel = card(page, 'Keputusan Anda')
   // Spaces only are no note.
   await panel.getByLabel('Catatan (opsional)').fill('   ')
-  await panel.getByRole('button', { name: /^Pantau/u }).click()
+  await panel.getByRole('button', { name: /^Tolak/u }).click()
+  // The confirmation is part of the card, not a browser or modal dialog, and
+  // says what a rejection leads to; Batal sends nothing.
+  const confirm = panel.getByRole('group', { name: 'Tolak SawahKu?' })
+  await expect(confirm).toContainText(
+    'Proposal yang ditolak dihapus otomatis setelah 90 hari.',
+  )
+  await expect(page.getByRole('alertdialog')).toHaveCount(0)
+  await confirm.getByRole('button', { name: 'Batal' }).click()
+  await expect(confirm).toHaveCount(0)
+  expect(aisaApi.calls).toEqual([])
 
-  await expect(toast(page, 'Tanggapan tersimpan: Pantau.')).toBeVisible()
+  await panel.getByRole('button', { name: /^Tolak/u }).click()
+  await panel.getByRole('button', { name: 'Ya, tolak' }).click()
+
+  await expect(toast(page, 'Keputusan tersimpan: Tolak.')).toBeVisible()
   expect(aisaApi.calls.map((call) => [call.path, call.body])).toEqual([
-    ['/api/proposals/form-seedsawahku/response', { kind: 'pantau' }],
+    ['/api/proposals/form-seedsawahku/response', { kind: 'tolak' }],
   ])
 })
 
@@ -75,18 +88,17 @@ test('DSB-72 an API refusal of a response is shown verbatim and nothing claims s
   await page.goto('/proposal/form-seedbelajaryuk')
   aisaApi.refuseNext({ status: 404, detail: 'proposal tidak ditemukan' })
   const panel = card(page, 'Keputusan Anda')
-  await panel.getByRole('button', { name: /^Arsipkan/u }).click()
-  // Arsipkan asks once more; nothing is sent before the confirmation.
-  const confirm = page.getByRole('alertdialog')
-  await expect(confirm.getByText('Arsipkan BelajarYuk?')).toBeVisible()
+  await panel.getByRole('button', { name: /^Tolak/u }).click()
+  // Tolak asks once more; nothing is sent before the confirmation.
+  await expect(panel.getByText('Tolak BelajarYuk?')).toBeVisible()
   expect(aisaApi.calls).toEqual([])
-  await confirm.getByRole('button', { name: 'Arsipkan', exact: true }).click()
+  await panel.getByRole('button', { name: 'Ya, tolak' }).click()
 
   await expect(alertIn(panel, 'proposal tidak ditemukan')).toBeVisible()
   await expect(toast(page, 'proposal tidak ditemukan')).toBeVisible()
-  await expect(toast(page, 'Tanggapan tersimpan: Arsipkan.')).toHaveCount(0)
+  await expect(toast(page, 'Keputusan tersimpan: Tolak.')).toHaveCount(0)
   expect(aisaApi.calls).toHaveLength(1)
-  expect(aisaApi.calls[0]?.body).toEqual({ kind: 'arsipkan' })
+  expect(aisaApi.calls[0]?.body).toEqual({ kind: 'tolak' })
 })
 
 test('DSB-73 an unreachable aisa-api says so instead of failing silently', async ({
@@ -96,7 +108,7 @@ test('DSB-73 an unreachable aisa-api says so instead of failing silently', async
   await page.goto('/proposal/form-seedbelajaryuk')
   aisaApi.dropNext()
   const panel = card(page, 'Keputusan Anda')
-  await panel.getByRole('button', { name: /^Pantau/u }).click()
+  await panel.getByRole('button', { name: /^Setuju/u }).click()
 
   await expect(alertIn(panel, UNREACHABLE)).toBeVisible()
   expect(aisaApi.calls).toHaveLength(1)
@@ -109,9 +121,9 @@ test('DSB-74 a double click on a response sends it once', async ({
   await page.goto('/proposal/upload-seedklinikdesa')
   aisaApi.delayAnswers(1500)
   const panel = card(page, 'Keputusan Anda')
-  await panel.getByRole('button', { name: /^Pantau/u }).dblclick()
+  await panel.getByRole('button', { name: /^Setuju/u }).dblclick()
 
-  await expect(toast(page, 'Tanggapan tersimpan: Pantau.')).toBeVisible()
+  await expect(toast(page, 'Keputusan tersimpan: Setuju.')).toBeVisible()
   expect(aisaApi.calls).toHaveLength(1)
 })
 
@@ -153,7 +165,9 @@ test('DSB-76 Koreksi grade with a reason sends the grade and the reason, not a s
     'Grade sekarang',
   )
   // Every other grade names the step it recommends.
-  await expect(gradeOption(page, 'Tidak layak')).toContainText('Tolak')
+  await expect(gradeOption(page, 'Tidak layak')).toContainText(
+    'Sebaiknya ditolak',
+  )
   await expect(page.getByRole('option')).toHaveCount(5)
   await page.keyboard.press('Escape')
 
@@ -210,24 +224,24 @@ test('DSB-78 Tanggapi semua asks first, then sends the grade and the response', 
     ),
   ).toBeVisible()
 
-  await page.getByRole('button', { name: 'Arsipkan semua' }).click()
-  await expect(page.getByText('Arsipkan 3 proposal?')).toBeVisible()
+  await page.getByRole('button', { name: 'Tolak semua' }).click()
+  await expect(page.getByText('Tolak 3 proposal?')).toBeVisible()
   await page.getByRole('button', { name: 'Batal' }).click()
-  await expect(page.getByText('Arsipkan 3 proposal?')).toHaveCount(0)
+  await expect(page.getByText('Tolak 3 proposal?')).toHaveCount(0)
   expect(aisaApi.calls).toEqual([])
 
   aisaApi.answerNext({ status: 200, body: { count: 3 } })
-  await page.getByRole('button', { name: 'Arsipkan semua' }).click()
+  await page.getByRole('button', { name: 'Tolak semua' }).click()
   await page.getByRole('button', { name: 'Ya, lanjutkan' }).click()
 
-  await expect(toast(page, 'Arsipkan: 3 proposal Sangat layak.')).toBeVisible()
+  await expect(toast(page, 'Ditolak: 3 proposal Sangat layak.')).toBeVisible()
   expect(aisaApi.calls).toEqual([
     {
       method: 'POST',
       path: '/api/proposals/bulk-response',
       key: EXPECTED_KEY,
       contentType: 'application/json',
-      body: { category: 'sangat_layak', kind: 'arsipkan' },
+      body: { category: 'sangat_layak', kind: 'tolak' },
     },
   ])
 })
@@ -256,13 +270,13 @@ test('DSB-79 a refused Tanggapi semua shows the API message verbatim', async ({
 }) => {
   await page.goto('/proposal?kategori=tidak_layak')
   aisaApi.refuseNext({ status: 401, detail: 'kunci tidak valid' })
-  await page.getByRole('button', { name: 'Pantau semua' }).click()
+  await page.getByRole('button', { name: 'Setujui semua' }).click()
   await page.getByRole('button', { name: 'Ya, lanjutkan' }).click()
 
   await expect(alertIn(page, 'kunci tidak valid')).toBeVisible()
   expect(aisaApi.calls[0]?.body).toEqual({
     category: 'tidak_layak',
-    kind: 'pantau',
+    kind: 'setuju',
   })
 })
 
@@ -275,10 +289,11 @@ test('DSB-80 Tanggapi semua reports how many proposals aisa-api actually changed
   // The toast must report the API's count, not the page's.
   await page.goto('/proposal?kategori=sangat_layak')
   aisaApi.answerNext({ status: 200, body: { count: 2 } })
-  await page.getByRole('button', { name: 'Arsipkan semua' }).click()
+  await page.getByRole('button', { name: 'Setujui semua' }).click()
+  await expect(page.getByText('Setujui 3 proposal?')).toBeVisible()
   await page.getByRole('button', { name: 'Ya, lanjutkan' }).click()
 
   await expect(page.locator('[data-sonner-toast] [data-title]')).toHaveText(
-    'Arsipkan: 2 proposal Sangat layak.',
+    'Disetujui: 2 proposal Sangat layak.',
   )
 })

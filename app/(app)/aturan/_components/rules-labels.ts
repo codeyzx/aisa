@@ -15,4 +15,4 @@ export const EDITABLE_MODEL_LABEL: Record<
 export const ASISTEN_MODEL_NOTE = 'berlaku setelah Asisten di-deploy ulang'
 
 export const RETENTION_EXPLANATION = (days: number) =>
-  `Proposal yang diarsipkan dihapus otomatis setelah ${Number.isFinite(days) ? days : 'N'} hari (setiap hari 02.00 WIB).`
+  `Proposal yang ditolak dihapus otomatis setelah ${Number.isFinite(days) ? days : 'N'} hari (setiap hari 02.00 WIB).`

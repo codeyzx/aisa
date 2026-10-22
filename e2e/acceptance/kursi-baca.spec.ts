@@ -87,7 +87,7 @@ test('DSB-60 Aturan penilaian and Pengaturan show a viewer every active rule, re
   await expect(main.getByText('90 hari', { exact: true }).first()).toBeVisible()
   await expect(
     main.getByText(
-      /^Proposal yang diarsipkan dihapus otomatis setelah 90 hari \(setiap hari 02\.00 WIB\)\./u,
+      /^Proposal yang ditolak dihapus otomatis setelah 90 hari \(setiap hari 02\.00 WIB\)\./u,
     ),
   ).toBeVisible()
   await expect(main.getByRole('combobox')).toHaveCount(0)
@@ -101,7 +101,7 @@ test('DSB-61 a viewer gets no response, correction or delete control on a propos
   await expect(
     page.getByRole('heading', { level: 2, name: 'Tani Maju' }),
   ).toBeVisible()
-  for (const name of [/^Undang/u, /^Pantau/u, /^Arsipkan/u]) {
+  for (const name of [/^Setuju/u, /^Tolak/u, 'Ya, tolak']) {
     await expect(page.getByRole('button', { name })).toHaveCount(0)
   }
   for (const name of ['Simpan koreksi', 'Hapus data']) {
@@ -131,7 +131,7 @@ test('DSB-62 a viewer gets no bulk response on a filtered list', async ({
   await page.getByRole('checkbox', { name: 'Pilih SawahKu' }).click()
   const bar = page.getByRole('region', { name: 'Tanggapan massal' })
   await expect(bar.getByText('1 dipilih')).toBeVisible()
-  for (const name of ['Undang', 'Pantau', 'Arsipkan']) {
+  for (const name of ['Setujui', 'Tolak']) {
     await expect(bar.getByRole('button', { name })).toHaveCount(0)
   }
 })

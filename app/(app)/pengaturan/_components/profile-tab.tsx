@@ -23,7 +23,7 @@ const ABILITIES: { capability: Capability; title: string; note: string }[] = [
   {
     capability: AISA_RESPOND,
     title: 'Menanggapi proposal',
-    note: 'Undang, pantau, arsipkan, koreksi kategori, dan unggah proposal.',
+    note: 'Setuju atau tolak proposal, koreksi grade, dan unggah proposal.',
   },
   {
     capability: AISA_CONFIGURE,
@@ -108,7 +108,7 @@ export function ProfileTab({ session }: { session: Session }) {
 
       <SettingsPanel
         title="WhatsApp"
-        description="AISA mengirim ringkasan ke nomor manajer, dan manajer bisa membalas langsung dengan undang, pantau, atau arsipkan."
+        description="AISA mengirim ringkasan ke nomor manajer, dan manajer bisa membalas langsung dengan setuju atau tolak."
       >
         <SettingsRow
           label="Nomor WhatsApp"

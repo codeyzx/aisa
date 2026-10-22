@@ -2,7 +2,7 @@
  * The Dashboard (the AISA home that replaced Hari ini; `/hari-ini` redirects
  * here) against the seed (`scripts/_seed-aisa.ts`). The expected numbers are
  * worked out from the seed's proposals with the overview's rules, not read off
- * the page: 14 proposals, 2 responded (Panen Kita undang, AplikasiX arsipkan),
+ * the page: 14 proposals, 2 responded (Panen Kita setuju, AplikasiX tolak),
  * so 12 belum ditanggapi — of which 9 are scored, 2 perlu dicek manual, 1
  * antre; the 11 that can be decided on are "Menunggu keputusan". By EFFECTIVE
  * grade (score bands 85/75/65/50 alone): Sangat layak 3 (Tani Maju, Dana UMKM,

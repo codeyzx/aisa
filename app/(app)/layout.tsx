@@ -10,7 +10,7 @@ import { AssistantDock } from '@/app/(app)/_components/assistant/assistant-dock'
 import { AppShell } from '@/components/shell/app-shell'
 import { filterNavByAvailability } from '@/components/shell/nav-config'
 import { type ShellData } from '@/components/shell/shell-data'
-import { nextDigestSlot } from '@/components/shell/shell-routes'
+import { nextDigest } from '@/components/shell/shell-routes'
 import {
   SIDEBAR_COOKIE_NAME,
   sidebarOpenFromCookie,
@@ -126,7 +126,7 @@ export default async function AppLayout({
       sections={sections}
       data={data}
       sidebarOpen={sidebarOpen}
-      initialSlot={nextDigestSlot(new Date())}
+      initialNext={nextDigest(new Date())}
       // The key is for React's dev check, which flags a server-created element
       // rendered among the client frame's children as an unkeyed list child.
       dock={<AssistantDock key="assistant" />}

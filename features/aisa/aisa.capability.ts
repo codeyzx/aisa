@@ -4,7 +4,7 @@ import { type Capability } from '@/lib/auth/rbac'
 export const AISA_READ: Capability = 'aisa:read'
 
 /**
- * Act on proposals through `aisa-api`: respond (undang/pantau/arsipkan), bulk
+ * Act on proposals through `aisa-api`: respond (setuju/tolak), bulk
  * respond, correct a category, upload a pitch deck.
  */
 export const AISA_RESPOND: Capability = 'aisa:respond'

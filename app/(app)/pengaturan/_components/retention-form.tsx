@@ -80,10 +80,13 @@ export function RetentionForm({
   return (
     <form noValidate onSubmit={submit}>
       <SettingsPanel
-        title="Berapa lama arsip disimpan"
-        description="Setelah batas ini, proposal yang Anda arsipkan dihapus otomatis beserta data founder-nya."
+        title="Berapa lama proposal yang ditolak disimpan"
+        description="Setelah batas ini, proposal yang Anda tolak dihapus otomatis beserta data founder-nya. Proposal yang disetujui tidak pernah dihapus otomatis."
       >
-        <SettingsRow label="Hapus arsip setelah" htmlFor="archive-retention">
+        <SettingsRow
+          label="Hapus yang ditolak setelah"
+          htmlFor="archive-retention"
+        >
           {canConfigure ? (
             <Select
               value={String(days)}
@@ -109,8 +112,8 @@ export function RetentionForm({
             <p className="pt-1.5 text-sm font-medium">{saved} hari</p>
           )}
           <p className="mt-2.5 text-[13px] leading-relaxed text-muted-foreground">
-            {RETENTION_EXPLANATION(days)} Contoh: proposal yang diarsipkan hari
-            ini dihapus sekitar{' '}
+            {RETENTION_EXPLANATION(days)} Contoh: proposal yang ditolak hari ini
+            dihapus sekitar{' '}
             <b className="font-medium text-foreground">{example}</b>.
           </p>
         </SettingsRow>

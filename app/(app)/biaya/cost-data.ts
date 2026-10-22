@@ -25,7 +25,7 @@ export const KIND_AGENT: Record<PricedKind, { agent: string; does: string }> = {
   penilaian: { agent: 'Penilai', does: 'Membaca dan menilai proposal' },
   ringkasan: {
     agent: 'Pembuat ringkasan',
-    does: 'Ringkasan WhatsApp 09.00 dan 17.00, termasuk insight-nya',
+    does: 'Ringkasan WhatsApp harian 09.00 dan mingguan Jumat 17.00, termasuk insight-nya',
   },
   asisten: { agent: 'Asisten', does: 'Menjawab pertanyaan manajer' },
 }

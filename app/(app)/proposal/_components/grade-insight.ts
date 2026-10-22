@@ -84,7 +84,13 @@ function byStrongest(a: Scored, b: Scored): number {
   return b.item.value - a.item.value || b.weight - a.weight
 }
 
-/** How many weak and strong points each grade leads with; at most three. */
+/**
+ * How many weak and strong points each grade leads with. Slots one side cannot
+ * fill go to the other, so a grade held down by a single criterion still shows
+ * what else the deck proves.
+ */
+const MAX_POINTS = 3
+
 const POINTS: Record<Category, { weak: number; strong: number }> = {
   sangat_layak: { weak: 1, strong: 2 },
   layak_bersyarat: { weak: 2, strong: 1 },
@@ -99,6 +105,7 @@ function summaryOf(
   weak: number,
   strong: number,
   belowFour: number,
+  weakest: Scored | undefined,
 ): string {
   const of = (n: number) => `${n} dari ${total} kriteria`
   const noneBelowFour = `Semua ${total} kriteria bernilai 4 atau 5.`
@@ -121,6 +128,10 @@ function summaryOf(
         grade === 'tidak_layak'
           ? 'buktinya belum cukup untuk dipertimbangkan'
           : 'risikonya tinggi'
+      // One weak criterion beside several strong ones: name it, since the
+      // count alone ("1 dari 5") reads as if the deck were mostly fine.
+      if (weak === 1 && strong && weakest)
+        return `${CRITERION_SHORT[weakest.criterion]} hanya ${weakest.item.value}/5 dan menarik skor turun, jadi ${verdict}, meski ${of(strong)} sudah kuat.`
       if (weak) return `${of(weak)} lemah atau tidak dibahas, jadi ${verdict}.`
       return belowFour
         ? `Belum ada kriteria yang kuat: ${of(belowFour)} bernilai 3 atau kurang.`
@@ -161,8 +172,12 @@ export function gradeInsight(
   const holdingUp = scored.filter(isStrong).toSorted(byStrongest)
 
   const quota = POINTS[grade]
-  const weakPoints = holdingBack.slice(0, quota.weak)
-  const strongPoints = holdingUp.slice(0, quota.strong)
+  const weakCount = Math.min(
+    holdingBack.length,
+    Math.max(quota.weak, MAX_POINTS - holdingUp.length),
+  )
+  const weakPoints = holdingBack.slice(0, weakCount)
+  const strongPoints = holdingUp.slice(0, MAX_POINTS - weakCount)
   const toPoint =
     (tone: InsightPoint['tone']) =>
     (s: Scored): InsightPoint => ({
@@ -178,7 +193,14 @@ export function gradeInsight(
   ]
 
   return {
-    summary: summaryOf(grade, scored.length, weak, strong, holdingBack.length),
+    summary: summaryOf(
+      grade,
+      scored.length,
+      weak,
+      strong,
+      holdingBack.length,
+      holdingBack[0],
+    ),
     points,
   }
 }

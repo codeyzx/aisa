@@ -38,7 +38,7 @@ describe('gradeInsight', () => {
     expect(gradeInsight('tidak_layak', {})).toBeNull()
   })
 
-  it('Sangat layak leads with its two strongest criteria', () => {
+  it('Sangat layak with nothing weak shows its three strongest criteria', () => {
     const insight = gradeInsight(
       'sangat_layak',
       all({ manajemen: 5, kinerja: 5, risiko: 4, rencana: 5, dampak: 4 }),
@@ -57,6 +57,11 @@ describe('gradeInsight', () => {
           criterion: 'rencana',
           tone: 'strong',
           text: 'Rencana & imbal hasil 5/5 — Alasan nilai 5 (hal. 6)',
+        },
+        {
+          criterion: 'kinerja',
+          tone: 'strong',
+          text: 'Kinerja bisnis 5/5 — Alasan nilai 5 (hal. 6)',
         },
       ],
     })
@@ -205,6 +210,24 @@ describe('gradeInsight', () => {
     expect(insight.summary).toBe('Semua 5 kriteria bernilai 4 atau 5.')
     expect(insight.points).toEqual([
       expect.objectContaining({ criterion: 'risiko', tone: 'strong' }),
+      expect.objectContaining({ criterion: 'manajemen', tone: 'strong' }),
+      expect.objectContaining({ criterion: 'kinerja', tone: 'strong' }),
+    ])
+  })
+
+  it('Risiko tinggi held down by one criterion names it and shows what holds up', () => {
+    const insight = gradeInsight(
+      'risiko_tinggi',
+      all({ manajemen: 4, kinerja: 4, risiko: 1, rencana: 4, dampak: 4 }),
+      WEIGHTS,
+    )!
+    expect(insight.summary).toBe(
+      'Risiko & tren makro hanya 1/5 dan menarik skor turun, jadi risikonya tinggi, meski 4 dari 5 kriteria sudah kuat.',
+    )
+    expect(insight.points.map((p) => [p.criterion, p.tone])).toEqual([
+      ['risiko', 'weak'],
+      ['manajemen', 'strong'],
+      ['rencana', 'strong'],
     ])
   })
 })

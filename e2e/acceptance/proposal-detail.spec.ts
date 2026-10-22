@@ -58,7 +58,7 @@ test('DSB-20 a scored, fitting proposal shows both stages, quotes and tokens', a
   await expect(grade.getByText('Rentang skor 85–100')).toBeVisible()
   const action = grade.getByTestId('grade-action')
   await expect(action).toContainText('Lanjutkan investasi')
-  // Why, read from this proposal's own criteria: a count, then its two
+  // Why, read from this proposal's own criteria: a count, then its three
   // strongest (5s tie, broken by the 25% weights) with their quoted pages.
   await expect(action.getByTestId('grade-insight')).toHaveText(
     'Bukti kuat di 5 dari 5 kriteria, tanpa kriteria yang lemah.',
@@ -66,6 +66,7 @@ test('DSB-20 a scored, fitting proposal shows both stages, quotes and tokens', a
   await expect(action.getByRole('listitem')).toHaveText([
     'Menaikkan skor: Tim manajemen 5/5 — Pendiri pernah membangun dan keluar dari startup serupa (hal. 2)',
     'Menaikkan skor: Rencana & imbal hasil 5/5 — Unit ekonomi positif dan proyeksi imbal hasil rinci (hal. 5)',
+    'Menaikkan skor: Kinerja bisnis 5/5 — Pendapatan tumbuh tiap kuartal dengan pelanggan yang disebut namanya (hal. 3)',
   ])
   await expect(grade.getByTestId('grade-scale')).toContainText(
     'Skor 92,5 dari 100 berada di rentang 85–100: Sangat layak.',

@@ -3,8 +3,6 @@
 import {
   Area,
   AreaChart,
-  Bar,
-  BarChart,
   CartesianGrid,
   ResponsiveContainer,
   Tooltip,
@@ -18,8 +16,9 @@ import { LOCALE } from '@/lib/format/locale'
 import { formatDecimal, formatNumber } from '@/lib/format/number'
 
 import { CATEGORY_FILL } from '../../_components/badges'
+import { fromFirstValue } from '../../_components/daily-window'
 
-import type { TrendData } from '../trend-data'
+import type { DayRow, TokenDay, TrendData } from '../trend-data'
 
 const INITIAL = { width: 320, height: 200 }
 const MANUAL_COLOR = 'var(--muted-foreground)'
@@ -42,6 +41,36 @@ type Payload = readonly { payload?: { full?: string } }[] | undefined
 const fullLabel = (_: unknown, payload: Payload) =>
   payload?.[0]?.payload?.full ?? ''
 
+const noProposal = (day: DayRow) =>
+  day.total === 0 &&
+  day.manual === 0 &&
+  CATEGORIES.every((category) => day[category] === 0)
+const noToken = (day: TokenDay) => day.input === 0 && day.output === 0
+
+/**
+ * A one-day area draws nothing and a two-day one reads as a bare slope, so
+ * with so few days a dot marks each of them.
+ */
+const fewPointDot = (count: number, color: string) =>
+  count < 3 ? { r: 3, fill: color, strokeWidth: 0 } : false
+
+/** Room at both ends, so the first and last day's label are not cut off. */
+const EDGE_PAD = { left: 16, right: 16 }
+
+const PROPOSAL_SERIES: readonly string[] = [...CATEGORIES, 'manual']
+const TOKEN_SERIES: readonly string[] = ['input', 'output']
+/** The tooltip lists series in legend order, not alphabetically by name. */
+const inOrder =
+  (series: readonly string[]) =>
+  ({ dataKey }: { dataKey?: unknown }) =>
+    series.indexOf(String(dataKey))
+
+/** " · grafik mulai 21 Okt" when the chart starts after the window does. */
+const sinceNote = (shown: { label: string }[], window: unknown[]) =>
+  shown.length < window.length && shown[0]
+    ? ` · grafik mulai ${shown[0].label}`
+    : ''
+
 export function TrendCharts({
   data,
   dailySub,
@@ -50,7 +79,9 @@ export function TrendCharts({
   /** The "today vs the window" sentence, shared with the insight list. */
   dailySub: string
 }) {
-  const { days, sectors, tokens, scoreWeek } = data
+  const { sectors, scoreWeek } = data
+  const days = fromFirstValue(data.days, noProposal)
+  const tokens = fromFirstValue(data.tokens, noToken)
   const maxSector = Math.max(1, ...sectors.map((row) => row.now))
   const tokenTotals = tokens.reduce(
     (sum, d) => ({ input: sum.input + d.input, output: sum.output + d.output }),
@@ -67,7 +98,10 @@ export function TrendCharts({
     <div className="a-charts">
       <div className="a-chart a-wide">
         <h3>Proposal masuk per hari</h3>
-        <div className="a-sub">{dailySub}</div>
+        <div className="a-sub">
+          {dailySub}
+          {sinceNote(days, data.days)}
+        </div>
         <div className="a-legend">
           {CATEGORIES.map((category) => (
             <span key={category}>
@@ -89,7 +123,7 @@ export function TrendCharts({
             height="100%"
             initialDimension={INITIAL}
           >
-            <BarChart
+            <AreaChart
               data={days}
               margin={{ top: 8, right: 8, bottom: 0, left: -18 }}
             >
@@ -99,6 +133,7 @@ export function TrendCharts({
                 tickLine={false}
                 axisLine={false}
                 fontSize={11}
+                padding={EDGE_PAD}
               />
               <YAxis
                 tickLine={false}
@@ -107,31 +142,40 @@ export function TrendCharts({
                 allowDecimals={false}
               />
               <Tooltip
-                cursor={{ fill: 'var(--muted)' }}
+                cursor={{ stroke: 'var(--border)' }}
                 contentStyle={TOOLTIP_STYLE}
                 labelFormatter={fullLabel}
+                itemSorter={inOrder(PROPOSAL_SERIES)}
+                formatter={(value) => `${formatNumber(Number(value))} proposal`}
               />
               {CATEGORIES.map((category) => (
-                <Bar
+                <Area
                   key={category}
+                  type="monotone"
                   dataKey={category}
                   name={CATEGORY_LABEL[category]}
                   stackId="proposal"
+                  stroke={CATEGORY_FILL[category]}
                   fill={CATEGORY_FILL[category]}
-                  // A card-coloured outline leaves a gap between stacked fills.
-                  stroke="var(--card)"
-                  strokeWidth={1}
+                  fillOpacity={0.55}
+                  strokeWidth={1.5}
+                  dot={fewPointDot(days.length, CATEGORY_FILL[category])}
+                  activeDot={{ r: 3 }}
                 />
               ))}
-              <Bar
+              <Area
+                type="monotone"
                 dataKey="manual"
                 name={MANUAL_LABEL}
                 stackId="proposal"
+                stroke={MANUAL_COLOR}
                 fill={MANUAL_COLOR}
-                fillOpacity={0.5}
-                radius={[3, 3, 0, 0]}
+                fillOpacity={0.3}
+                strokeWidth={1.5}
+                dot={fewPointDot(days.length, MANUAL_COLOR)}
+                activeDot={{ r: 3 }}
               />
-            </BarChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
         <details>
@@ -275,6 +319,7 @@ export function TrendCharts({
           {formatNumber(tokenTotals.input + tokenTotals.output)} token dalam 14
           hari · masuk {compact.format(tokenTotals.input)} · keluar{' '}
           {compact.format(tokenTotals.output)}
+          {sinceNote(tokens, data.tokens)}
         </div>
         <div className="a-legend">
           <span>
@@ -292,7 +337,7 @@ export function TrendCharts({
             height="100%"
             initialDimension={INITIAL}
           >
-            <BarChart
+            <AreaChart
               data={tokens}
               margin={{ top: 8, right: 8, bottom: 0, left: -6 }}
             >
@@ -302,6 +347,7 @@ export function TrendCharts({
                 tickLine={false}
                 axisLine={false}
                 fontSize={11}
+                padding={EDGE_PAD}
               />
               <YAxis
                 tickLine={false}
@@ -310,25 +356,37 @@ export function TrendCharts({
                 tickFormatter={(value) => compact.format(Number(value))}
               />
               <Tooltip
-                cursor={{ fill: 'var(--muted)' }}
+                cursor={{ stroke: 'var(--border)' }}
                 contentStyle={TOOLTIP_STYLE}
                 labelFormatter={fullLabel}
+                itemSorter={inOrder(TOKEN_SERIES)}
                 formatter={(value) => `${formatNumber(Number(value))} token`}
               />
-              <Bar
+              <Area
+                type="monotone"
                 dataKey="input"
                 name="Token masuk"
                 stackId="token"
+                stroke="var(--chart-2)"
                 fill="var(--chart-2)"
+                fillOpacity={0.35}
+                strokeWidth={2}
+                dot={fewPointDot(tokens.length, 'var(--chart-2)')}
+                activeDot={{ r: 3 }}
               />
-              <Bar
+              <Area
+                type="monotone"
                 dataKey="output"
                 name="Token keluar"
                 stackId="token"
+                stroke="var(--chart-1)"
                 fill="var(--chart-1)"
-                radius={[3, 3, 0, 0]}
+                fillOpacity={0.35}
+                strokeWidth={2}
+                dot={fewPointDot(tokens.length, 'var(--chart-1)')}
+                activeDot={{ r: 3 }}
               />
-            </BarChart>
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>

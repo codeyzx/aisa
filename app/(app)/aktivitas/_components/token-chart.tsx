@@ -68,7 +68,8 @@ export function TokenChart({ days }: { days: TokenDay[] }) {
             stroke="var(--chart-2)"
             strokeWidth={2}
             fill="url(#token-area)"
-            dot={false}
+            // A one-day area draws nothing; with so few days, dot each one.
+            dot={days.length < 3 ? { r: 3, fill: 'var(--chart-2)' } : false}
             activeDot={{ r: 4 }}
           />
         </AreaChart>

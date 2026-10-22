@@ -12,6 +12,7 @@ import {
   daysBetween,
   fullDayLabel,
   todayIso,
+  trimLeadingEmpty,
   wibIsoDate,
 } from '../_components/daily-window'
 
@@ -43,7 +44,10 @@ const KIND_MODELS: Record<PricedKind, (models: Rules['models']) => string[]> = {
 
 /** How many trailing days the proposal pace for the calculator is read over. */
 export const PACE_DAYS = 30
-/** The daily chart shows at most this many days, newest last. */
+/**
+ * The daily chart reads at most this many days, newest last, and starts at the
+ * first of them with a cost.
+ */
 export const CHART_DAYS = 60
 
 const ZERO_COST: TokenCost = { inputUsd: 0, outputUsd: 0, usd: 0 }
@@ -249,23 +253,28 @@ export function costData({
   const firstDate = stats[0]?.date ?? null
   const today = todayIso(now)
   const span = firstDate ? daysBetween(firstDate, today) + 1 : 0
-  const daily = dailyWindow([...stats], Math.min(CHART_DAYS, span), now).map(
-    ({ date }) => {
-      const perKind = dayUsd.get(date) ?? {
-        penilaian: 0,
-        ringkasan: 0,
-        asisten: 0,
-      }
-      return {
-        date,
-        label: dayLabel(date),
-        full: fullDayLabel(date),
-        usd: perKind.penilaian + perKind.ringkasan + perKind.asisten,
-        penilaian: perKind.penilaian,
-        ringkasan: perKind.ringkasan,
-        asisten: perKind.asisten,
-      }
-    },
+  const chartDays = dailyWindow(
+    [...stats],
+    Math.min(CHART_DAYS, span),
+    now,
+  ).map(({ date }) => {
+    const perKind = dayUsd.get(date) ?? {
+      penilaian: 0,
+      ringkasan: 0,
+      asisten: 0,
+    }
+    return {
+      date,
+      label: dayLabel(date),
+      full: fullDayLabel(date),
+      usd: perKind.penilaian + perKind.ringkasan + perKind.asisten,
+      penilaian: perKind.penilaian,
+      ringkasan: perKind.ringkasan,
+      asisten: perKind.asisten,
+    }
+  })
+  const daily = trimLeadingEmpty(chartDays, (day) =>
+    PRICED_KINDS.every((kind) => day[kind] <= 0),
   )
 
   const paceDays = Math.min(PACE_DAYS, span)

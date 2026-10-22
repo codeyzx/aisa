@@ -356,13 +356,13 @@ jadi tautan tanpa `proposal` bisa menunjukkan angka berbeda di hari lain.
 
 **Yang seharusnya terlihat:**
 
-- Keterangan `… hari terakhir, per agent`: sebanyak hari sejak pemakaian pertama tercatat sampai
-  hari ini, paling banyak 60 hari. Legenda tiga warna: **Penilai**, **Pembuat ringkasan**,
+- Keterangan `… hari terakhir, per agent`: sebanyak hari sejak hari pertama yang ada biayanya
+  sampai hari ini, paling banyak 60 hari; grafik mulai dari hari itu. Legenda tiga warna: **Penilai**, **Pembuat ringkasan**,
   **Asisten**. Setiap hari satu batang bertumpuk per agent, sumbu kiri dalam rupiah ringkas (mis.
   `Rp 1,2 rb`).
 - Kursor di batang memunculkan tanggal lengkap dan rupiah setiap agent.
 - Tabel berkolom **Tanggal**, **Penilai**, **Pembuat ringkasan**, **Asisten**, **Total**. Hari
-  tanpa pemakaian tetap ada dengan `Rp 0`. Kursor di sel **Total** memunculkan dolarnya.
+  tanpa pemakaian sesudah hari pertama itu tetap ada dengan `Rp 0`. Kursor di sel **Total** memunculkan dolarnya.
 - Kalau AI belum pernah dipakai: **Belum ada hari yang tercatat** dan **Grafik muncul setelah AI
   dipakai untuk pertama kali.**
 

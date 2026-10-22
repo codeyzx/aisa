@@ -85,3 +85,29 @@ export function dayLabel(iso: string): string {
 export function fullDayLabel(iso: string): string {
   return weekdayDate.format(new Date(`${iso}T00:00:00Z`))
 }
+
+/**
+ * Drops the days before the first one with a value, so a daily chart starts
+ * where its data starts instead of at the window's edge. Only the start is
+ * trimmed: a quiet day after the first value is a real zero and stays. Returns
+ * `[]` when no day has a value; the caller decides what an empty chart shows.
+ */
+export function trimLeadingEmpty<T>(
+  rows: readonly T[],
+  isEmpty: (row: T) => boolean,
+): T[] {
+  const first = rows.findIndex((row) => !isEmpty(row))
+  return first === -1 ? [] : rows.slice(first)
+}
+
+/**
+ * `trimLeadingEmpty` for a chart with no empty state of its own: a window with
+ * no value at all keeps every day, so the chart still draws its empty axis.
+ */
+export function fromFirstValue<T>(
+  rows: readonly T[],
+  isEmpty: (row: T) => boolean,
+): T[] {
+  const trimmed = trimLeadingEmpty(rows, isEmpty)
+  return trimmed.length ? trimmed : [...rows]
+}

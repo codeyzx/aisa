@@ -10,7 +10,7 @@ import { requireCapability } from '@/lib/auth/guards'
 import { LOCALE, TIME_ZONE } from '@/lib/format/locale'
 import { formatNumber } from '@/lib/format/number'
 
-import { dailyWindow } from '../_components/daily-window'
+import { dailyWindow, fromFirstValue } from '../_components/daily-window'
 import { compact } from './_components/format'
 import { JobLog } from './_components/job-log'
 import { TokenChart } from './_components/token-chart'
@@ -69,10 +69,13 @@ export default async function AktivitasPage({
   const modelCalls = sum((d) => d.stats?.modelCalls ?? 0)
   const failed = jobs.filter((job) => job.status === 'gagal').length
 
-  const chart = days.slice(-CHART_DAYS).map((d) => ({
+  const chartWindow = days.slice(-CHART_DAYS).map((d) => ({
     label: chartLabel.format(new Date(`${d.date}T12:00:00+07:00`)),
     total: (d.stats?.tokensIn ?? 0) + (d.stats?.tokensOut ?? 0),
   }))
+  const chart = fromFirstValue(chartWindow, (d) => d.total === 0)
+  const chartSince =
+    chart.length < chartWindow.length ? chart[0]?.label : undefined
 
   return (
     <div className="a-stack">
@@ -123,7 +126,11 @@ export default async function AktivitasPage({
 
       <div className="a-chart">
         <h3>Token per hari</h3>
-        <div className="a-sub">{CHART_DAYS} hari terakhir, semua agent</div>
+        <div className="a-sub">
+          {chartSince
+            ? `Sejak ${chartSince}, semua agent`
+            : `${CHART_DAYS} hari terakhir, semua agent`}
+        </div>
         <TokenChart days={chart} />
       </div>
 

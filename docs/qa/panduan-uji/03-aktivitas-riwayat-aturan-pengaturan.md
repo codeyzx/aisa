@@ -107,7 +107,9 @@ belum ada statistik harian di 30 hari itu.
 
 **Langkah:**
 
-1. Gulir ke kartu **Token per hari**. Subjudulnya "14 hari terakhir, semua agent".
+1. Gulir ke kartu **Token per hari**. Subjudulnya "14 hari terakhir, semua agent", atau "Sejak
+   21 Okt, semua agent" kalau hari pertama yang ada tokennya lebih baru dari 14 hari lalu
+   (grafik mulai dari hari itu).
 2. Arahkan kursor ke titik-titik di garis grafik.
 
 **Yang seharusnya terlihat:** grafik area dengan tanggal di sumbu bawah (mis. `9 Okt`, `11 Okt`, …,

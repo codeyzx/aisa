@@ -1,6 +1,6 @@
 """Operator CLI: `uv run aisa seed-rules | intake-file <pdf> [--name N] | digest <slot> [--send]
 | delete-proposal <id> --reason R | retention | migrate-grades [--apply]
-| migrate-responses [--apply]`."""
+| migrate-responses [--apply] | migrate-anchors [--apply]`."""
 
 from __future__ import annotations
 
@@ -50,6 +50,10 @@ def main() -> None:
                        help="move undang/pantau/arsipkan decisions to setuju/tolak")
     r.add_argument("--apply", action="store_true",
                    help="really write; without it, only print the plan")
+    n = sub.add_parser("migrate-anchors",
+                       help="fill missing rubric levels 2 and 4 from the defaults, keeping stored text")
+    n.add_argument("--apply", action="store_true",
+                   help="really write; without it, only print the plan")
     a = ap.parse_args()
 
     if a.cmd == "seed-rules":
@@ -88,6 +92,14 @@ def main() -> None:
         from .migrate_responses import migrate as migrate_responses
 
         migrate_responses(apply=a.apply)
+    elif a.cmd == "migrate-anchors":
+        from .domain import DomainError
+        from .migrate_anchors import migrate as migrate_anchors
+
+        try:
+            migrate_anchors(apply=a.apply)
+        except DomainError as e:
+            raise SystemExit(f"gagal: {e}") from e
 
 
 if __name__ == "__main__":

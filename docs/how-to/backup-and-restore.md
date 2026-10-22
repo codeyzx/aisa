@@ -237,6 +237,26 @@ A response kind it does not recognise is listed and left alone. A second run fin
 do and changes nothing. Old words stay in `history`; see the
 [AISA Firestore contract](../reference/contracts/aisa-firestore.md).
 
+### The AISA rubric-level migration (Python)
+
+A rules doc saved before rubric levels 2 and 4 existed carries only `"1"`, `"3"` and `"5"`
+per criterion. It still loads, but the dashboard shows 2 and 4 as undefined and refuses to
+save the rules until they are filled. This tool fills them; it makes no model call.
+
+```bash
+cd services/api
+uv run aisa migrate-anchors           # dry run: reads settings/rules, prints the plan, no write
+uv run aisa migrate-anchors --apply   # does it
+```
+
+It writes to the same Firestore as the migrations above, so read the dry run first. With
+`--apply` it fills each `"2"` or `"4"` that is missing or blank with the default text for that
+criterion and leaves every stored text as it is. It saves the result as the next rules
+version exactly as a save from the dashboard does: `settings/rules`, `rulesVersions/{v}`, and
+one `aturan_diubah` history row via `sistem`. If a criterion is missing or a level 1, 3 or 5
+is blank it reports that and writes nothing; fix those on the Aturan page. A second run finds
+every level present and changes nothing.
+
 ## What this is not
 
 - **Not a scheduled backup service.** Nothing runs these for you and nothing retains the

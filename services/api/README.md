@@ -63,6 +63,14 @@ CLI helpers:
   3. deletes every `pendingConfirmations` doc (they name old commands).
      A `response.kind` that is neither an old nor a new word is listed and left alone. A second
      run finds nothing to do and writes nothing.
+- `uv run aisa migrate-anchors [--apply]` completes a `settings/rules` doc saved before rubric
+  levels 2 and 4 existed. Without `--apply` it prints, per criterion, which of `"2"` and `"4"`
+  would be filled, and writes nothing. With `--apply` it fills only a level that is missing or
+  blank, from `DEFAULT_ANCHORS`; a level with stored text is never changed. It saves through
+  the same path as `PUT /api/rules`: the next version in `settings/rules` and
+  `rulesVersions/{v}`, and one `aturan_diubah` history row (`via: sistem`, reason "Lengkapi
+  patokan skor 2 dan 4 dari baseline"). A missing criterion or a blank 1/3/5 is reported and
+  nothing is written. When every level is present it says so and writes nothing.
 
 ## Routes
 

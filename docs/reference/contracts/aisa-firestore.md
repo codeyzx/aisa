@@ -98,7 +98,9 @@ to 90.
 all five. `PUT /api/rules` rejects (422) a body whose `anchors` lacks a criterion or a
 non-blank text for any of the five levels. A stored doc written before levels 2 and 4
 existed still loads: a missing `"2"` or `"4"` is read from the code's default text for that
-criterion (`DEFAULT_ANCHORS`); reading does not write the filled text back.
+criterion (`DEFAULT_ANCHORS`); reading does not write the filled text back. `aisa
+migrate-anchors --apply` writes it: it fills only a missing or blank `"2"`/`"4"`, keeps every
+stored text, and saves a new version with an `aturan_diubah` history row via `sistem`.
 
 There is no Orchestrator model: commands are recognised by code. `models.asisten` is
 informational only; the Asisten's model is fixed when it is deployed to Agent Runtime.

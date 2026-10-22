@@ -59,9 +59,10 @@ export const CRITERION_COLOR: Record<Criterion, string> = {
 // Grade colours, best to worst: green, teal-blue, amber, orange, red. A badge is
 // the solid `--category-N-fill` with `--category-N-on` text (≥ 4.5:1); coloured text
 // on the card reads `--category-N`; dots, bars and chart fills read
-// `--category-N-fill` (≥ 3:1 on the card). Risiko tinggi (orange, dark text) and
-// Tidak layak (red, white text) differ in hue, lightness and text colour, and
-// every badge carries its own icon and word, so colour is never the only cue.
+// `--category-N-fill` (≥ 3:1 on the card). Adjacent grades differ in lightness as
+// well as hue, so Perlu penyesuaian, Risiko tinggi and Tidak layak stay apart for
+// colour-blind readers, and every badge carries its own icon and word, so colour is
+// never the only cue.
 const GRADE_TONE: Record<Category, number> = {
   sangat_layak: 1,
   layak_bersyarat: 2,

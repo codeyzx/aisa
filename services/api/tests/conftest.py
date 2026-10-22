@@ -216,6 +216,9 @@ class Tx:
     def update(self, ref, data):
         ref.update(data)
 
+    def delete(self, ref):
+        ref.delete()
+
 
 class FakeFirestore:
     def __init__(self):

@@ -71,6 +71,24 @@ CLI helpers:
   `rulesVersions/{v}`, and one `aturan_diubah` history row (`via: sistem`, reason "Lengkapi
   patokan skor 2 dan 4 dari baseline"). A missing criterion or a blank 1/3/5 is reported and
   nothing is written. When every level is present it says so and writes nothing.
+- `uv run aisa seed-demo [--apply]` writes a fictional demo dataset so every dashboard chart
+  has data; `uv run aisa seed-demo --remove [--apply]` takes it out again. Both only print the
+  plan without `--apply`. Every doc it creates has an id starting with `demo-`, in
+  `proposals`, `proposalTexts`, `jobs` (with `steps`), `history` and `digests`; real docs are
+  never touched. Over the 13 WIB days before today it writes 42 Form proposals (no
+  `driveFileId`, so no deck button; 40 assessed, 2 `perlu_dicek_manual`) scored, graded and
+  fit-checked by `scoring` against the live `settings/rules`, each with its `proposalTexts`,
+  its `penilaian` job and a `proposal_masuk` row, plus a setuju/tolak `tanggapan` for about half
+  of the older ones; a few `asisten` jobs a day; and a 09.00 digest each day and the weekly
+  summary on Fridays, built with `digest.py`'s templates, each with its `ringkasan` job and
+  row. A digest slot that already has a real digest that day is skipped. The digest text
+  greets with `MANAGER_SALUTATION` / `MANAGER_NAME` from the environment it runs in.
+  `dailyStats` is changed in the same transaction as each unit (a proposal with its job, or
+  one job), by exactly what intake and `JobLog.finish` would add; `--remove` subtracts it again,
+  computed from the stored docs, drops a map key that reaches zero and deletes a `dailyStats`
+  doc left with nothing in it. Ids and the RNG seed are fixed, so a second `--apply` skips
+  every unit that exists. A demo proposal deleted from the dashboard keeps its `dailyStats`
+  contribution (as a real one does), and `--remove` can no longer subtract it.
 
 ## Routes
 

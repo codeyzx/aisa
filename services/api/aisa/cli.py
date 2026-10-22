@@ -1,6 +1,6 @@
 """Operator CLI: `uv run aisa seed-rules | intake-file <pdf> [--name N] | digest <slot> [--send]
 | delete-proposal <id> --reason R | retention | migrate-grades [--apply]
-| migrate-responses [--apply] | migrate-anchors [--apply]`."""
+| migrate-responses [--apply] | migrate-anchors [--apply] | seed-demo [--remove] [--apply]`."""
 
 from __future__ import annotations
 
@@ -54,6 +54,12 @@ def main() -> None:
                        help="fill missing rubric levels 2 and 4 from the defaults, keeping stored text")
     n.add_argument("--apply", action="store_true",
                    help="really write; without it, only print the plan")
+    s = sub.add_parser("seed-demo",
+                       help="write (or with --remove, delete) the fictional demo-* dataset")
+    s.add_argument("--remove", action="store_true",
+                   help="delete every demo-* doc and subtract its dailyStats contribution")
+    s.add_argument("--apply", action="store_true",
+                   help="really write or delete; without it, only print the plan")
     a = ap.parse_args()
 
     if a.cmd == "seed-rules":
@@ -100,6 +106,13 @@ def main() -> None:
             migrate_anchors(apply=a.apply)
         except DomainError as e:
             raise SystemExit(f"gagal: {e}") from e
+    elif a.cmd == "seed-demo":
+        from . import seed_demo
+
+        if a.remove:
+            seed_demo.remove(apply=a.apply)
+        else:
+            seed_demo.seed(apply=a.apply)
 
 
 if __name__ == "__main__":

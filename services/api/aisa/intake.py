@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import PurePath
 
 from google.api_core.exceptions import AlreadyExists
@@ -20,19 +22,22 @@ from .jobs import JobLog, write_history
 from .models import (
     CATEGORY_LABEL,
     Assessment,
+    Category,
+    Fit,
     Founder,
     JobKind,
     JobStatus,
     Proposal,
     ProposalStatus,
     ProposalText,
+    Rules,
     Source,
     StepActor,
     Via,
     to_doc,
 )
 from .pdftext import extract_pages, too_little_text
-from .penilai import assess_once
+from .penilai import Attempt, assess_once
 from .scoring import categorize, compute_score, fit_check, values_of
 
 log = logging.getLogger(__name__)
@@ -96,6 +101,48 @@ def _bump_daily(category: str | None, sector: str | None, manual: bool) -> None:
     if manual:
         upd["perluDicekManual"] = inc(1)
     db.client().document(f"dailyStats/{db.wib_date()}").set(upd, merge=True)
+
+
+@dataclass
+class Graded:
+    attempt: Attempt
+    score: float
+    fit: Fit
+    category: Category
+    assessment: Assessment
+
+
+def assess_and_grade(job: JobLog, pages: list[str], rules: Rules, read: str,
+                     check_paused: Callable[[], None] = lambda: None
+                     ) -> tuple[Graded | None, str | None]:
+    """The Penilai (first try + one retry) and the code that turns its values into a score,
+    a fit and a grade, each recorded as a step of `job`. Returns (result, None), or
+    (None, the last validation error) when both attempts failed. Writes nothing else."""
+    attempt = None
+    for i in range(PENILAI_ATTEMPTS):
+        check_paused()
+        action = "Menilai 5 kriteria" + (" (ulang)" if i else "")
+        job.begin(action, "gemini.generate_content", StepActor.model)
+        attempt = assess_once(pages, rules)
+        job.step(action, "gemini.generate_content",
+                 StepActor.model, model=rules.models.penilai, read=read,
+                 tokens_in=attempt.tokens_in, tokens_out=attempt.tokens_out,
+                 duration_ms=attempt.duration_ms, status="ok" if attempt.ok else "gagal",
+                 error=attempt.error)
+        if attempt.ok:
+            break
+    if not attempt or not attempt.ok:
+        return None, attempt.error if attempt else ""
+    check_paused()
+    with job.code_step("Hitung skor", "kode", read=f"settings/rules v{rules.version}"):
+        score = compute_score(rules.weights, values_of(attempt.criteria))
+    with job.code_step("Cek kecocokan", "kode", read=f"settings/rules v{rules.version}"):
+        fit = fit_check(attempt.profile, rules.fit)
+    with job.code_step("Tentukan grade", "kode", read=f"settings/rules v{rules.version}"):
+        category = categorize(score, rules.thresholds)
+    assessment = Assessment(criteria=attempt.criteria, score=score,
+                            rulesVersion=rules.version, model=rules.models.penilai)
+    return Graded(attempt, score, fit, category, assessment), None
 
 
 def run_intake(pid: str, pdf: bytes | None = None) -> ProposalStatus | None:
@@ -172,38 +219,17 @@ def run_intake(pid: str, pdf: bytes | None = None) -> ProposalStatus | None:
                 return finish_manual("teks terlalu sedikit, juga setelah dibaca sebagai gambar "
                                      f"({chars} karakter di {len(pages)} halaman)")
 
-        attempt = None
-        for i in range(PENILAI_ATTEMPTS):
-            check_paused()
-            action = "Menilai 5 kriteria" + (" (ulang)" if i else "")
-            job.begin(action, "gemini.generate_content", StepActor.model)
-            attempt = assess_once(pages, rules)
-            job.step(action, "gemini.generate_content",
-                     StepActor.model, model=rules.models.penilai, read=f"proposalTexts/{pid}",
-                     tokens_in=attempt.tokens_in, tokens_out=attempt.tokens_out,
-                     duration_ms=attempt.duration_ms, status="ok" if attempt.ok else "gagal",
-                     error=attempt.error)
-            if attempt.ok:
-                break
-        if not attempt or not attempt.ok:
-            return finish_manual(f"penilaian gagal validasi: {attempt.error if attempt else ''}"[:300])
-        check_paused()
-
-        with job.code_step("Hitung skor", "kode", read=f"settings/rules v{rules.version}"):
-            values = values_of(attempt.criteria)
-            score = compute_score(rules.weights, values)
-        with job.code_step("Cek kecocokan", "kode", read=f"settings/rules v{rules.version}"):
-            fit = fit_check(attempt.profile, rules.fit)
-        with job.code_step("Tentukan kategori", "kode"):
-            category, qof = categorize(score, values, fit.passed, rules.thresholds)
+        graded, error = assess_and_grade(job, pages, rules, f"proposalTexts/{pid}", check_paused)
+        if graded is None:
+            return finish_manual(f"penilaian gagal validasi: {error}"[:300])
+        attempt, score, fit, category = graded.attempt, graded.score, graded.fit, graded.category
 
         name = p.name
         # No name was given at intake (it fell back to the file name): use the deck's own.
         if attempt.startup_name and p.name == PurePath(p.source.fileName).stem:
             name = attempt.startup_name
             job.ref.update({"title": f"Menilai proposal {name}"})
-        assessment = Assessment(criteria=attempt.criteria, score=score,
-                                rulesVersion=rules.version, model=rules.models.penilai)
+        assessment = graded.assessment
         t = db.now()
         with job.code_step("Simpan hasil penilaian", "firestore", wrote=f"proposals/{pid}"):
             ref.update({
@@ -211,13 +237,13 @@ def run_intake(pid: str, pdf: bytes | None = None) -> ProposalStatus | None:
                 "status": ProposalStatus.dinilai.value, "statusReason": None,
                 "profile": to_doc(attempt.profile), "assessment": to_doc(assessment),
                 "fit": to_doc(fit), "category": category.value,
-                "effectiveCategory": category.value, "qualityOutsideFocus": qof,
+                "effectiveCategory": category.value,
                 **_spent(job), "assessedAt": t, "updatedAt": t,
             })
         write_history(via=Via.sistem, action="proposal_masuk", proposalId=pid, proposalName=name,
                       after=category.value,
                       detail=f"Proposal {name} masuk: skor {fmt_score(score)}, {CATEGORY_LABEL[category]}"
-                             + (", berkualitas di luar fokus" if qof else ""))
+                             + ("" if fit.passed else ", di luar fokus"))
         _bump_daily(category.value, attempt.profile.sector, manual=False)
         job.finish(JobStatus.selesai)
         return ProposalStatus.dinilai

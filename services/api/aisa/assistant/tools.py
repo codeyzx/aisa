@@ -13,19 +13,34 @@ from typing import Optional
 
 from . import store
 
+# Grades, best first. This package is deployed alone, so it keeps its own copy of the
+# labels in aisa.models (CATEGORY_LABEL, CATEGORY_ACTION); a test holds the two equal.
 CATEGORY_LABEL = {
-    "sangat_cocok": "Sangat cocok",
-    "cocok": "Cocok",
-    "kurang_cocok": "Kurang cocok",
-    "tidak_cocok": "Tidak cocok",
+    "sangat_layak": "Sangat layak",
+    "layak_bersyarat": "Layak bersyarat",
+    "perlu_penyesuaian": "Perlu penyesuaian",
+    "risiko_tinggi": "Risiko tinggi",
+    "tidak_layak": "Tidak layak",
 }
+CATEGORY_ACTION = {
+    "sangat_layak": "Lanjutkan investasi",
+    "layak_bersyarat": "Investasi dengan syarat",
+    "perlu_penyesuaian": "Sesuaikan dulu sebelum lanjut",
+    "risiko_tinggi": "Pertimbangkan menolak",
+    "tidak_layak": "Tolak",
+}
+CATEGORY_RANK = {k: i for i, k in enumerate(CATEGORY_LABEL)}
+# A–E order.
 CRITERION_LABEL = {
-    "tim": "Tim",
-    "pasar": "Pasar & masalah",
-    "produk": "Produk & keunggulan",
-    "traksi": "Traksi",
-    "bisnis": "Model bisnis & keuangan",
+    "manajemen": "A. Tim manajemen",
+    "kinerja": "B. Kinerja bisnis saat ini",
+    "risiko": "C. Risiko bisnis & tren makro",
+    "rencana": "D. Rencana bisnis & potensi imbal hasil",
+    "dampak": "E. Potensi dampak",
 }
+NO_GRADE = "tanpa grade (belum/tidak dinilai)"
+OUT_OF_FOCUS_MEANING = ("prioritas rendah: tidak sesuai fokus investasi (sektor/tahap/dana), "
+                        "jadi risikonya lebih tinggi untuk portofolio")
 STATUS_LABEL = {
     "antre": "Antre",
     "dinilai_proses": "Sedang dinilai",
@@ -56,13 +71,14 @@ def _key(value: Optional[str]) -> str:
 
 
 def _norm_category(value: Optional[str]) -> Optional[str]:
+    """A grade value ("layak_bersyarat") or its label in any case/spacing ("Layak bersyarat")."""
     if not value:
         return None
     k = _key(value)
     if k in CATEGORY_LABEL:
         return k
     raise ValueError(
-        f"kategori '{value}' tidak dikenal; pilih salah satu: {', '.join(CATEGORY_LABEL)}"
+        f"grade '{value}' tidak dikenal; pilih salah satu: {', '.join(CATEGORY_LABEL)}"
     )
 
 
@@ -79,13 +95,16 @@ def _score(p: dict) -> Optional[float]:
     return (p.get("assessment") or {}).get("score")
 
 
-def _quality_outside_focus(p: dict) -> bool:
-    """The stored flag holds only while the effective category is still Tidak cocok.
+def _outside_focus(p: dict) -> bool:
+    """"Di luar fokus" is a failed fit check (`fit.passed` false); it never changes the grade."""
+    return (p.get("fit") or {}).get("passed") is False
 
-    A category correction leaves ``qualityOutsideFocus`` set on the document; the digest
-    applies the same check, so a corrected proposal must not read as "di luar fokus" here.
-    """
-    return bool(p.get("qualityOutsideFocus")) and p.get("effectiveCategory") == "tidak_cocok"
+
+def _rank(p: dict) -> tuple:
+    """Ranking everywhere proposals are listed: grade, then in-focus first, then score."""
+    score = _score(p)
+    return (CATEGORY_RANK.get(p.get("effectiveCategory"), len(CATEGORY_RANK)),
+            _outside_focus(p), score is None, -(score or 0))
 
 
 def _summary(p: dict) -> dict:
@@ -96,7 +115,8 @@ def _summary(p: dict) -> dict:
         "id": p["id"],
         "nama": p.get("name"),
         "skor": _score(p),
-        "kategori": CATEGORY_LABEL.get(eff, eff),
+        "grade": CATEGORY_LABEL.get(eff, eff),
+        "aksi": CATEGORY_ACTION.get(eff),
         "sektor": profile.get("sector"),
         "tahap": profile.get("stage"),
         "danaDiminta": profile.get("fundingAskIdr"),
@@ -104,10 +124,10 @@ def _summary(p: dict) -> dict:
         "status": STATUS_LABEL.get(p.get("status"), p.get("status")),
         "tanggapan": (p.get("response") or {}).get("kind") or "belum ditanggapi",
     }
-    if _quality_outside_focus(p):
-        row["berkualitasDiLuarFokus"] = True
+    if _outside_focus(p):
+        row["diLuarFokus"] = True
     if p.get("correction"):
-        row["kategoriAsliAI"] = CATEGORY_LABEL.get(p.get("category"), p.get("category"))
+        row["gradeAsliAI"] = CATEGORY_LABEL.get(p.get("category"), p.get("category"))
     return {k: v for k, v in row.items() if v is not None}
 
 
@@ -118,7 +138,7 @@ def _filter(
     sector: Optional[str] = None,
     stage: Optional[str] = None,
     responded: Optional[bool] = None,
-    quality_outside_focus: Optional[bool] = None,
+    outside_focus: Optional[bool] = None,
     status: Optional[str] = None,
     min_score: Optional[float] = None,
 ) -> list[dict]:
@@ -139,7 +159,7 @@ def _filter(
             continue
         if responded is not None and bool(p.get("responded")) != responded:
             continue
-        if quality_outside_focus is not None and _quality_outside_focus(p) != quality_outside_focus:
+        if outside_focus is not None and _outside_focus(p) != outside_focus:
             continue
         if min_score is not None and (_score(p) is None or _score(p) < min_score):
             continue
@@ -205,32 +225,35 @@ def _overview_row(p: dict) -> dict:
         "sektor": (p.get("profile") or {}).get("sector"),
         "danaDiminta": _funding(p),
         "skor": _score(p),
-        "kategori": CATEGORY_LABEL.get(eff, eff),
+        "grade": CATEGORY_LABEL.get(eff, eff),
+        "aksi": CATEGORY_ACTION.get(eff),
         "status": STATUS_LABEL.get(p.get("status"), p.get("status")),
         "tanggapan": (p.get("response") or {}).get("kind") or "belum",
     }
-    if _quality_outside_focus(p):
-        row["luarFokus"] = True
+    if _outside_focus(p):
+        row["diLuarFokus"] = True
     return {k: v for k, v in row.items() if v is not None}
 
 
 def get_overview() -> dict:
-    """Gambaran ringkas SEMUA proposal dalam satu panggilan: jumlah per kategori efektif, jumlah
-    belum ditanggapi, dan satu baris per proposal (nama, sektor, danaDiminta dalam rupiah bila
-    disebut, skor kualitas, kategori efektif, status, tanggapan, luarFokus = "Berkualitas, di
-    luar fokus"), urut dari skor tertinggi,
-    maksimal 50 baris. Pakai ini untuk pertanyaan umum ("ringkas semua proposal", "bagaimana
-    kondisi proposal", "mana yang menonjol")."""
+    """Gambaran ringkas SEMUA proposal dalam satu panggilan: jumlah per grade efektif, jumlah
+    di luar fokus, jumlah belum ditanggapi, dan satu baris per proposal (nama, sektor,
+    danaDiminta dalam rupiah bila disebut, skor kualitas, grade efektif, aksi, status,
+    tanggapan, diLuarFokus), urut menurut grade, lalu yang sesuai fokus dulu, lalu skor
+    tertinggi, maksimal 50 baris. Pakai ini untuk pertanyaan umum ("ringkas semua proposal",
+    "bagaimana kondisi proposal", "mana yang menonjol")."""
     proposals = store.list_proposals()
-    proposals.sort(key=lambda p: (_score(p) is not None, _score(p) or 0), reverse=True)
-    per_category: dict[str, int] = {}
+    proposals.sort(key=_rank)
+    per_grade: dict[str, int] = {}
     for p in proposals:
-        k = CATEGORY_LABEL.get(p.get("effectiveCategory"), "tanpa kategori (belum/tidak dinilai)")
-        per_category[k] = per_category.get(k, 0) + 1
+        k = CATEGORY_LABEL.get(p.get("effectiveCategory"), NO_GRADE)
+        per_grade[k] = per_grade.get(k, 0) + 1
     return {
         "total": len(proposals),
         "belumDitanggapi": sum(1 for p in proposals if not p.get("responded")),
-        "perKategori": per_category,
+        "perGrade": per_grade,
+        "diLuarFokus": sum(1 for p in proposals if _outside_focus(p)),
+        "artiDiLuarFokus": OUT_OF_FOCUS_MEANING,
         "ditampilkan": min(len(proposals), OVERVIEW_MAX),
         "proposal": [_overview_row(p) for p in proposals[:OVERVIEW_MAX]],
     }
@@ -241,22 +264,24 @@ def search_proposals(
     sector: Optional[str] = None,
     stage: Optional[str] = None,
     responded: Optional[bool] = None,
-    quality_outside_focus: Optional[bool] = None,
+    outside_focus: Optional[bool] = None,
     status: Optional[str] = None,
     min_score: Optional[float] = None,
     min_funding_idr: int | None = None,
     max_funding_idr: int | None = None,
     limit: int = 10,
 ) -> dict:
-    """Cari proposal di data AISA, diurutkan dari skor kualitas tertinggi.
+    """Cari proposal di data AISA, diurutkan menurut grade, lalu yang sesuai fokus dulu, lalu
+    skor kualitas tertinggi.
 
     Args:
-        category: Kategori efektif (sudah memperhitungkan koreksi manajer): sangat_cocok, cocok,
-            kurang_cocok, atau tidak_cocok.
+        category: Grade efektif (sudah memperhitungkan koreksi manajer): sangat_layak,
+            layak_bersyarat, perlu_penyesuaian, risiko_tinggi, atau tidak_layak.
         sector: Sektor, dicocokkan sebagian dan tanpa beda huruf besar/kecil (mis. "fintech").
         stage: Tahap pendanaan, dicocokkan sebagian (mis. "seed").
         responded: true = sudah ditanggapi (undang/pantau/arsipkan), false = belum ditanggapi.
-        quality_outside_focus: true = hanya yang bertanda "Berkualitas, di luar fokus".
+        outside_focus: true = hanya yang di luar fokus investasi (gagal cek sektor, tahap,
+            atau dana); false = hanya yang sesuai fokus. Di luar fokus tidak mengubah grade.
         status: antre, dinilai_proses, dinilai, perlu_dicek_manual, atau dihentikan.
         min_score: Skor kualitas minimal (0-100).
         min_funding_idr: Dana diminta minimal, dalam rupiah penuh, termasuk nilai itu sendiri
@@ -275,14 +300,14 @@ def search_proposals(
             sector=sector,
             stage=stage,
             responded=responded,
-            quality_outside_focus=quality_outside_focus,
+            outside_focus=outside_focus,
             status=status,
             min_score=min_score,
         )
     except ValueError as e:
         return {"error": str(e)}
     rows, unknown = _by_funding(rows, min_funding_idr, max_funding_idr)
-    rows.sort(key=lambda p: (_score(p) is not None, _score(p) or 0), reverse=True)
+    rows.sort(key=_rank)
     limit = max(1, min(int(limit or 10), SEARCH_LIMIT_MAX))
     return {
         "totalCocok": len(rows),
@@ -304,9 +329,9 @@ def count_proposals(
     """Hitung jumlah proposal, dikelompokkan menurut satu atribut.
 
     Args:
-        group_by: category (kategori efektif), sector, stage, status, response (jenis tanggapan),
-            atau outside_focus (tanda berkualitas di luar fokus).
-        category: Filter kategori efektif sebelum dihitung (opsional).
+        group_by: category (grade efektif), sector, stage, status, response (jenis tanggapan),
+            atau outside_focus (di luar fokus investasi atau sesuai fokus).
+        category: Filter grade efektif sebelum dihitung (opsional).
         sector: Filter sektor sebelum dihitung (opsional).
         responded: Filter sudah (true) / belum (false) ditanggapi (opsional).
         status: Filter status proposal (opsional).
@@ -329,7 +354,7 @@ def count_proposals(
     for p in rows:
         profile = p.get("profile") or {}
         if group_by == "category":
-            k = CATEGORY_LABEL.get(p.get("effectiveCategory"), "tanpa kategori (belum/tidak dinilai)")
+            k = CATEGORY_LABEL.get(p.get("effectiveCategory"), NO_GRADE)
         elif group_by == "sector":
             k = (profile.get("sector") or "tidak disebut").lower()
         elif group_by == "stage":
@@ -339,7 +364,7 @@ def count_proposals(
         elif group_by == "response":
             k = (p.get("response") or {}).get("kind") or "belum ditanggapi"
         else:
-            k = "berkualitas di luar fokus" if _quality_outside_focus(p) else "lainnya"
+            k = "di luar fokus" if _outside_focus(p) else "sesuai fokus"
         counts[k] = counts.get(k, 0) + 1
     return {"total": len(rows), **unknown, "per": group_by,
             "jumlah": dict(sorted(counts.items(), key=lambda kv: -kv[1]))}
@@ -396,8 +421,8 @@ def _detail(p: dict) -> dict:
 
 
 def get_proposal_detail(name_or_id: str) -> dict:
-    """Ambil detail satu proposal: nilai tiap kriteria beserta alasan dan kutipan halaman,
-    hasil cek kecocokan, koreksi kategori, dan tanggapan manajer. Kontak founder tidak pernah
+    """Ambil detail satu proposal: nilai tiap kriteria (A-E) beserta alasan dan kutipan halaman,
+    hasil cek kecocokan (fokus), koreksi grade, dan tanggapan manajer. Kontak founder tidak pernah
     disertakan.
 
     Args:
@@ -411,7 +436,7 @@ def get_proposal_detail(name_or_id: str) -> dict:
 
 
 def compare_proposals(names: list[str]) -> dict:
-    """Bandingkan 2-4 proposal berdampingan: skor, nilai per kriteria, kategori, cek kecocokan.
+    """Bandingkan 2-4 proposal berdampingan: skor, nilai per kriteria, grade, cek kecocokan.
 
     Args:
         names: Daftar nama startup atau ID proposal yang dibandingkan.
@@ -450,8 +475,9 @@ def compare_proposals(names: list[str]) -> dict:
 
 
 def get_history(proposal: Optional[str] = None, limit: int = 10) -> dict:
-    """Ambil Riwayat (jejak audit): tanggapan, koreksi kategori, perubahan aturan, ringkasan
-    terkirim, STOP/LANJUT. Tanpa `proposal`, mengembalikan riwayat terbaru.
+    """Ambil Riwayat (jejak audit): tanggapan, koreksi grade, penilaian ulang, perubahan aturan,
+    ringkasan terkirim, STOP/LANJUT. Nilai lama sangat_cocok/cocok/kurang_cocok/tidak_cocok di
+    riwayat berasal dari skala lama. Tanpa `proposal`, mengembalikan riwayat terbaru.
 
     Args:
         proposal: Nama atau ID proposal (opsional).
@@ -471,7 +497,7 @@ def get_history(proposal: Optional[str] = None, limit: int = 10) -> dict:
 
 
 def get_trends(days: int = 7) -> dict:
-    """Tren proposal dari statistik harian (tanggal WIB): jumlah masuk per hari, per kategori,
+    """Tren proposal dari statistik harian (tanggal WIB): jumlah masuk per hari, per grade,
     per sektor, dan perbandingan dengan periode sebelumnya yang sama panjang.
 
     Args:
@@ -484,7 +510,7 @@ def get_trends(days: int = 7) -> dict:
     stats = store.daily_stats(current + previous)
 
     def total(dates):
-        agg = {"proposalMasuk": 0, "perluDicekManual": 0, "perKategori": {}, "perSektor": {}}
+        agg = {"proposalMasuk": 0, "perluDicekManual": 0, "perGrade": {}, "perSektor": {}}
         for d in dates:
             s = stats.get(d.isoformat())
             if not s:
@@ -493,7 +519,7 @@ def get_trends(days: int = 7) -> dict:
             agg["perluDicekManual"] += s.get("perluDicekManual") or 0
             for k, v in (s.get("byCategory") or {}).items():
                 label = CATEGORY_LABEL.get(k, k)
-                agg["perKategori"][label] = agg["perKategori"].get(label, 0) + (v or 0)
+                agg["perGrade"][label] = agg["perGrade"].get(label, 0) + (v or 0)
             for k, v in (s.get("bySector") or {}).items():
                 agg["perSektor"][k] = agg["perSektor"].get(k, 0) + (v or 0)
         return agg
@@ -524,8 +550,8 @@ def get_trends(days: int = 7) -> dict:
 
 
 def get_rules() -> dict:
-    """Aturan penilaian yang aktif: bobot kriteria, aturan cek kecocokan (sektor, tahap, rentang
-    dana), batas kategori, versi, dan alasan perubahan terakhir."""
+    """Aturan penilaian yang aktif: bobot kriteria A-E, aturan cek kecocokan (sektor, tahap,
+    rentang dana), skor minimal tiap grade, versi, dan alasan perubahan terakhir."""
     r = store.get_doc("settings/rules")
     if not r:
         return {"error": "aturan penilaian tidak tersedia di data AISA"}
@@ -533,7 +559,7 @@ def get_rules() -> dict:
         "versi": r.get("version"),
         "bobot": {CRITERION_LABEL.get(k, k): v for k, v in (r.get("weights") or {}).items()},
         "cekKecocokan": r.get("fit"),
-        "batasKategori": r.get("thresholds"),
+        "skorMinimalGrade": _grade_bands(r.get("thresholds") or {}),
         "patokanNilai": {
             CRITERION_LABEL.get(k, k): {str(n): _cut(t, 120) for n, t in (v or {}).items()}
             for k, v in (r.get("anchors") or {}).items()
@@ -542,6 +568,18 @@ def get_rules() -> dict:
         "alasanPerubahan": _cut(r.get("reason")),
     }
     return store.plain({k: v for k, v in out.items() if v is not None})
+
+
+THRESHOLD_KEYS = {"sangatLayak": "sangat_layak", "layakBersyarat": "layak_bersyarat",
+                  "perluPenyesuaian": "perlu_penyesuaian", "risikoTinggi": "risiko_tinggi"}
+
+
+def _grade_bands(t: dict) -> dict:
+    """{grade label: minimum score}; Tidak layak is everything below Risiko tinggi."""
+    out = {CATEGORY_LABEL[g]: t[k] for k, g in THRESHOLD_KEYS.items() if k in t}
+    if "risikoTinggi" in t:
+        out[CATEGORY_LABEL["tidak_layak"]] = f"di bawah {t['risikoTinggi']}"
+    return out
 
 
 def _safe(fn):

@@ -10,7 +10,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class _M(BaseModel):
@@ -25,26 +25,44 @@ def to_doc(model: BaseModel) -> dict[str, Any]:
 
 
 class Criterion(StrEnum):
-    tim = "tim"
-    pasar = "pasar"
-    produk = "produk"
-    traksi = "traksi"
-    bisnis = "bisnis"
+    """Declared in A–E order; every list, prompt and chart follows it."""
+
+    manajemen = "manajemen"
+    kinerja = "kinerja"
+    risiko = "risiko"
+    rencana = "rencana"
+    dampak = "dampak"
 
 
 class Category(StrEnum):
-    sangat_cocok = "sangat_cocok"
-    cocok = "cocok"
-    kurang_cocok = "kurang_cocok"
-    tidak_cocok = "tidak_cocok"
+    """The grade, decided by the score alone; declared from best to worst."""
+
+    sangat_layak = "sangat_layak"
+    layak_bersyarat = "layak_bersyarat"
+    perlu_penyesuaian = "perlu_penyesuaian"
+    risiko_tinggi = "risiko_tinggi"
+    tidak_layak = "tidak_layak"
 
 
 CATEGORY_LABEL: dict[Category, str] = {
-    Category.sangat_cocok: "Sangat cocok",
-    Category.cocok: "Cocok",
-    Category.kurang_cocok: "Kurang cocok",
-    Category.tidak_cocok: "Tidak cocok",
+    Category.sangat_layak: "Sangat layak",
+    Category.layak_bersyarat: "Layak bersyarat",
+    Category.perlu_penyesuaian: "Perlu penyesuaian",
+    Category.risiko_tinggi: "Risiko tinggi",
+    Category.tidak_layak: "Tidak layak",
 }
+
+# The action (Aksi) that goes with each grade.
+CATEGORY_ACTION: dict[Category, str] = {
+    Category.sangat_layak: "Lanjutkan investasi",
+    Category.layak_bersyarat: "Investasi dengan syarat",
+    Category.perlu_penyesuaian: "Sesuaikan dulu sebelum lanjut",
+    Category.risiko_tinggi: "Pertimbangkan menolak",
+    Category.tidak_layak: "Tolak",
+}
+
+# Grade rank for sorting: 0 is the best grade.
+CATEGORY_RANK: dict[str, int] = {c.value: i for i, c in enumerate(Category)}
 
 
 class ProposalStatus(StrEnum):
@@ -103,6 +121,8 @@ HistoryAction = Literal[
     "ringkasan_terkirim",
     "proposal_masuk",
     "proposal_dihapus",
+    # Written only by `aisa migrate-grades`: a proposal re-assessed on the new scale.
+    "dinilai_ulang",
 ]
 
 Slot = Literal["09.00", "17.00"]
@@ -200,7 +220,6 @@ class Proposal(_M):
     assessment: Assessment | None = None
     fit: Fit | None = None
     category: Category | None = None
-    qualityOutsideFocus: bool = False
     correction: Correction | None = None
     effectiveCategory: Category | None = None
     response: Response | None = None
@@ -234,10 +253,22 @@ class FitRules(_M):
 
 
 class Thresholds(_M):
-    sangatCocok: float = 80
-    cocok: float = 65
-    kurangCocok: float = 45
-    qualityOutsideFocus: float = 65
+    """Minimum score of each grade; below `risikoTinggi` the grade is tidak_layak."""
+
+    sangatLayak: float = 85
+    layakBersyarat: float = 75
+    perluPenyesuaian: float = 65
+    risikoTinggi: float = 50
+
+    @model_validator(mode="after")
+    def _descending(self) -> Thresholds:
+        t = [self.sangatLayak, self.layakBersyarat, self.perluPenyesuaian, self.risikoTinggi]
+        if not all(0 < x <= 100 for x in t):
+            raise ValueError("batas grade harus di antara 0 (tidak termasuk) dan 100")
+        if not all(a > b for a, b in zip(t, t[1:], strict=False)):
+            raise ValueError("batas grade harus menurun: sangatLayak > layakBersyarat > "
+                             "perluPenyesuaian > risikoTinggi")
+        return self
 
 
 class ModelNames(_M):
@@ -338,11 +369,12 @@ class History(_M):
 
 
 class DigestCounts(_M):
-    sangat_cocok: int = 0
-    cocok: int = 0
-    kurang_cocok: int = 0
-    tidak_cocok: int = 0
-    kualitasLuarFokus: int = 0
+    sangat_layak: int = 0
+    layak_bersyarat: int = 0
+    perlu_penyesuaian: int = 0
+    risiko_tinggi: int = 0
+    tidak_layak: int = 0
+    luarFokus: int = 0  # unresponded proposals whose fit failed, in any grade
     perluDicekManual: int = 0
     belumDitanggapi: int = 0
     baruMasuk: int = 0
@@ -395,29 +427,59 @@ class AssistantSession(_M):
     sessionId: str
 
 
-# ---------- default rules (used only by the `seed-rules` CLI) ----------
+# ---------- default rules (written by `seed-rules` and `migrate-grades`) ----------
 
-_ANCHORS = Anchors(
-    **{
-        "1": "Tidak ada bukti, atau bukti bertentangan",
-        "3": "Ada bukti sebagian",
-        "5": "Bukti kuat: data, perilaku pelanggan, atau rekam jejak",
-    }
-)
+RULES_REASON_NEW_SCALE = "Skala penilaian baru: 5 kriteria (A–E) dan 5 grade"
+
+DEFAULT_WEIGHTS: dict[Criterion, float] = {
+    Criterion.manajemen: 0.25,
+    Criterion.kinerja: 0.20,
+    Criterion.risiko: 0.20,
+    Criterion.rencana: 0.25,
+    Criterion.dampak: 0.10,
+}
+
+
+def _a(one: str, three: str, five: str) -> Anchors:
+    return Anchors(**{"1": one, "3": three, "5": five})
+
+
+DEFAULT_ANCHORS: dict[Criterion, Anchors] = {
+    Criterion.manajemen: _a(
+        "Tim tidak dikenalkan, atau hanya disebut tanpa latar belakang",
+        "Tim disebut dengan peran dan pengalaman umum, tanpa rekam jejak yang bisa dicek",
+        "Rekam jejak spesifik dan relevan (tempat kerja, jabatan, capaian berangka) dan peran "
+        "kunci lengkap"),
+    Criterion.kinerja: _a(
+        "Belum ada bukti bisnis berjalan, atau angkanya saling bertentangan",
+        "Ada pengguna atau pendapatan awal, tetapi angkanya tanpa periode atau tanpa nama "
+        "pelanggan",
+        "Pendapatan, pengguna, dan pertumbuhan berperiode, dengan pelanggan atau mitra yang "
+        "disebut namanya"),
+    Criterion.risiko: _a(
+        "Ada risiko besar yang tidak dibahas, informasinya bertentangan, atau risiko tidak "
+        "dibahas sama sekali",
+        "Sebagian risiko disebut, tetapi mitigasinya umum atau tren pasar tidak didukung data",
+        "Risiko utama (persaingan, regulasi, ketergantungan) disebut beserta mitigasinya, dan "
+        "tren makro/pasar yang mendukung dibuktikan data bersumber"),
+    Criterion.rencana: _a(
+        "Tidak ada rencana penggunaan dana atau proyeksi keuangan",
+        "Ada rencana penggunaan dana atau proyeksi, tetapi tanpa dasar data atau unit ekonomi",
+        "Penggunaan dana rinci, proyeksi berdasar data aktual, unit ekonomi, dan potensi imbal "
+        "hasil bagi investor dijelaskan"),
+    Criterion.dampak: _a(
+        "Dampak sosial atau lingkungan tidak disebut",
+        "Dampak disebut tetapi belum diukur (mis. 'membantu petani')",
+        "Dampak terukur dengan angka (mis. lapangan kerja, inklusi, emisi) dan cara mengukurnya"),
+}
 
 
 def default_rules(now: datetime) -> Rules:
     m = "gemini-3.8-flash"
     return Rules(
         version=1,
-        weights={
-            Criterion.tim: 0.275,
-            Criterion.pasar: 0.30,
-            Criterion.produk: 0.20,
-            Criterion.traksi: 0.125,
-            Criterion.bisnis: 0.10,
-        },
-        anchors={c: _ANCHORS for c in Criterion},
+        weights=dict(DEFAULT_WEIGHTS),
+        anchors=dict(DEFAULT_ANCHORS),
         fit=FitRules(
             sectors=["agritech", "fintech", "edtech", "healthtech", "climate"],
             stages=["pre-seed", "seed", "seri-a"],

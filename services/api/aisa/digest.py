@@ -12,6 +12,7 @@ from . import db, gowa, llm
 from .config import settings
 from .jobs import JobLog, write_history
 from .models import (
+    CATEGORY_LABEL,
     Category,
     Digest,
     DigestCounts,
@@ -24,13 +25,16 @@ from .models import (
     Via,
     to_doc,
 )
-from .scoring import NOT_MENTIONED, format_idr
+from .scoring import format_idr
 
 DAYS = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"]
-COCOK_INLINE_MAX = 15
+INLINE_MAX = 15  # per grade listed inline (layak bersyarat, perlu penyesuaian)
 SANGAT_DETAIL_MAX = 10
-QOF_MAX = 10
 MANUAL_MAX = 15
+# Grades whose proposals are named in the message; the two lowest are counted only.
+DETAILED = Category.sangat_layak
+INLINE = (Category.layak_bersyarat, Category.perlu_penyesuaian)
+OUT_OF_FOCUS = "(di luar fokus)"
 # Below this weekly count a sector trend is noise, so no insight is written about it.
 MIN_INSIGHT_COUNT = 3
 INSIGHT_LABEL = "Yang menarik:"
@@ -49,7 +53,12 @@ class Item:
     fundingAskIdr: int | None = None
     oneLiner: str | None = None
     reasons: list[str] = field(default_factory=list)  # criterion reasons, highest value first
-    fit_reasons: list[str] = field(default_factory=list)  # failed fit checks only
+    out_of_focus: bool = False  # fit.passed is False: shown, never a different grade
+
+
+def rank_key(it: Item) -> tuple:
+    """Within one grade: in-focus before out-of-focus, then the higher score."""
+    return (it.out_of_focus, -it.score)
 
 
 @dataclass
@@ -58,7 +67,6 @@ class DigestData:
     salutation: str
     window_start: datetime | None  # None: no digest has been sent before
     groups: dict[Category, list[Item]]
-    quality_outside_focus: list[Item]
     manual: list[Item]
     baru_masuk: int
     insight: str | None = None
@@ -69,10 +77,14 @@ class DigestData:
     def belum(self) -> int:
         return sum(len(v) for v in self.groups.values()) + len(self.manual)
 
+    @property
+    def luar_fokus(self) -> int:
+        return sum(it.out_of_focus for v in self.groups.values() for it in v)
+
     def counts(self) -> DigestCounts:
         return DigestCounts(
             **{c.value: len(self.groups.get(c, [])) for c in Category},
-            kualitasLuarFokus=len(self.quality_outside_focus),
+            luarFokus=self.luar_fokus,
             perluDicekManual=len(self.manual),
             belumDitanggapi=self.belum,
             baruMasuk=self.baru_masuk,
@@ -107,31 +119,38 @@ def greeting(at: datetime) -> str:
     return "Selamat malam"
 
 
-def _qof_line(it: Item) -> str:
-    why = ", ".join(it.fit_reasons) or it.sector
-    return f"{it.name} ({fmt_score(it.score)})" + (f" · {why}" if why else "")
+def _mark(it: Item) -> str:
+    return f" {OUT_OF_FOCUS}" if it.out_of_focus else ""
+
+
+def _inline(items: list[Item]) -> str:
+    shown = ", ".join(f"{it.name} ({fmt_score(it.score)}){_mark(it)}" for it in items[:INLINE_MAX])
+    more = f", dan {len(items) - INLINE_MAX} lainnya" if len(items) > INLINE_MAX else ""
+    return shown + more
 
 
 def template(d: DigestData) -> str:
+    """One heading per grade, best first. Sangat layak is listed with a reason, the next two
+    grades inline, the two lowest by count only. An out-of-focus proposal keeps its grade and
+    is marked "(di luar fokus)" wherever it is named."""
     lines = [opening(d), ""]
-    sangat = d.groups.get(Category.sangat_cocok, [])
-    lines.append(f"*Sangat cocok ({len(sangat)})*")
+    sangat = d.groups.get(DETAILED, [])
+    lines.append(f"*{CATEGORY_LABEL[DETAILED]} ({len(sangat)})*")
     for i, it in enumerate(sangat[:SANGAT_DETAIL_MAX], 1):
         meta = ", ".join(x for x in (it.sector, format_idr(it.fundingAskIdr) if it.fundingAskIdr else None) if x)
         why = it.reasons[0] if it.reasons else it.oneLiner
-        lines.append(f"{i}. {it.name}{f' ({meta})' if meta else ''} · {fmt_score(it.score)}."
-                     + (f" {why}" if why else ""))
+        lines.append(f"{i}. {it.name}{f' ({meta})' if meta else ''} · {fmt_score(it.score)}"
+                     f"{_mark(it)}." + (f" {why}" if why else ""))
     if len(sangat) > SANGAT_DETAIL_MAX:
         lines.append(f"…dan {len(sangat) - SANGAT_DETAIL_MAX} lainnya")
-    cocok = d.groups.get(Category.cocok, [])
-    inline = ", ".join(f"{it.name} ({fmt_score(it.score)})" for it in cocok[:COCOK_INLINE_MAX])
-    more = f", dan {len(cocok) - COCOK_INLINE_MAX} lainnya" if len(cocok) > COCOK_INLINE_MAX else ""
-    lines.append(f"*Cocok ({len(cocok)})*" + (f": {inline}{more}" if cocok else ""))
-    lines.append(f"*Kurang cocok ({len(d.groups.get(Category.kurang_cocok, []))})*")
-    lines.append(f"*Tidak cocok ({len(d.groups.get(Category.tidak_cocok, []))})*")
-    if d.quality_outside_focus:
-        q = "; ".join(_qof_line(it) for it in d.quality_outside_focus[:QOF_MAX])
-        lines.append(f"*Berkualitas, di luar fokus ({len(d.quality_outside_focus)})*: {q}")
+    for c in INLINE:
+        items = d.groups.get(c, [])
+        lines.append(f"*{CATEGORY_LABEL[c]} ({len(items)})*" + (f": {_inline(items)}" if items else ""))
+    for c in (Category.risiko_tinggi, Category.tidak_layak):
+        lines.append(f"*{CATEGORY_LABEL[c]} ({len(d.groups.get(c, []))})*")
+    if d.luar_fokus:
+        lines.append(f"{d.luar_fokus} di antaranya di luar fokus (sektor, tahap, atau dana): "
+                     "prioritas rendah.")
     if d.manual:
         m = ", ".join(it.name for it in d.manual[:MANUAL_MAX])
         more = f", dan {len(d.manual) - MANUAL_MAX} lainnya" if len(d.manual) > MANUAL_MAX else ""
@@ -139,6 +158,14 @@ def template(d: DigestData) -> str:
     if d.insight:
         lines += ["", f"{INSIGHT_LABEL} {d.insight}"]
     return "\n".join(lines)
+
+
+def _named(d: DigestData) -> list[Item]:
+    """Every assessed proposal the template names."""
+    out = list(d.groups.get(DETAILED, [])[:SANGAT_DETAIL_MAX])
+    for c in INLINE:
+        out += d.groups.get(c, [])[:INLINE_MAX]
+    return out
 
 
 def label_ok(text: str, d: DigestData) -> bool:
@@ -170,11 +197,19 @@ def numbers_ok(text: str, allowed_source: str, list_len: int = 0) -> bool:
 
 
 def names_present(text: str, d: DigestData) -> bool:
-    must = [it.name for it in d.groups.get(Category.sangat_cocok, [])[:SANGAT_DETAIL_MAX]]
-    must += [it.name for it in d.groups.get(Category.cocok, [])[:COCOK_INLINE_MAX]]
-    must += [it.name for it in d.quality_outside_focus[:QOF_MAX]]
-    must += [it.name for it in d.manual[:MANUAL_MAX]]
+    must = [it.name for it in _named(d)] + [it.name for it in d.manual[:MANUAL_MAX]]
     return all(n in text for n in must)
+
+
+def focus_marks_ok(text: str, d: DigestData) -> bool:
+    """A rewrite must keep every "(di luar fokus)" mark the draft has: dropping one would
+    present a low-priority proposal as in focus."""
+    return text.count(OUT_OF_FOCUS) >= sum(it.out_of_focus for it in _named(d))
+
+
+def grade_headings_ok(text: str) -> bool:
+    """Every grade keeps its heading, so no grade silently disappears from the message."""
+    return all(f"{label} (" in text for label in CATEGORY_LABEL.values())
 
 
 def has_advice(text: str) -> bool:
@@ -214,12 +249,14 @@ class Seen:
     """One proposal as the insight candidates read it, responded or not."""
     at: datetime | None
     sector: str | None
-    category: str | None  # effective category
+    category: str | None  # effective category (grade)
     score: float | None
     responded: bool
+    out_of_focus: bool = False
 
 
-GOOD = (Category.sangat_cocok.value, Category.cocok.value)
+# The grades an investor would move on: "lanjutkan investasi" and "investasi dengan syarat".
+GOOD = (Category.sangat_layak.value, Category.layak_bersyarat.value)
 
 
 def is_new(s: Seen, window_start: datetime | None) -> bool:
@@ -227,10 +264,11 @@ def is_new(s: Seen, window_start: datetime | None) -> bool:
     return window_start is None or (s.at is not None and s.at >= window_start)
 
 
-def _category_phrase(sangat: int, cocok: int) -> str:
-    if sangat and cocok:
-        return "Sangat cocok atau Cocok"
-    return "Sangat cocok" if sangat else "Cocok"
+def _category_phrase(sangat: int, bersyarat: int) -> str:
+    sl, lb = CATEGORY_LABEL[Category.sangat_layak], CATEGORY_LABEL[Category.layak_bersyarat]
+    if sangat and bersyarat:
+        return f"{sl} atau {lb}"
+    return sl if sangat else lb
 
 
 def fallback_candidates(seen: list[Seen], d: DigestData, now: datetime) -> list[dict]:
@@ -240,9 +278,12 @@ def fallback_candidates(seen: list[Seen], d: DigestData, now: datetime) -> list[
     new = [s for s in seen if is_new(s, d.window_start)]
     good = [s for s in new if s.category in GOOD]
     if good:
-        c = {"jenis": "proposalBaruCocok", "proposalBaru": len(new),
-             "sangatCocok": sum(s.category == Category.sangat_cocok.value for s in good),
-             "cocok": sum(s.category == Category.cocok.value for s in good)}
+        c = {"jenis": "proposalBaruLayak", "proposalBaru": len(new),
+             "sangatLayak": sum(s.category == Category.sangat_layak.value for s in good),
+             "layakBersyarat": sum(s.category == Category.layak_bersyarat.value for s in good)}
+        luar = sum(s.out_of_focus for s in good)
+        if luar:
+            c["diLuarFokus"] = luar
         per: dict[str, int] = {}
         for s in good:
             if s.sector:
@@ -261,8 +302,8 @@ def fallback_candidates(seen: list[Seen], d: DigestData, now: datetime) -> list[
                  "jumlahMingguIni": len(this), "mingguLalu": fmt_score(sum(last) / len(last)),
                  "jumlahMingguLalu": len(last)}]
 
-    if d.quality_outside_focus or d.manual:
-        return [{"jenis": "perluPerhatian", "berkualitasDiLuarFokus": len(d.quality_outside_focus),
+    if d.luar_fokus or d.manual:
+        return [{"jenis": "perluPerhatian", "diLuarFokus": d.luar_fokus,
                  "perluDicekManual": len(d.manual)}]
 
     top = max((it for v in d.groups.values() for it in v), key=lambda it: it.score, default=None)
@@ -283,12 +324,16 @@ def insight_candidates(seen: list[Seen], d: DigestData, now: datetime) -> list[d
 
 def _fallback_text(c: dict) -> str | None:
     kind = c.get("jenis")
-    if kind == "proposalBaruCocok":
-        n = c["sangatCocok"] + c["cocok"]
-        text = f"{n} dari {c['proposalBaru']} proposal baru masuk {_category_phrase(c['sangatCocok'], c['cocok'])}"
+    if kind == "proposalBaruLayak":
+        n = c["sangatLayak"] + c["layakBersyarat"]
+        text = (f"{n} dari {c['proposalBaru']} proposal baru masuk "
+                f"{_category_phrase(c['sangatLayak'], c['layakBersyarat'])}")
         if "sektorTerbanyak" in c:
             text += (f", terbanyak dari sektor {c['sektorTerbanyak']}" if n > 1
                      else f", dari sektor {c['sektorTerbanyak']}")
+        if c.get("diLuarFokus"):
+            text += (f"; {c['diLuarFokus']} di antaranya di luar fokus" if n > 1
+                     else "; proposal itu di luar fokus")
         return text + "."
     if kind == "rataRataSkor":
         a, b = c["mingguIni"], c["mingguLalu"]
@@ -298,8 +343,8 @@ def _fallback_text(c: dict) -> str | None:
                 f"{arah} {b} minggu lalu ({c['jumlahMingguLalu']} proposal).")
     if kind == "perluPerhatian":
         parts = []
-        if c["berkualitasDiLuarFokus"]:
-            parts.append(f"{c['berkualitasDiLuarFokus']} proposal Berkualitas, di luar fokus")
+        if c["diLuarFokus"]:
+            parts.append(f"{c['diLuarFokus']} proposal di luar fokus")
         if c["perluDicekManual"]:
             parts.append(f"{c['perluDicekManual']} proposal Perlu dicek manual")
         return f"ada {' dan '.join(parts)} yang belum ditanggapi."
@@ -334,35 +379,24 @@ INSIGHT_SYSTEM = (
     "kalimat akan disambung setelah 'Yang menarik: '. Tulis wajar seperti "
     "'proposal agritech naik 50% dibanding minggu lalu'; hindari frasa kaku seperti "
     "'mencatatkan angka'. Bila kandidat punya field 'jenis', tulis tentang kandidat itu saja; "
-    "angka desimal ditulis persis seperti di data (pakai koma, mis. 72,4) dan nama kategori "
-    "ditulis seperti di data (Sangat cocok, Cocok, Berkualitas, di luar fokus, Perlu dicek manual)."
+    "angka desimal ditulis persis seperti di data (pakai koma, mis. 72,4) dan nama grade "
+    "ditulis seperti di data (Sangat layak, Layak bersyarat, Perlu penyesuaian, Risiko tinggi, "
+    "Tidak layak, Perlu dicek manual). 'di luar fokus' berarti tidak sesuai fokus investasi "
+    "(sektor, tahap, atau dana), bukan grade."
 )
 
 RINGKASAN_SYSTEM = (
     "Anda menyusun pesan WhatsApp ringkasan proposal untuk manajer investasi. Anda menerima "
     "draf yang sudah benar. Rapikan bahasanya agar enak dibaca, tetapi: pertahankan struktur "
-    "per kategori dan format *tebal* WhatsApp, pertahankan SEMUA nama proposal dan SEMUA angka "
-    "persis seperti di draf, jangan menambah angka baru, jangan menambah saran tindak lanjut "
+    "per grade (Sangat layak, Layak bersyarat, Perlu penyesuaian, Risiko tinggi, Tidak layak) "
+    "beserta judul *tebal* dan jumlahnya, urutan proposal di setiap grade, SEMUA nama proposal, "
+    "SEMUA angka persis seperti di draf, dan setiap tanda '(di luar fokus)' tetap di samping "
+    "nama yang sama. Jangan menambah angka baru dan jangan menambah saran tindak lanjut "
     "(jangan menyarankan mengundang, menghubungi, atau mengarsipkan). Untuk setiap proposal "
-    "Sangat cocok, boleh ganti kalimat penjelasnya dengan satu kalimat singkat dari 'alasan' "
+    "Sangat layak, boleh ganti kalimat penjelasnya dengan satu kalimat singkat dari 'alasan' "
     "yang diberikan. Bila draf berisi baris 'Yang menarik:', pertahankan label itu persis di "
     "awal barisnya. Balas hanya dengan teks pesan."
 )
-
-
-FIT_LABEL = {"sector": "sektor", "stage": "tahap", "funding": "dana"}
-
-
-def fit_reasons(fit: Fit | None) -> list[str]:
-    """Reasons of the failed fit checks; "tidak disebut" gets the check's name in front."""
-    if not fit:
-        return []
-    out = []
-    for key, label in FIT_LABEL.items():
-        item = getattr(fit.checks, key)
-        if not item.passed:
-            out.append(f"{label} {item.reason}" if item.reason == NOT_MENTIONED else item.reason)
-    return out
 
 
 def _item(pid: str, p: Proposal) -> Item:
@@ -372,7 +406,16 @@ def _item(pid: str, p: Proposal) -> Item:
         reasons = [r.reason for _, r in top]
     return Item(id=pid, name=p.name, score=p.assessment.score if p.assessment else 0.0,
                 sector=p.profile.sector, fundingAskIdr=p.profile.fundingAskIdr,
-                oneLiner=p.profile.oneLiner, reasons=reasons, fit_reasons=fit_reasons(p.fit))
+                oneLiner=p.profile.oneLiner, reasons=reasons,
+                out_of_focus=out_of_focus(p.fit))
+
+
+def out_of_focus(fit: Fit | dict | None) -> bool:
+    """"Di luar fokus" is `fit.passed == False`; a proposal with no fit is not marked."""
+    if fit is None:
+        return False
+    passed = fit.get("passed") if isinstance(fit, dict) else fit.passed
+    return passed is False
 
 
 def collect(slot: str, now: datetime) -> tuple[DigestData, list[dict], list[str]]:
@@ -381,7 +424,6 @@ def collect(slot: str, now: datetime) -> tuple[DigestData, list[dict], list[str]
     window_start = last[0].get("sentAt") if last else None
 
     groups: dict[Category, list[Item]] = {c: [] for c in Category}
-    qof: list[Item] = []
     manual: list[Item] = []
     ids: list[str] = []
     seen: list[Seen] = []
@@ -393,26 +435,25 @@ def collect(slot: str, now: datetime) -> tuple[DigestData, list[dict], list[str]
                          category=raw.get("effectiveCategory"),
                          score=(raw.get("assessment") or {}).get("score")
                          if raw.get("status") == ProposalStatus.dinilai.value else None,
-                         responded=bool(raw.get("responded"))))
+                         responded=bool(raw.get("responded")),
+                         out_of_focus=raw.get("status") == ProposalStatus.dinilai.value
+                         and out_of_focus(raw.get("fit"))))
         if raw.get("responded"):
             continue
         p = Proposal.model_validate(raw)
         if p.status == ProposalStatus.dinilai and p.effectiveCategory:
             it = _item(s.id, p)
             groups[Category(p.effectiveCategory)].append(it)
-            if p.qualityOutsideFocus and p.effectiveCategory == Category.tidak_cocok:
-                qof.append(it)
             ids.append(s.id)
         elif p.status == ProposalStatus.perlu_dicek_manual:
             manual.append(Item(id=s.id, name=p.name, score=0.0))
             ids.append(s.id)
     for v in groups.values():
-        v.sort(key=lambda it: it.score, reverse=True)
-    qof.sort(key=lambda it: it.score, reverse=True)
+        v.sort(key=rank_key)
 
     baru = sum(is_new(x, window_start) for x in seen)
     data = DigestData(slot=slot, salutation=settings().manager_salutation, window_start=window_start,
-                      groups=groups, quality_outside_focus=qof, manual=manual, baru_masuk=baru,
+                      groups=groups, manual=manual, baru_masuk=baru,
                       manager_name=settings().manager_name, at=now)
     return data, insight_candidates(seen, data, now), ids
 
@@ -444,7 +485,7 @@ def run_digest(slot: str, send: bool = True) -> dict:
     job = JobLog(JobKind.ringkasan, "Pembuat ringkasan", f"Ringkasan {slot}",
                  model=rules.models.ringkasan, digest_id=digest_id)
     try:
-        with job.code_step("Ambil proposal belum ditanggapi dan hitung per kategori", "firestore",
+        with job.code_step("Ambil proposal belum ditanggapi dan hitung per grade", "firestore",
                            read="proposals"):
             data, cands, ids = collect(slot, now)
         paused = db.is_paused()
@@ -471,8 +512,8 @@ def run_digest(slot: str, send: bool = True) -> dict:
 
         text, used_template = draft, True
         if not paused:
-            payload = {"draf": draft, "alasanSangatCocok": {
-                it.name: it.reasons for it in data.groups[Category.sangat_cocok][:SANGAT_DETAIL_MAX]}}
+            payload = {"draf": draft, "alasanSangatLayak": {
+                it.name: it.reasons for it in data.groups[DETAILED][:SANGAT_DETAIL_MAX]}}
             job.begin("Menyusun teks ringkasan", "gemini.generate_content", StepActor.model)
             try:
                 r = llm.generate(rules.models.ringkasan, RINGKASAN_SYSTEM,
@@ -484,6 +525,7 @@ def run_digest(slot: str, send: bool = True) -> dict:
                 with job.code_step("Cek angka di ringkasan", "kode"):
                     good = (bool(candidate) and numbers_ok(candidate, draft, SANGAT_DETAIL_MAX)
                             and names_present(candidate, data) and label_ok(candidate, data)
+                            and focus_marks_ok(candidate, data) and grade_headings_ok(candidate)
                             and not has_advice(candidate))
                 if good:
                     text, used_template = candidate, False

@@ -10,47 +10,77 @@ W = RULES.weights
 T = Thresholds()
 
 
-def vals(t=3, p=3, pr=3, tr=3, b=3):
-    return {C.tim: t, C.pasar: p, C.produk: pr, C.traksi: tr, C.bisnis: b}
+def vals(m=3, k=3, r=3, re=3, d=3):
+    return {C.manajemen: m, C.kinerja: k, C.risiko: r, C.rencana: re, C.dampak: d}
 
 
 def test_score_bounds_and_baseline_weights():
     assert compute_score(W, vals(1, 1, 1, 1, 1)) == 0.0
     assert compute_score(W, vals(5, 5, 5, 5, 5)) == 100.0
     assert compute_score(W, vals(3, 3, 3, 3, 3)) == 50.0
-    # 0.275*.75 + .30*.5 + .20*.5 + .125*.75 + .10*.75 = 0.625
-    assert compute_score(W, vals(4, 3, 3, 4, 4)) == 62.5
+    # .25*.75 + .20*.5 + .20*.5 + .25*.75 + .10*.75 = 0.65
+    assert compute_score(W, vals(4, 3, 3, 4, 4)) == 65.0
+    # A deck silent on impact (dampak 1) loses only its 10% weight.
+    assert compute_score(W, vals(5, 5, 5, 5, 1)) == 90.0
+
+
+def test_default_weights_follow_the_guide():
+    assert list(W) == [C.manajemen, C.kinerja, C.risiko, C.rencana, C.dampak]
+    assert [W[c] for c in C] == [0.25, 0.20, 0.20, 0.25, 0.10]
+    assert set(RULES.anchors) == set(C)
 
 
 def test_score_rejects_out_of_range_and_missing():
     with pytest.raises(ValueError):
         compute_score(W, vals(6))
     with pytest.raises(ValueError):
-        compute_score(W, {C.tim: 3})
+        compute_score(W, {C.manajemen: 3})
 
 
 def test_weights_valid():
     assert weights_valid(W)
-    assert not weights_valid({**W, C.tim: 0.3})
-    assert not weights_valid({k: v for k, v in W.items() if k != C.tim})
+    assert not weights_valid({**W, C.manajemen: 0.3})
+    assert not weights_valid({k: v for k, v in W.items() if k != C.manajemen})
 
 
-@pytest.mark.parametrize("score,v,fit,expected", [
-    (85, vals(5, 5, 4, 4, 4), True, (Category.sangat_cocok, False)),
-    (80, vals(5, 5, 4, 4, 2), True, (Category.sangat_cocok, False)),
-    (85, vals(5, 5, 5, 5, 1), True, (Category.cocok, False)),   # >=80 but a criterion = 1
-    (70, vals(), True, (Category.cocok, False)),
-    (65, vals(), True, (Category.cocok, False)),
-    (64.9, vals(), True, (Category.kurang_cocok, False)),
-    (45, vals(), True, (Category.kurang_cocok, False)),
-    (44.9, vals(), True, (Category.tidak_cocok, False)),
-    (79, vals(), False, (Category.tidak_cocok, True)),          # berkualitas, di luar fokus
-    (65, vals(), False, (Category.tidak_cocok, True)),
-    (64.9, vals(), False, (Category.tidak_cocok, False)),
-    (95, vals(5, 5, 5, 5, 5), False, (Category.tidak_cocok, True)),
+@pytest.mark.parametrize("score,expected", [
+    (100, Category.sangat_layak),
+    (85, Category.sangat_layak),
+    (84.9, Category.layak_bersyarat),
+    (75, Category.layak_bersyarat),
+    (74.9, Category.perlu_penyesuaian),
+    (65, Category.perlu_penyesuaian),
+    (64.9, Category.risiko_tinggi),
+    (50, Category.risiko_tinggi),
+    (49.9, Category.tidak_layak),
+    (0, Category.tidak_layak),
 ])
-def test_categorize(score, v, fit, expected):
-    assert categorize(score, v, fit, T) == expected
+def test_categorize_bands(score, expected):
+    assert categorize(score, T) == expected
+
+
+def test_categorize_uses_the_rules_thresholds():
+    t = Thresholds(sangatLayak=90, layakBersyarat=80, perluPenyesuaian=60, risikoTinggi=40)
+    assert categorize(85, t) == Category.layak_bersyarat
+    assert categorize(45, t) == Category.risiko_tinggi
+
+
+@pytest.mark.parametrize("bad", [
+    {"sangatLayak": 75, "layakBersyarat": 75},           # not strictly descending
+    {"perluPenyesuaian": 80},                             # above layakBersyarat
+    {"sangatLayak": 101},                                 # above 100
+    {"risikoTinggi": 0},                                  # 0 is not in (0, 100]
+    {"risikoTinggi": -5},
+])
+def test_thresholds_must_descend_within_0_100(bad):
+    with pytest.raises(ValueError):
+        Thresholds(**bad)
+
+
+def test_thresholds_default_and_top_at_100():
+    assert Thresholds().model_dump() == {"sangatLayak": 85, "layakBersyarat": 75,
+                                         "perluPenyesuaian": 65, "risikoTinggi": 50}
+    Thresholds(sangatLayak=100)
 
 
 FIT = FitRules(sectors=["agritech", "fintech"], stages=["pre-seed", "seed", "seri-a"],

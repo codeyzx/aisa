@@ -270,8 +270,8 @@ def test_kam_u07_unset_key_is_503(client, env, uploads):
 
 DASHBOARD_ROUTES = [
     ("POST", "/api/proposals/p1/response", {"kind": "undang"}),
-    ("POST", "/api/proposals/p1/correction", {"category": "cocok", "reason": "r"}),
-    ("POST", "/api/proposals/bulk-response", {"category": "cocok", "kind": "arsipkan"}),
+    ("POST", "/api/proposals/p1/correction", {"category": "layak_bersyarat", "reason": "r"}),
+    ("POST", "/api/proposals/bulk-response", {"category": "layak_bersyarat", "kind": "arsipkan"}),
     ("DELETE", "/api/proposals/p1", {"reason": "r"}),
     ("PUT", "/api/rules", {"rules": {}, "reason": "r"}),
     ("POST", "/api/runtime/stop", None),
@@ -353,40 +353,93 @@ def test_dsb_rute06_response_on_missing_proposal_is_404(client, fs):
 @pytest.mark.parametrize("reason", ["", "  "], ids=["kosong", "spasi"])
 def test_dsb_rute07_correction_without_reason_is_422(client, fs, reason):
     seed_proposal(fs, "p1", "Tani Maju")
-    r = api(client, "POST", "/api/proposals/p1/correction", {"category": "sangat_cocok", "reason": reason})
-    assert r.status_code == 422 and fs.get("proposals/p1")["effectiveCategory"] == "cocok"
+    r = api(client, "POST", "/api/proposals/p1/correction", {"category": "sangat_layak", "reason": reason})
+    assert r.status_code == 422 and fs.get("proposals/p1")["effectiveCategory"] == "perlu_penyesuaian"
 
 
 def test_dsb_rute08_correction_keeps_category_and_score(client, fs):
     seed_proposal(fs, "p1", "Tani Maju", score=70.0)
-    r = api(client, "POST", "/api/proposals/p1/correction", {"category": "sangat_cocok", "reason": "tim kuat"})
+    r = api(client, "POST", "/api/proposals/p1/correction", {"category": "sangat_layak", "reason": "tim kuat"})
     assert r.status_code == 200
     p = fs.get("proposals/p1")
-    assert p["category"] == "cocok" and p["effectiveCategory"] == "sangat_cocok"
+    assert p["category"] == "perlu_penyesuaian" and p["effectiveCategory"] == "sangat_layak"
     assert p["assessment"]["score"] == 70.0 and p["responded"] is False
 
 
 def test_dsb_rute09_correction_on_unassessed_proposal_is_409(client, fs):
     seed_proposal(fs, "p1", "Deck Scan", status=ProposalStatus.perlu_dicek_manual.value)
-    r = api(client, "POST", "/api/proposals/p1/correction", {"category": "cocok", "reason": "r"})
+    r = api(client, "POST", "/api/proposals/p1/correction", {"category": "layak_bersyarat", "reason": "r"})
     assert r.status_code == 409
 
 
 def test_dsb_rute10_bulk_response_counts_only_unresponded_in_category(client, fs):
-    seed_proposal(fs, "a", "A", category="tidak_cocok")
-    seed_proposal(fs, "b", "B", category="tidak_cocok", responded=True)
-    seed_proposal(fs, "c", "C", category="cocok")
-    r = api(client, "POST", "/api/proposals/bulk-response", {"category": "tidak_cocok", "kind": "arsipkan"})
+    seed_proposal(fs, "a", "A", category="tidak_layak", score=30.0)
+    seed_proposal(fs, "b", "B", category="tidak_layak", score=30.0, responded=True)
+    seed_proposal(fs, "c", "C", category="perlu_penyesuaian")
+    r = api(client, "POST", "/api/proposals/bulk-response", {"category": "tidak_layak", "kind": "arsipkan"})
     assert r.status_code == 200 and r.json() == {"count": 1}
     assert fs.get("proposals/a")["response"]["kind"] == "arsipkan"
     assert fs.get("proposals/c")["responded"] is False
 
 
-def test_dsb_rute11_rules_with_bad_weights_is_422(client, fs, rules):
-    new = rules.model_dump(by_alias=True, mode="json")
-    new["weights"] = {**new["weights"], "tim": 0.5}
+def _rules_body(rules) -> dict:
+    return rules.model_dump(by_alias=True, mode="json")
+
+
+@pytest.mark.parametrize("weights", [
+    {"manajemen": 0.5, "kinerja": 0.20, "risiko": 0.20, "rencana": 0.25, "dampak": 0.10},  # sum 1.25
+    {"manajemen": 0.35, "kinerja": 0.20, "risiko": 0.20, "rencana": 0.25},  # dampak missing
+    {"tim": 0.275, "pasar": 0.30, "produk": 0.20, "traksi": 0.125, "bisnis": 0.10},  # old keys
+    {"manajemen": 0.25, "kinerja": 0.20, "risiko": 0.20, "rencana": 0.25, "dampak": 0.10,
+     "tim": 0.0},  # an old key next to the new ones
+], ids=["jumlah-salah", "kriteria-hilang", "kunci-lama", "kunci-lama-tambahan"])
+def test_dsb_rute11_rules_with_bad_weights_is_422(client, fs, rules, weights):
+    new = _rules_body(rules)
+    new["weights"] = weights
     r = api(client, "PUT", "/api/rules", {"rules": new, "reason": "uji"})
     assert r.status_code == 422 and fs.get("settings/rules")["version"] == 1
+
+
+@pytest.mark.parametrize("thresholds", [
+    {"sangatLayak": 75, "layakBersyarat": 75, "perluPenyesuaian": 65, "risikoTinggi": 50},
+    {"sangatLayak": 85, "layakBersyarat": 60, "perluPenyesuaian": 65, "risikoTinggi": 50},
+    {"sangatLayak": 101, "layakBersyarat": 75, "perluPenyesuaian": 65, "risikoTinggi": 50},
+    {"sangatLayak": 85, "layakBersyarat": 75, "perluPenyesuaian": 65, "risikoTinggi": 0},
+    {"sangatLayak": 85, "layakBersyarat": 75, "perluPenyesuaian": 65, "risikoTinggi": -10},
+], ids=["sama", "tidak-menurun", "di-atas-100", "nol", "negatif"])
+def test_dsb_rute11b_rules_with_bad_thresholds_is_422(client, fs, rules, thresholds):
+    new = _rules_body(rules)
+    new["thresholds"] = thresholds
+    r = api(client, "PUT", "/api/rules", {"rules": new, "reason": "uji"})
+    assert r.status_code == 422 and fs.get("settings/rules")["version"] == 1
+    assert fs.all("history") == {}
+
+
+def test_dsb_rute11c_valid_new_scale_rules_bump_the_version(client, fs, rules):
+    new = _rules_body(rules)
+    new["weights"] = {"manajemen": 0.30, "kinerja": 0.20, "risiko": 0.15, "rencana": 0.25,
+                      "dampak": 0.10}
+    new["thresholds"] = {"sangatLayak": 100, "layakBersyarat": 80, "perluPenyesuaian": 60,
+                         "risikoTinggi": 40}
+    r = api(client, "PUT", "/api/rules", {"rules": new, "reason": "uji skala baru"})
+    assert r.status_code == 200 and r.json()["version"] == 2
+    stored = fs.get("settings/rules")
+    assert stored["version"] == 2 and stored["thresholds"] == new["thresholds"]
+    assert stored["weights"] == new["weights"] and fs.get("rulesVersions/2") == stored
+
+
+@pytest.mark.parametrize("path,body", [
+    ("/api/proposals/p1/correction", {"category": "cocok", "reason": "r"}),
+    ("/api/proposals/p1/correction", {"category": "sangat_cocok", "reason": "r"}),
+    ("/api/proposals/bulk-response", {"category": "cocok", "kind": "arsipkan"}),
+    ("/api/proposals/bulk-response", {"category": "tidak_cocok", "kind": "arsipkan"}),
+])
+def test_dsb_rute13_old_category_values_are_422(client, fs, path, body):
+    seed_proposal(fs, "p1", "Tani Maju")
+    before = fs.all("proposals")
+    r = api(client, "POST", path, body)
+    assert r.status_code == 422
+    assert fs.all("proposals") == before and fs.all("history") == {}
 
 
 def test_dsb_rute12_stop_and_resume_set_runtime(client, fs, env):

@@ -111,11 +111,11 @@ def _execute(phone: str, cmd, job: JobLog | None = None) -> str:
             return found
         link(title=f"Perintah: pindahkan {found}", proposal_id=pid)
         if not cmd.reason:
-            return ("Koreksi kategori perlu alasan. Contoh: pindahkan "
+            return ("Koreksi grade perlu alasan. Contoh: pindahkan "
                     f"{cmd.name} ke {CATEGORY_LABEL[cmd.category].lower()} karena <alasan>")
         p = domain.correct(pid, cmd.category, cmd.reason, Via.wa)
         score = p.assessment.score if p.assessment else None
-        return (f"Kategori {p.name} dipindahkan ke {CATEGORY_LABEL[cmd.category]}."
+        return (f"Grade {p.name} dipindahkan ke {CATEGORY_LABEL[cmd.category]}."
                 + (f" Skor kualitas tetap {fmt_score(score)}." if score is not None else ""))
     if isinstance(cmd, RespondBulk):
         found = domain.unresponded_in(cmd.category)

@@ -1,5 +1,5 @@
 """Operator CLI: `uv run aisa seed-rules | intake-file <pdf> [--name N] | digest <slot> [--send]
-| delete-proposal <id> --reason R | retention`."""
+| delete-proposal <id> --reason R | retention | migrate-grades [--apply]`."""
 
 from __future__ import annotations
 
@@ -41,6 +41,10 @@ def main() -> None:
     x.add_argument("proposal_id")
     x.add_argument("--reason", required=True)
     sub.add_parser("retention", help="delete archived proposals past rules.retentionDays now")
+    m = sub.add_parser("migrate-grades",
+                       help="move rules and assessed proposals to the A–E criteria and 5 grades")
+    m.add_argument("--apply", action="store_true",
+                   help="really re-assess and write; without it, only print the plan")
     a = ap.parse_args()
 
     if a.cmd == "seed-rules":
@@ -71,6 +75,10 @@ def main() -> None:
         from .retention import run
 
         print(json.dumps(run(), ensure_ascii=False))
+    elif a.cmd == "migrate-grades":
+        from .migrate_grades import migrate
+
+        migrate(apply=a.apply)
 
 
 if __name__ == "__main__":

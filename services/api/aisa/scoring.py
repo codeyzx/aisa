@@ -72,19 +72,17 @@ def fit_check(profile: Profile, rules: FitRules) -> Fit:
     return Fit(passed=sector.passed and stage.passed and funding.passed, checks=checks)
 
 
-def categorize(
-    score: float, values: dict[Criterion, int], fit_passed: bool, t: Thresholds
-) -> tuple[Category, bool]:
-    """Returns (category, qualityOutsideFocus)."""
-    if not fit_passed:
-        return Category.tidak_cocok, score >= t.qualityOutsideFocus
-    if score >= t.sangatCocok and min(values.values()) > 1:
-        return Category.sangat_cocok, False
-    if score >= t.cocok:
-        return Category.cocok, False
-    if score >= t.kurangCocok:
-        return Category.kurang_cocok, False
-    return Category.tidak_cocok, False
+def categorize(score: float, t: Thresholds) -> Category:
+    """The grade from the score alone, by the bands in `t`; fit does not change it."""
+    if score >= t.sangatLayak:
+        return Category.sangat_layak
+    if score >= t.layakBersyarat:
+        return Category.layak_bersyarat
+    if score >= t.perluPenyesuaian:
+        return Category.perlu_penyesuaian
+    if score >= t.risikoTinggi:
+        return Category.risiko_tinggi
+    return Category.tidak_layak
 
 
 def values_of(criteria: dict[Criterion, CriterionResult]) -> dict[Criterion, int]:

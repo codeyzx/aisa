@@ -20,7 +20,7 @@ def ok_attempt(name="Tani Maju"):
                    name, None, 1000, 100, 50)
 
 
-def bad_attempt(error="tim: tanpa kutipan halaman"):
+def bad_attempt(error="manajemen: tanpa kutipan halaman"):
     return Attempt(False, None, None, None, error, 900, 90, 40)
 
 
@@ -155,12 +155,12 @@ def test_ocr_fits_caps_size_and_pages():
 
 def test_pnl_02_two_failed_validations_go_manual(proposal, penilai, rules):
     fs = proposal(RICH)
-    penilai.results = [bad_attempt(), bad_attempt("pasar: nilai 7 di luar 1..5")]
+    penilai.results = [bad_attempt(), bad_attempt("rencana: nilai 7 di luar 1..5")]
     assert intake.run_intake(PID, b"%PDF") == "perlu_dicek_manual"
     assert penilai.calls == 2
     p, job, steps = job_of(fs)
     assert p["status"] == "perlu_dicek_manual" and p["assessment"] is None and p["category"] is None
-    assert p["statusReason"] == "penilaian gagal validasi: pasar: nilai 7 di luar 1..5"
+    assert p["statusReason"] == "penilaian gagal validasi: rencana: nilai 7 di luar 1..5"
     assert p["tokens"] == {"in": 1800, "out": 180}
     model_steps = [s for s in steps if s["actor"] == "model"]
     assert [s["action"] for s in model_steps] == ["Menilai 5 kriteria", "Menilai 5 kriteria (ulang)"]
@@ -174,7 +174,7 @@ def test_pnl_03_one_failure_then_success_is_assessed(proposal, penilai, rules):
     penilai.results = [bad_attempt(), ok_attempt()]
     assert intake.run_intake(PID, b"%PDF") == "dinilai"
     p, _, _ = job_of(fs)
-    assert p["status"] == "dinilai" and p["category"] == p["effectiveCategory"] is not None
+    assert p["status"] == "dinilai" and p["category"] == p["effectiveCategory"] == "layak_bersyarat"
     assert p["assessment"]["score"] == 75.0 and p["tokens"] == {"in": 1900, "out": 190}
 
 
@@ -231,7 +231,41 @@ def test_pnl_04_history_detail_uses_comma_decimal_and_category_label(proposal, p
     assert intake.run_intake(PID, b"%PDF") == "dinilai"
     cat = fs.get(f"proposals/{PID}")["category"]
     (h,) = fs.all("history").values()
-    assert h["detail"].startswith(f"Proposal Tani Maju masuk: skor 68,1, {CATEGORY_LABEL[cat]}")
+    assert cat == "perlu_penyesuaian"
+    assert h["detail"] == f"Proposal Tani Maju masuk: skor 68,1, {CATEGORY_LABEL[cat]}"
+
+
+@pytest.mark.parametrize("score,grade", [
+    (85.0, "sangat_layak"), (84.9, "layak_bersyarat"), (65.0, "perlu_penyesuaian"),
+    (50.0, "risiko_tinggi"), (49.9, "tidak_layak"),
+])
+def test_grade_comes_from_the_score_band_only(proposal, penilai, rules, env, score, grade):
+    fs = proposal(RICH)
+    env.setattr(intake, "compute_score", lambda weights, values: score)
+    penilai.results = [ok_attempt()]
+    assert intake.run_intake(PID, b"%PDF") == "dinilai"
+    p, _, steps = job_of(fs)
+    assert p["category"] == p["effectiveCategory"] == grade
+    assert "qualityOutsideFocus" not in p
+    assert "Tentukan grade" in [s["action"] for s in steps]
+    (stats,) = fs.all("dailyStats").values()
+    assert stats["byCategory"] == {grade: 1}
+
+
+def test_out_of_focus_keeps_its_band_grade_and_history_says_so(proposal, penilai, rules, env):
+    fs = proposal(RICH)
+    env.setattr(intake, "compute_score", lambda weights, values: 90.0)
+    out = Attempt(True, criteria(5), Profile(sector="f&b", stage="seed", fundingAskIdr=5_000_000_000),
+                  "Kopi Rakyat", None, 1000, 100, 50)
+    penilai.results = [out]
+    assert intake.run_intake(PID, b"%PDF") == "dinilai"
+    p = fs.get(f"proposals/{PID}")
+    assert p["fit"]["passed"] is False and p["fit"]["checks"]["sector"]["passed"] is False
+    assert p["category"] == p["effectiveCategory"] == "sangat_layak"
+    assert "qualityOutsideFocus" not in p
+    (h,) = fs.all("history").values()
+    assert h["after"] == "sangat_layak"
+    assert h["detail"] == "Proposal Tani Maju masuk: skor 90, Sangat layak, di luar fokus"
 
 
 # ---------- live progress: jobs/{id}.currentStep ----------

@@ -25,6 +25,30 @@ CLI helpers:
 - `uv run aisa delete-proposal <id> --reason "..."` deletes one proposal (same path as
   `DELETE /api/proposals/{id}`, recorded with `via: sistem`).
 - `uv run aisa retention` runs retention now (same as `POST /retention/run`).
+- `uv run aisa migrate-grades [--apply]` moves stored data from the old scale (criteria
+  tim/pasar/produk/traksi/bisnis, categories sangat_cocok…tidak_cocok) to the A–E criteria and
+  5 grades. Without `--apply` it only prints the plan: the rules change, each assessed
+  proposal (id, name, old category → "akan dinilai ulang", and whether a manager correction
+  will be dropped), the pending confirmations to delete, and the `dailyStats` dates; it makes
+  no model call and writes nothing. With `--apply` it:
+  1. bumps `settings/rules` (and `rulesVersions/{v}`) to the default weights, anchors and
+     thresholds of the new scale, keeping `fit`, `models`, `minCharsPerPage` and
+     `retentionDays`, with one `aturan_diubah` history row (`via: sistem`);
+  2. deletes every `pendingConfirmations` doc (they may name an old category);
+  3. re-assesses every `dinilai` proposal whose `assessment.rulesVersion` is not the new
+     version from its stored `proposalTexts`, through the same Penilai, score, fit and grade
+     code as intake, with a `penilaian` job "Menilai ulang <nama> (skala baru)". It writes
+     `assessment`, `profile`, `fit`, `category`, `effectiveCategory`, `jobId`, sets
+     `correction` to null, deletes `qualityOutsideFocus` and adds the tokens; `response`,
+     `responded`, `name`, `createdAt` and `assessedAt` are kept. Two failed validations (or
+     no stored text) → `perlu_dicek_manual` with "penilaian ulang gagal: …". Each proposal
+     gets one `dinilai_ulang` history row (`before` = old `category`). Other statuses are not
+     touched;
+  4. recomputes `dailyStats.byCategory` for every existing date from the `dinilai` proposals
+     by the WIB date of `assessedAt` (a deleted proposal cannot be re-assessed and drops
+     out; `proposalsIn` and `perluDicekManual` are left as they were),
+     and prints each proposal's old category → new grade and score. A second run finds nothing
+     to do and writes nothing.
 
 ## Routes
 
@@ -40,7 +64,7 @@ CLI helpers:
 | `POST /api/proposals/{id}/correction`                 | `X-AISA-Key`                                                            | `{category, reason}`; reason required; only `dinilai` proposals                                                                                                                                                                                                                                                                                                                                                                     |
 | `POST /api/proposals/bulk-response`                   | `X-AISA-Key`                                                            | `{category, kind}` → `{count}`                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `DELETE /api/proposals/{id}`                          | `X-AISA-Key`                                                            | body `{reason}` (required, non-empty, else 422); any status; 404 if missing → 200 `{deleted: true, assistantScrub}`. See "Deleting a proposal" below                                                                                                                                                                                                                                                                                |
-| `PUT /api/rules`                                      | `X-AISA-Key`                                                            | `{rules, reason}`; weights must cover all five criteria and sum to 1 ± 0.001, else 422. Version is bumped by the server                                                                                                                                                                                                                                                                                                             |
+| `PUT /api/rules`                                      | `X-AISA-Key`                                                            | `{rules, reason}`; weights must cover the five criteria A–E and sum to 1 ± 0.001, thresholds strictly descending within (0, 100], else 422. Version bumped by server                                                                                                                                                                                                                                                                |
 | `POST /api/runtime/stop` / `POST /api/runtime/resume` | `X-AISA-Key`                                                            | pause / resume; resume assesses `antre` and `dihentikan` proposals                                                                                                                                                                                                                                                                                                                                                                  |
 | `GET /api/proposals/{id}/deck-url`                    | `X-AISA-Key`                                                            | `{url, previewUrl, expiresIn}`. Uploads: one V4 signed GCS URL (15 min, `expiresIn: 900`) signed with `Content-Type: application/pdf` and `Content-Disposition: inline`, so it renders in an `<iframe>` and in a new tab; `previewUrl` equals `url`. Form decks stay in Drive: `url` is the `/view` link, `previewUrl` the embeddable `/preview` link (renders only for a Google account that can open the file), `expiresIn: null` |
 | `POST /api/assistant/ask`                             | `X-AISA-Key`                                                            | `{session: "dashboard-<id>", text}` → `{answer}`. The Asisten for the dashboard's "Tanya AISA": same agent, STOP check and `asisten` job as a WhatsApp question, no GOWA traffic, commands not parsed. Paused → a fixed reply without calling the agent; cancelled by STOP → a fixed reply; agent failure → 503 with the WhatsApp fallback text as `detail`, job recorded `gagal`                                                   |
@@ -82,10 +106,12 @@ already sent there keep the name.
 
 ### WhatsApp commands (recognised by code, case-insensitive)
 
-`undang|pantau|arsipkan <nama>` · `undang|pantau|arsipkan semua <sangat cocok|cocok|kurang cocok|tidak cocok>`
-(asks for confirmation; `YA` within 10 minutes executes) · `pindahkan <nama> ke <kategori> karena <alasan>`
+`undang|pantau|arsipkan <nama>` · `undang|pantau|arsipkan semua <grade>`
+(asks for confirmation; `YA` within 10 minutes executes) · `pindahkan <nama> ke <grade> karena <alasan>`
 · `STOP` · `LANJUT`. Names match exact → unique prefix → unique fuzzy (≥ 0.85); otherwise the
 reply lists candidates and nothing changes. Any other message goes to the Asisten.
+`<grade>` is one of "sangat layak", "layak bersyarat", "perlu penyesuaian", "risiko tinggi",
+"tidak layak" (any case, any spacing); "layak" alone is not a grade.
 
 ## Environment
 
@@ -141,6 +167,15 @@ reply lists candidates and nothing changes. Any other message goes to the Asiste
   invalid transcription, or a transcript that is still too little text →
   `perlu_dicek_manual`, no score, with the reason in `statusReason`.
 - Two failed Penilai validations → `perlu_dicek_manual`, no score.
+- The Penilai rates five criteria 1–5, in order A. `manajemen` (Tim manajemen), B. `kinerja`
+  (Kinerja bisnis saat ini), C. `risiko` (Risiko bisnis & tren makro, where 5 means risks named
+  and mitigated with a supportive trend), D. `rencana` (Rencana bisnis & potensi imbal hasil),
+  E. `dampak` (Potensi dampak). Code computes `skor = Σ bobot × (nilai − 1) / 4 × 100` (default
+  weights 0.25/0.20/0.20/0.25/0.10) and the grade from the score alone by `rules.thresholds`:
+  ≥ `sangatLayak` (85) Sangat layak, ≥ `layakBersyarat` (75) Layak bersyarat, ≥
+  `perluPenyesuaian` (65) Perlu penyesuaian, ≥ `risikoTinggi` (50) Risiko tinggi, else Tidak
+  layak. The fit check (sector, stage, funding) is stored in `fit` and never changes the
+  grade; `fit.passed == false` is what "di luar fokus" means everywhere.
 - STOP is checked between intake steps (→ `dihentikan`) and before new intake (→ stays
   `antre`). While paused the digest is sent from the template, without model calls, and a
   WhatsApp message that is not a command gets "AISA sedang dijeda (STOP). Kirim LANJUT
@@ -159,7 +194,8 @@ reply lists candidates and nothing changes. Any other message goes to the Asiste
   sends one "⏳ Sedang mengambil data, mohon tunggu…". Presence and that message are
   best-effort: a GOWA failure there is logged and never affects the answer.
 - The Asisten is told to answer broad questions from one `get_overview` call (one compact row
-  per proposal, at most 50, plus counts per category and unresponded), to call
+  per proposal, at most 50, ranked grade → in focus first → score, plus counts per grade,
+  out of focus and unresponded), to call
   `get_proposal_detail` for at most 2 named proposals unless asked for more, and to stay
   around 4 tool calls per answer. This is an instruction to the model, not a limit enforced
   by code.
@@ -170,10 +206,16 @@ reply lists candidates and nothing changes. Any other message goes to the Asiste
 - A criterion whose quotes were all missing from their pages is capped at 2 and stored with
   `citationsUnverified: true`.
 - The digest greeting follows the WIB send time (pagi < 11, siang < 15, sore < 18, else
-  malam). Sangat cocok lines carry the top criterion's reason; "Berkualitas, di luar fokus"
-  lines carry the failed fit-check reasons. The insight used is stored in `digests.insight`.
+  malam). It has one heading per grade: Sangat layak proposals are listed with the top
+  criterion's reason, Layak bersyarat and Perlu penyesuaian inline with their scores, Risiko
+  tinggi and Tidak layak as counts only. Within a grade, in-focus proposals come first, then
+  higher scores; an out-of-focus proposal is marked "(di luar fokus)", and a line says how many
+  unresponded proposals are out of focus (`digests.counts.luarFokus`). The insight used is
+  stored in `digests.insight`.
 - The digest's model-written text is used only if every number in it appears in the data,
-  every listed proposal name is present, the insight (when there is one) is still introduced
+  every listed proposal name, every "(di luar fokus)" mark and every grade heading is present,
+  the insight (when there is one) is still introduced
   by "Yang menarik:", and it contains no follow-up advice; otherwise the deterministic
   template is sent. Messages are split under 3500 characters.
-- The Penilai is not deterministic: the same deck scored 62.5 and 70.0 on two runs.
+- The Penilai is not deterministic: on the earlier scale the same deck scored 62.5 and 70.0
+  on two runs.

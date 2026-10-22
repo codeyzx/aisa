@@ -26,9 +26,9 @@ def test_scrubbed_history_drops_name_and_details():
 
 
 def test_scrub_name_whole_word_case_insensitive():
-    detail = "Arsipkan semua tidak cocok: 3 proposal (Kopi Rakyat, kopi rakyat, Kopi Rakyatku)"
+    detail = "Arsipkan semua tidak layak: 3 proposal (Kopi Rakyat, kopi rakyat, Kopi Rakyatku)"
     assert scrub_name(detail, "Kopi Rakyat") == \
-        "Arsipkan semua tidak cocok: 3 proposal ((dihapus), (dihapus), Kopi Rakyatku)"
+        "Arsipkan semua tidak layak: 3 proposal ((dihapus), (dihapus), Kopi Rakyatku)"
     assert scrub_name("a.b (x)", "a.b") == "(dihapus) (x)"  # regex characters are literal
     assert scrub_name("teks", "  ") == "teks"
 

@@ -176,13 +176,13 @@ def test_heartbeat_stops_on_stop_and_sends_no_wait_message(harness):
 def test_get_overview_is_compact(monkeypatch):
     from aisa.assistant import tools
 
-    rows = [{"id": f"p{i}", "name": f"S{i}", "status": "dinilai", "effectiveCategory": "cocok",
+    rows = [{"id": f"p{i}", "name": f"S{i}", "status": "dinilai", "effectiveCategory": "layak_bersyarat",
              "assessment": {"score": float(i)}, "profile": {"sector": "agri"},
              "responded": i % 2 == 0} for i in range(60)]
     monkeypatch.setattr(tools.store, "list_proposals", lambda: rows)
     out = tools.get_overview()
     assert out["total"] == 60 and out["ditampilkan"] == 50 and len(out["proposal"]) == 50
-    assert out["belumDitanggapi"] == 30 and out["perKategori"] == {"Cocok": 60}
+    assert out["belumDitanggapi"] == 30 and out["perGrade"] == {"Layak bersyarat": 60}
     assert out["proposal"][0]["nama"] == "S59"
-    assert set(out["proposal"][0]) <= {"nama", "sektor", "skor", "kategori", "status",
-                                       "tanggapan", "luarFokus"}
+    assert set(out["proposal"][0]) <= {"nama", "sektor", "skor", "grade", "aksi", "status",
+                                       "tanggapan", "diLuarFokus"}

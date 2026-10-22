@@ -24,9 +24,9 @@ def asked(fs, env):
 
 @pytest.fixture
 def seeded(fs):
-    seed_proposal(fs, "p1", "Tani Maju", category="cocok", score=70.0)
-    seed_proposal(fs, "p2", "Tani Makmur", category="cocok", score=66.0)
-    seed_proposal(fs, "p3", "Kopi Rakyat", category="tidak_cocok", score=79.0)
+    seed_proposal(fs, "p1", "Tani Maju", category="perlu_penyesuaian", score=70.0)
+    seed_proposal(fs, "p2", "Tani Makmur", category="perlu_penyesuaian", score=66.0)
+    seed_proposal(fs, "p3", "Kopi Rakyat", category="tidak_layak", score=40.0)
     seed_proposal(fs, "p4", "Deck Scan", status=ProposalStatus.perlu_dicek_manual.value)
     return fs
 
@@ -70,21 +70,21 @@ def test_pwa_o03_ambiguous_name_lists_numbered_candidates(seeded, asked):
     assert unchanged(seeded, before) and seeded.all("history") == {}
 
 
-@pytest.mark.parametrize("text", ["pindahkan Tani Maju ke sangat cocok",
-                                  "pindahkan Tani Maju ke sangat cocok karena",
-                                  "pindahkan Tani Maju ke sangat cocok karena   "],
+@pytest.mark.parametrize("text", ["pindahkan Tani Maju ke sangat layak",
+                                  "pindahkan Tani Maju ke sangat layak karena",
+                                  "pindahkan Tani Maju ke sangat layak karena   "],
                          ids=["tanpa-karena", "karena-kosong", "karena-spasi"])
 def test_pwa_o04_correction_without_reason_asks_for_one(seeded, asked, text):
     before = seeded.all("proposals")
-    assert handle(text) == ("Koreksi kategori perlu alasan. Contoh: pindahkan Tani Maju ke "
-                            "sangat cocok karena <alasan>")
+    assert handle(text) == ("Koreksi grade perlu alasan. Contoh: pindahkan Tani Maju ke "
+                            "sangat layak karena <alasan>")
     assert unchanged(seeded, before) and seeded.all("history") == {}
 
 
 @pytest.mark.parametrize("text,reply", [
-    ("pindahkan Startup Fiktif Zzz ke cocok",
+    ("pindahkan Startup Fiktif Zzz ke layak bersyarat",
      'Proposal "Startup Fiktif Zzz" tidak ditemukan. Tidak ada yang diubah.'),
-    ("pindahkan Tani ke cocok",
+    ("pindahkan Tani ke layak bersyarat",
      'Ada beberapa proposal yang mirip "Tani":\n1. Tani Maju\n2. Tani Makmur\n'
      "Tidak ada yang diubah. Kirim ulang perintah dengan nama lengkap."),
 ], ids=["tak-dikenal", "ambigu"])
@@ -95,24 +95,24 @@ def test_correction_without_reason_reports_an_unresolved_name_first(seeded, aske
 
 
 def test_correction_without_reason_links_the_job_to_the_resolved_proposal(seeded, asked):
-    assert handle("pindahkan tani maju ke cocok").startswith("Koreksi kategori perlu alasan.")
+    assert handle("pindahkan tani maju ke layak bersyarat").startswith("Koreksi grade perlu alasan.")
     (j,) = jobs(seeded)
     assert j["proposalId"] == "p1"
 
 
 def test_pwa_o05_correction_keeps_category_and_score(seeded, asked):
-    reply = handle("pindahkan Tani Maju ke sangat cocok karena tim pernah exit")
-    assert reply == "Kategori Tani Maju dipindahkan ke Sangat cocok. Skor kualitas tetap 70."
+    reply = handle("pindahkan Tani Maju ke sangat layak karena tim pernah exit")
+    assert reply == "Grade Tani Maju dipindahkan ke Sangat layak. Skor kualitas tetap 70."
     p = seeded.get("proposals/p1")
-    assert p["category"] == "cocok" and p["effectiveCategory"] == "sangat_cocok"
+    assert p["category"] == "perlu_penyesuaian" and p["effectiveCategory"] == "sangat_layak"
     assert p["assessment"]["score"] == 70.0 and p["responded"] is False
     assert p["correction"]["reason"] == "tim pernah exit" and p["correction"]["via"] == "wa"
 
 
 def test_pwa_o06_correction_of_unassessed_proposal_is_refused(seeded, asked):
     before = seeded.all("proposals")
-    assert handle("pindahkan Deck Scan ke cocok karena isinya bagus") == \
-        "Tidak bisa dijalankan: hanya proposal yang sudah dinilai yang punya kategori"
+    assert handle("pindahkan Deck Scan ke layak bersyarat karena isinya bagus") == \
+        "Tidak bisa dijalankan: hanya proposal yang sudah dinilai yang punya grade"
     assert unchanged(seeded, before)
     (j,) = jobs(seeded)
     assert j["status"] == "gagal"
@@ -125,11 +125,11 @@ def test_pwa_o07_ya_with_nothing_pending(seeded, asked):
 
 
 def test_pwa_o08_bulk_then_ya_responds_to_listed_proposals(seeded, asked):
-    reply = handle("arsipkan semua tidak cocok")
-    assert reply == ("Ada 1 proposal Tidak cocok yang belum ditanggapi: Kopi Rakyat\n"
+    reply = handle("arsipkan semua tidak layak")
+    assert reply == ("Ada 1 proposal Tidak layak yang belum ditanggapi: Kopi Rakyat\n"
                      "Balas YA dalam 10 menit untuk arsipkan semuanya.")
     pc = seeded.get(f"pendingConfirmations/{MANAGER}")
-    assert pc["proposalIds"] == ["p3"] and pc["command"] == "arsipkan semua tidak cocok"
+    assert pc["proposalIds"] == ["p3"] and pc["command"] == "arsipkan semua tidak layak"
     assert timedelta(minutes=9) < pc["expiresAt"] - db.now() <= timedelta(minutes=10)
     assert seeded.get("proposals/p3")["responded"] is False  # nothing before YA
     assert handle("ya") == "Selesai: 1 proposal ditandai arsipkan."
@@ -141,7 +141,7 @@ def test_pwa_o08_bulk_then_ya_responds_to_listed_proposals(seeded, asked):
 
 def test_pwa_o09_ya_after_ten_minutes_has_expired(seeded, asked):
     seeded.document(f"pendingConfirmations/{MANAGER}").set({
-        "command": "arsipkan semua tidak cocok", "proposalIds": ["p3"],
+        "command": "arsipkan semua tidak layak", "proposalIds": ["p3"],
         "expiresAt": db.now() - timedelta(minutes=1)})
     before = seeded.all("proposals")
     assert handle("YA") == "Konfirmasi sudah kedaluwarsa (lebih dari 10 menit). Kirim ulang perintahnya."
@@ -150,7 +150,7 @@ def test_pwa_o09_ya_after_ten_minutes_has_expired(seeded, asked):
 
 
 def test_pwa_o10_bulk_on_empty_category(seeded, asked):
-    assert handle("pantau semua kurang cocok") == "Tidak ada proposal Kurang cocok yang belum ditanggapi."
+    assert handle("pantau semua risiko tinggi") == "Tidak ada proposal Risiko tinggi yang belum ditanggapi."
     assert seeded.get(f"pendingConfirmations/{MANAGER}") is None
 
 

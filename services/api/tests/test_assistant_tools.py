@@ -19,10 +19,10 @@ FOUNDER = {"name": "Rina Founder", "email": "rina@contoh.test", "phone": "628111
 
 
 def _p(pid, name, *, score=None, eff=None, cat=None, sector=None, stage=None, status="dinilai",
-       responded=False, response=None, qof=False, correction=None, criteria=None, fit=None):
+       responded=False, response=None, correction=None, criteria=None, fit=None):
     doc = {
         "name": name, "nameLower": name.lower(), "status": status,
-        "category": cat or eff, "effectiveCategory": eff, "qualityOutsideFocus": qof,
+        "category": cat or eff, "effectiveCategory": eff,
         "responded": responded, "response": response, "correction": correction,
         "profile": {"sector": sector, "stage": stage, "fundingAskIdr": 2_000_000_000,
                     "oneLiner": "x" * 300},
@@ -37,27 +37,36 @@ def _p(pid, name, *, score=None, eff=None, cat=None, sector=None, stage=None, st
     return pid, doc
 
 
+PASS = {"passed": True, "checks": {"sector": {"passed": True, "reason": "ok"}}}
+
+# Ranked as every tool lists them: grade, then in-focus before out-of-focus, then score.
 SEED = [
-    _p("p1", "Kopi Teras Senja", score=82.5, eff="sangat_cocok", sector="F&B", stage="Seed",
-       criteria={"tim": {"value": 5, "reason": "r" * 400,
-                         "citations": [{"page": 2, "quote": "q" * 300}] * 5},
-                 "traksi": {"value": 1, "notMentioned": True, "reason": "tidak ada"}},
-       fit={"passed": True, "checks": {"sector": {"passed": True, "reason": "ok"}}}),
-    _p("p2", "Kelas Kode Rakyat", score=71.0, eff="cocok", sector="Edtech", stage="Pre-seed",
-       responded=True, response={"kind": "undang", "via": "wa"},
+    _p("p1", "Kopi Teras Senja", score=86.0, eff="sangat_layak", sector="F&B", stage="Seed",
+       criteria={"manajemen": {"value": 5, "reason": "r" * 400,
+                               "citations": [{"page": 2, "quote": "q" * 300}] * 5},
+                 "kinerja": {"value": 1, "notMentioned": True, "reason": "tidak ada"}},
+       fit=PASS),
+    _p("p2", "Kelas Kode Rakyat", score=71.0, eff="perlu_penyesuaian", sector="Edtech",
+       stage="Pre-seed", responded=True, response={"kind": "undang", "via": "wa"},
        fit={"passed": False, "checks": {"stage": {"passed": False, "reason": "tahap"},
                                         "sector": {"passed": True, "reason": "ok"}}}),
-    _p("p3", "Kelas Kode Pro", score=40.0, eff="kurang_cocok", sector="edtech", stage="Seed"),
-    # Quality outside focus, still Tidak cocok: the mark shows.
-    _p("p4", "Tambak Cerdas", score=78.0, eff="tidak_cocok", sector="Agritech", stage="Series A",
-       qof=True),
-    # Flag kept after a correction to Cocok: the mark must not show.
-    _p("p5", "Roti Lembah", score=76.0, cat="tidak_cocok", eff="cocok", sector="F&B",
-       stage="Seed", qof=True, correction={"category": "cocok", "reason": "fokus baru", "via": "wa",
-                                           "at": datetime(2026, 10, 21, 1, 0, tzinfo=UTC)}),
+    # No fit stored: not marked out of focus.
+    _p("p3", "Kelas Kode Pro", score=55.0, eff="risiko_tinggi", sector="edtech", stage="Seed"),
+    # Out of focus keeps its grade, and ranks after the in-focus proposal of the same grade
+    # even with the higher score.
+    _p("p4", "Tambak Cerdas", score=78.0, eff="layak_bersyarat", sector="Agritech",
+       stage="Series A",
+       fit={"passed": False, "checks": {"sector": {"passed": False, "reason": "sektor"}}}),
+    # Corrected by the manager from Perlu penyesuaian to Layak bersyarat.
+    _p("p5", "Roti Lembah", score=66.0, cat="perlu_penyesuaian", eff="layak_bersyarat",
+       sector="F&B", stage="Seed", fit=PASS,
+       correction={"category": "layak_bersyarat", "reason": "fokus baru", "via": "wa",
+                   "at": datetime(2026, 10, 21, 1, 0, tzinfo=UTC)}),
     # No score: manual check.
     _p("p6", "Arsip Pindaian", status="perlu_dicek_manual"),
 ]
+RANKED = ["Kopi Teras Senja", "Roti Lembah", "Tambak Cerdas", "Kelas Kode Rakyat",
+          "Kelas Kode Pro", "Arsip Pindaian"]
 
 
 @pytest.fixture
@@ -86,24 +95,29 @@ def _names(out):
 
 # ---------- AST-11: search_proposals ----------
 
-def test_ast11_search_sorted_by_score_unscored_last(afs):
+def test_ast11_search_ranked_grade_then_focus_then_score_ungraded_last(afs):
     out = tools.search_proposals()
     assert out["totalCocok"] == 6
-    assert _names(out) == ["Kopi Teras Senja", "Tambak Cerdas", "Roti Lembah",
-                           "Kelas Kode Rakyat", "Kelas Kode Pro", "Arsip Pindaian"]
+    assert _names(out) == RANKED
 
 
 def test_ast11_search_category_is_effective_category(afs):
-    assert _names(tools.search_proposals(category="cocok")) == ["Roti Lembah", "Kelas Kode Rakyat"]
+    assert _names(tools.search_proposals(category="layak_bersyarat")) == [
+        "Roti Lembah", "Tambak Cerdas"]
     # Spelling as the manager writes it is normalised.
-    assert _names(tools.search_proposals(category="Sangat cocok")) == ["Kopi Teras Senja"]
-    assert _names(tools.search_proposals(category="tidak-cocok")) == ["Tambak Cerdas"]
-    row = tools.search_proposals(category="cocok")["proposal"][0]
-    assert row["kategori"] == "Cocok" and row["kategoriAsliAI"] == "Tidak cocok"
+    assert _names(tools.search_proposals(category="Sangat layak")) == ["Kopi Teras Senja"]
+    assert _names(tools.search_proposals(category="risiko-tinggi")) == ["Kelas Kode Pro"]
+    assert tools.search_proposals(category="tidak_layak")["totalCocok"] == 0
+    row = tools.search_proposals(category="layak_bersyarat")["proposal"][0]
+    assert row["grade"] == "Layak bersyarat" and row["gradeAsliAI"] == "Perlu penyesuaian"
+    assert row["aksi"] == "Investasi dengan syarat"
 
 
 def test_ast11_search_unknown_category_or_status_is_an_error(afs):
     assert "tidak dikenal" in tools.search_proposals(category="bagus")["error"]
+    # Old-scale words are not grades any more, and "layak" alone is none either.
+    assert "tidak dikenal" in tools.search_proposals(category="cocok")["error"]
+    assert "tidak dikenal" in tools.search_proposals(category="layak")["error"]
     assert "tidak dikenal" in tools.search_proposals(status="selesai")["error"]
 
 
@@ -120,22 +134,25 @@ def test_ast11_search_responded_status_min_score(afs):
     assert tools.search_proposals(responded=False)["totalCocok"] == 5
     assert _names(tools.search_proposals(status="perlu_dicek_manual")) == ["Arsip Pindaian"]
     # An unscored proposal never passes a score floor.
-    assert _names(tools.search_proposals(min_score=76)) == [
-        "Kopi Teras Senja", "Tambak Cerdas", "Roti Lembah"]
+    assert _names(tools.search_proposals(min_score=71)) == [
+        "Kopi Teras Senja", "Tambak Cerdas", "Kelas Kode Rakyat"]
 
 
-def test_ast11_search_quality_outside_focus_follows_effective_category(afs):
-    assert _names(tools.search_proposals(quality_outside_focus=True)) == ["Tambak Cerdas"]
-    out = tools.search_proposals(quality_outside_focus=False)
-    assert "Roti Lembah" in _names(out) and out["totalCocok"] == 5
+def test_ast11_search_outside_focus_follows_fit(afs):
+    assert _names(tools.search_proposals(outside_focus=True)) == [
+        "Tambak Cerdas", "Kelas Kode Rakyat"]
+    out = tools.search_proposals(outside_focus=False)
+    assert _names(out) == ["Kopi Teras Senja", "Roti Lembah", "Kelas Kode Pro", "Arsip Pindaian"]
     rows = {r["nama"]: r for r in tools.search_proposals()["proposal"]}
-    assert rows["Tambak Cerdas"]["berkualitasDiLuarFokus"] is True
-    assert "berkualitasDiLuarFokus" not in rows["Roti Lembah"]
+    assert rows["Tambak Cerdas"]["diLuarFokus"] is True
+    assert rows["Tambak Cerdas"]["grade"] == "Layak bersyarat"  # the grade stays
+    assert "diLuarFokus" not in rows["Roti Lembah"]
+    assert "diLuarFokus" not in rows["Kelas Kode Pro"]  # no fit stored
 
 
 def test_ast11_search_limit_clamped(afs, monkeypatch):
     # The cap is 50 so a list answer ("sebutkan semua yang minta di bawah Rp3 M") fits one call.
-    many = [{"id": f"m{i}", "name": f"M{i}", "status": "dinilai", "effectiveCategory": "cocok",
+    many = [{"id": f"m{i}", "name": f"M{i}", "status": "dinilai", "effectiveCategory": "layak_bersyarat",
              "assessment": {"score": float(i)}} for i in range(60)]
     monkeypatch.setattr(tools.store, "list_proposals", lambda: many)
     out = tools.search_proposals(limit=100)
@@ -146,7 +163,7 @@ def test_ast11_search_limit_clamped(afs, monkeypatch):
 
 
 def test_ast11_summary_trims_one_liner(afs):
-    row = tools.search_proposals(category="sangat_cocok")["proposal"][0]
+    row = tools.search_proposals(category="sangat_layak")["proposal"][0]
     assert len(row["ringkas"]) == 140 and row["ringkas"].endswith("…")
     assert row["tanggapan"] == "belum ditanggapi"
 
@@ -177,10 +194,10 @@ def test_ast11_search_funding_below_and_above(funded):
 
 
 def test_ast11_funding_combines_with_other_filters_and_unknown_is_counted_after_them(funded):
-    out = tools.search_proposals(category="cocok", max_funding_idr=5_000_000_000)
-    # Roti Lembah (Cocok, no amount) is the unknown one; Kelas Kode Rakyat asks Rp3 M
-    assert _names(out) == ["Kelas Kode Rakyat"] and out["danaTidakDisebut"] == 1
-    assert tools.search_proposals(category="sangat_cocok", max_funding_idr=1)["danaTidakDisebut"] == 0
+    out = tools.search_proposals(category="layak_bersyarat", max_funding_idr=20_000_000_000)
+    # Roti Lembah (Layak bersyarat, no amount) is the unknown one; Tambak Cerdas asks Rp12 M
+    assert _names(out) == ["Tambak Cerdas"] and out["danaTidakDisebut"] == 1
+    assert tools.search_proposals(category="sangat_layak", max_funding_idr=1)["danaTidakDisebut"] == 0
 
 
 def test_ast11_no_funding_filter_no_unknown_field(funded):
@@ -191,7 +208,7 @@ def test_ast11_no_funding_filter_no_unknown_field(funded):
 def test_ast11_count_by_funding(funded):
     out = tools.count_proposals(group_by="category", max_funding_idr=2_999_999_999)
     assert out["total"] == 2 and out["danaTidakDisebut"] == 1
-    assert out["jumlah"] == {"Sangat cocok": 1, "Kurang cocok": 1}
+    assert out["jumlah"] == {"Sangat layak": 1, "Risiko tinggi": 1}
     above = tools.count_proposals(min_funding_idr=10_000_000_001, responded=False)
     assert above["total"] == 1 and above["danaTidakDisebut"] == 1
 
@@ -205,13 +222,13 @@ def test_ast11_overview_rows_carry_funding(funded):
 # ---------- AST-11: count_proposals ----------
 
 @pytest.mark.parametrize(("group_by", "expected"), [
-    ("category", {"Cocok": 2, "Sangat cocok": 1, "Kurang cocok": 1, "Tidak cocok": 1,
-                  "tanpa kategori (belum/tidak dinilai)": 1}),
+    ("category", {"Layak bersyarat": 2, "Sangat layak": 1, "Perlu penyesuaian": 1,
+                  "Risiko tinggi": 1, "tanpa grade (belum/tidak dinilai)": 1}),
     ("sector", {"f&b": 2, "edtech": 2, "agritech": 1, "tidak disebut": 1}),
     ("stage", {"seed": 3, "pre-seed": 1, "series a": 1, "tidak disebut": 1}),
     ("status", {"Dinilai": 5, "Perlu dicek manual": 1}),
     ("response", {"belum ditanggapi": 5, "undang": 1}),
-    ("outside_focus", {"lainnya": 5, "berkualitas di luar fokus": 1}),
+    ("outside_focus", {"sesuai fokus": 4, "di luar fokus": 2}),
 ])
 def test_ast11_count_group_by(afs, group_by, expected):
     out = tools.count_proposals(group_by=group_by)
@@ -221,9 +238,10 @@ def test_ast11_count_group_by(afs, group_by, expected):
 
 def test_ast11_count_filters_and_errors(afs):
     out = tools.count_proposals(group_by="category", responded=False)
-    assert out["total"] == 5 and out["jumlah"]["Cocok"] == 1
-    assert tools.count_proposals(group_by="sector", category="cocok")["jumlah"] == {
-        "f&b": 1, "edtech": 1}
+    assert out["total"] == 5 and out["jumlah"]["Layak bersyarat"] == 2
+    assert "Perlu penyesuaian" not in out["jumlah"]  # Kelas Kode Rakyat is responded
+    assert tools.count_proposals(group_by="sector", category="Layak bersyarat")["jumlah"] == {
+        "f&b": 1, "agritech": 1}
     assert "group_by" in tools.count_proposals(group_by="founder")["error"]
     assert "tidak dikenal" in tools.count_proposals(category="mantap")["error"]
 
@@ -262,18 +280,20 @@ def test_ast12_detail_by_id_name_and_unique_prefix(afs):
     assert tools.get_proposal_detail("kopi teras senja")["id"] == "p1"
     assert tools.get_proposal_detail("Tambak")["id"] == "p4"
     crit = by_id["skorDetail"]["kriteria"]
-    assert crit["Tim"]["nilai"] == 5 and len(crit["Tim"]["alasan"]) == tools.TEXT_MAX
-    assert len(crit["Tim"]["kutipan"]) == 3 and crit["Tim"]["kutipan"][0]["hal"] == 2
-    assert len(crit["Tim"]["kutipan"][0]["kutipan"]) == tools.QUOTE_MAX
-    assert crit["Traksi"]["tidakDisebut"] is True
+    a, b = "A. Tim manajemen", "B. Kinerja bisnis saat ini"
+    assert crit[a]["nilai"] == 5 and len(crit[a]["alasan"]) == tools.TEXT_MAX
+    assert len(crit[a]["kutipan"]) == 3 and crit[a]["kutipan"][0]["hal"] == 2
+    assert len(crit[a]["kutipan"][0]["kutipan"]) == tools.QUOTE_MAX
+    assert crit[b]["tidakDisebut"] is True
+    assert by_id["grade"] == "Sangat layak" and by_id["aksi"] == "Lanjutkan investasi"
     assert by_id["cekKecocokan"]["lulus"] is True
     assert by_id["masuk"] == "2026-10-20 10:00 WIB"
 
 
 def test_ast12_detail_correction_and_response(afs):
     roti = tools.get_proposal_detail("Roti Lembah")
-    assert roti["kategori"] == "Cocok" and roti["kategoriAsliAI"] == "Tidak cocok"
-    assert roti["koreksi"] == {"ke": "Cocok", "alasan": "fokus baru",
+    assert roti["grade"] == "Layak bersyarat" and roti["gradeAsliAI"] == "Perlu penyesuaian"
+    assert roti["koreksi"] == {"ke": "Layak bersyarat", "alasan": "fokus baru",
                                "pada": "2026-10-21 08:00 WIB", "via": "wa"}
     assert tools.get_proposal_detail("Kelas Kode Rakyat")["tanggapanDetail"]["kind"] == "undang"
     assert "skorDetail" not in tools.get_proposal_detail("Arsip Pindaian")
@@ -289,7 +309,7 @@ def test_ast12_detail_unknown_and_ambiguous(afs):
 
 
 def test_ast12_exact_name_beats_longer_prefix_match(afs):
-    afs.document("proposals/p7").set(dict(_p("p7", "Kelas Kode", score=10, eff="cocok")[1]))
+    afs.document("proposals/p7").set(dict(_p("p7", "Kelas Kode", score=10, eff="tidak_layak")[1]))
     assert tools.get_proposal_detail("kelas kode")["id"] == "p7"
 
 
@@ -301,7 +321,7 @@ def test_ast11_compare(afs):
     assert [r["nama"] for r in out["perbandingan"]] == ["Kopi Teras Senja", "Kelas Kode Rakyat"]
     assert out["perbandingan"][1]["gagalCek"] == ["stage"]
     assert out["perbandingan"][1]["lulusCekKecocokan"] is False
-    assert out["perbandingan"][0]["nilaiKriteria"]["Tim"]["hal"] == [2, 2, 2]
+    assert out["perbandingan"][0]["nilaiKriteria"]["A. Tim manajemen"]["hal"] == [2, 2, 2]
     errs = [e["error"] for e in out["tidakDitemukan"]]
     assert any("tidak ditemukan" in e for e in errs) and any("beberapa" in e for e in errs)
     # Only the first four names are compared.
@@ -340,7 +360,8 @@ def test_ast11_trends(afs, monkeypatch):
     for i, n in enumerate([3, 1, 0]):  # today, yesterday, 2 days ago
         afs.document(f"dailyStats/{(today - timedelta(days=i)).isoformat()}").set({
             "proposalsIn": n, "perluDicekManual": 1 if i == 0 else 0,
-            "byCategory": {"cocok": n}, "bySector": {"Edtech": n}})
+            "byCategory": {"layak_bersyarat": n}, "bySector": {"Edtech": n}})
+    # A day counted before the new scale keeps its old key; it is passed through, not dropped.
     afs.document("dailyStats/2026-10-18").set({"proposalsIn": 2, "byCategory": {"cocok": 2},
                                                "bySector": {"Edtech": 2}})
     out = tools.get_trends(days=3)
@@ -350,7 +371,8 @@ def test_ast11_trends(afs, monkeypatch):
                              {"tanggal": "2026-10-20", "masuk": 1},
                              {"tanggal": "2026-10-21", "masuk": 3}]
     assert out["sekarang"] == {"proposalMasuk": 4, "perluDicekManual": 1,
-                               "perKategori": {"Cocok": 4}}
+                               "perGrade": {"Layak bersyarat": 4}}
+    assert out["sebelumnya"]["perGrade"] == {"cocok": 2}
     assert out["perubahanMasukPersen"] == 100.0
     assert out["sektorTeratas"]["Edtech"] == {"sekarang": 4, "sebelumnya": 2, "perubahanPersen": 100.0}
     # No previous period: the change is unknown, not infinite.
@@ -372,12 +394,18 @@ def test_ast11_trends_days_clamped(afs, monkeypatch):
 def test_ast11_rules(afs):
     assert tools.get_rules() == {"error": "aturan penilaian tidak tersedia di data AISA"}
     afs.document("settings/rules").set({
-        "version": 3, "weights": {"tim": 30, "pasar": 20}, "thresholds": {"sangat_cocok": 75},
-        "fit": {"sectors": ["Edtech"]}, "anchors": {"tim": {"1": "t" * 200, "5": "baik"}},
+        "version": 3, "weights": {"manajemen": 0.25, "kinerja": 0.2},
+        "thresholds": {"sangatLayak": 85, "layakBersyarat": 75, "perluPenyesuaian": 65,
+                       "risikoTinggi": 50},
+        "fit": {"sectors": ["Edtech"]}, "anchors": {"manajemen": {"1": "t" * 200, "5": "baik"}},
         "reason": "uji", "changedAt": datetime(2026, 10, 21, 2, 0, tzinfo=UTC)})
     out = tools.get_rules()
-    assert out["versi"] == 3 and out["bobot"] == {"Tim": 30, "Pasar & masalah": 20}
-    assert len(out["patokanNilai"]["Tim"]["1"]) == 120
+    assert out["versi"] == 3 and out["bobot"] == {"A. Tim manajemen": 0.25,
+                                                  "B. Kinerja bisnis saat ini": 0.2}
+    assert out["skorMinimalGrade"] == {"Sangat layak": 85, "Layak bersyarat": 75,
+                                       "Perlu penyesuaian": 65, "Risiko tinggi": 50,
+                                       "Tidak layak": "di bawah 50"}
+    assert len(out["patokanNilai"]["A. Tim manajemen"]["1"]) == 120
     assert out["diubahPada"] == "2026-10-21 09:00 WIB"
 
 
@@ -386,27 +414,46 @@ def test_ast11_rules(afs):
 def test_ast11_overview_counts_and_marks(afs):
     out = tools.get_overview()
     assert out["total"] == 6 and out["belumDitanggapi"] == 5 and out["ditampilkan"] == 6
-    assert out["perKategori"]["tanpa kategori (belum/tidak dinilai)"] == 1
+    assert out["perGrade"] == {"Sangat layak": 1, "Layak bersyarat": 2, "Perlu penyesuaian": 1,
+                               "Risiko tinggi": 1, "tanpa grade (belum/tidak dinilai)": 1}
+    assert out["diLuarFokus"] == 2 and "fokus investasi" in out["artiDiLuarFokus"]
+    assert [r["nama"] for r in out["proposal"]] == RANKED
     rows = {r["nama"]: r for r in out["proposal"]}
-    assert rows["Tambak Cerdas"].get("luarFokus") is True
-    assert "luarFokus" not in rows["Roti Lembah"]
+    assert rows["Tambak Cerdas"].get("diLuarFokus") is True
+    assert rows["Tambak Cerdas"]["grade"] == "Layak bersyarat"
+    assert rows["Kopi Teras Senja"]["aksi"] == "Lanjutkan investasi"
+    assert "diLuarFokus" not in rows["Roti Lembah"]
     assert out["proposal"][-1]["nama"] == "Arsip Pindaian" and "skor" not in out["proposal"][-1]
     assert rows["Kelas Kode Rakyat"]["tanggapan"] == "undang"
 
 
-# ---------- AST-11: "Berkualitas, di luar fokus" matches the dashboard rule ----------
+# ---------- "Di luar fokus" is a failed fit, nothing else ----------
 
-@pytest.mark.parametrize(("flag", "eff", "shows"), [
-    (True, "tidak_cocok", True),
-    (True, "cocok", False),          # corrected away from Tidak cocok
-    (True, "sangat_cocok", False),
-    (True, None, False),
-    (False, "tidak_cocok", False),
-    (None, "tidak_cocok", False),
+@pytest.mark.parametrize(("fit", "shows"), [
+    ({"passed": False}, True),
+    ({"passed": True}, False),
+    ({"passed": None}, False),
+    ({}, False),
+    (None, False),
 ])
-def test_ast11_quality_outside_focus_matches_shows_quality_outside_focus(flag, eff, shows):
-    # Same truth table as showsQualityOutsideFocus in features/aisa/aisa.schema.ts.
-    assert tools._quality_outside_focus({"qualityOutsideFocus": flag, "effectiveCategory": eff}) is shows
+def test_ast11_outside_focus_is_failed_fit(fit, shows):
+    assert tools._outside_focus({"fit": fit, "effectiveCategory": "sangat_layak"}) is shows
+
+
+# ---------- the deployed package's labels match the API's ----------
+
+def test_grade_labels_and_actions_match_models():
+    from aisa.models import CATEGORY_ACTION, CATEGORY_LABEL
+
+    assert tools.CATEGORY_LABEL == {c.value: v for c, v in CATEGORY_LABEL.items()}
+    assert tools.CATEGORY_ACTION == {c.value: v for c, v in CATEGORY_ACTION.items()}
+    assert list(tools.CATEGORY_LABEL) == [c.value for c in CATEGORY_LABEL]  # best first
+
+
+@pytest.mark.parametrize("word", ["Layak bersyarat", "layak_bersyarat", "LAYAK-BERSYARAT",
+                                  " layak bersyarat "])
+def test_norm_category_accepts_labels(word):
+    assert tools._norm_category(word) == "layak_bersyarat"
 
 
 # ---------- a failed read is a tool result, not an aborted turn ----------

@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta, timezone
 
 from aisa.digest import (
-    DigestData, Item, has_advice, names_present, numbers_ok, sector_candidates, template, template_insight,
+    DigestData, Item, focus_marks_ok, grade_headings_ok, has_advice, names_present, numbers_ok,
+    sector_candidates, template, template_insight,
 )
 from aisa.gowa import signature_valid, split_message
 from aisa.models import Category
@@ -12,11 +13,10 @@ NOW = datetime(2026, 10, 21, 2, 0, tzinfo=timezone.utc)  # 09.00 WIB, a Wednesda
 
 def data():
     g = {c: [] for c in Category}
-    g[Category.sangat_cocok] = [Item("a", "Tani Maju", 93, "agritech", 5_000_000_000, "Marketplace panen.")]
-    g[Category.cocok] = [Item("b", "SawahKu", 66.5)]
-    g[Category.tidak_cocok] = [Item("c", "Kopi Rakyat", 79, "f&b")]
+    g[Category.sangat_layak] = [Item("a", "Tani Maju", 93, "agritech", 5_000_000_000, "Marketplace panen.")]
+    g[Category.layak_bersyarat] = [Item("b", "SawahKu", 76.5)]
+    g[Category.perlu_penyesuaian] = [Item("c", "Kopi Rakyat", 69, "f&b", out_of_focus=True)]
     return DigestData(slot="09.00", salutation="Ibu", window_start=NOW - timedelta(hours=16), groups=g,
-                      quality_outside_focus=[g[Category.tidak_cocok][0]],
                       manual=[Item("d", "Bengkel Online", 0)], baru_masuk=4,
                       insight="proposal agritech naik 50% dibanding minggu lalu (2 → 3).", at=NOW)
 
@@ -27,10 +27,37 @@ def test_template_contents_and_counts():
     assert t.startswith("Selamat pagi, Ibu. Sejak ringkasan Selasa pukul 17.00 masuk 4 proposal baru.")
     assert "Ada 4 proposal yang belum Ibu tanggapi." in t
     assert "1. Tani Maju (agritech, Rp5 M) · 93." in t
-    assert "*Cocok (1)*: SawahKu (66,5)" in t
-    assert "*Berkualitas, di luar fokus (1)*: Kopi Rakyat (79) · f&b" in t
+    assert "*Layak bersyarat (1)*: SawahKu (76,5)\n" in t
+    assert "*Perlu penyesuaian (1)*: Kopi Rakyat (69) (di luar fokus)" in t
+    assert "*Risiko tinggi (0)*" in t and "*Tidak layak (0)*" in t
+    assert "1 di antaranya di luar fokus (sektor, tahap, atau dana): prioritas rendah." in t
     assert "*Perlu dicek manual (1)*: Bengkel Online" in t
-    assert d.counts().belumDitanggapi == 4 and d.counts().kualitasLuarFokus == 1
+    # grade headings in order, best first
+    heads = ["*Sangat layak (", "*Layak bersyarat (", "*Perlu penyesuaian (", "*Risiko tinggi (",
+             "*Tidak layak ("]
+    assert [t.index(h) for h in heads] == sorted(t.index(h) for h in heads)
+    c = d.counts()
+    assert c.belumDitanggapi == 4 and c.luarFokus == 1
+    assert (c.sangat_layak, c.layak_bersyarat, c.perlu_penyesuaian, c.risiko_tinggi, c.tidak_layak) == (1, 1, 1, 0, 0)
+
+
+def test_out_of_focus_marks_every_named_grade_and_counts_unnamed_ones():
+    d = data()
+    d.groups[Category.sangat_layak][0].out_of_focus = True
+    d.groups[Category.tidak_layak] = [Item("e", "Warung Kita", 20, out_of_focus=True)]
+    t = template(d)
+    assert "1. Tani Maju (agritech, Rp5 M) · 93 (di luar fokus). Marketplace panen." in t
+    assert "Warung Kita" not in t  # the lowest grades are counted, not named
+    assert "*Tidak layak (1)*" in t
+    assert d.counts().luarFokus == 3
+    assert "3 di antaranya di luar fokus" in t
+
+
+def test_no_out_of_focus_line_when_none():
+    d = data()
+    d.groups[Category.perlu_penyesuaian][0].out_of_focus = False
+    t = template(d)
+    assert "di luar fokus" not in t and d.counts().luarFokus == 0
 
 
 def test_number_check():
@@ -42,6 +69,15 @@ def test_number_check():
     assert not numbers_ok(t + "\nNaik 999%.", t)
     assert names_present(t, d)
     assert not names_present(t.replace("SawahKu", "Sawah"), d)
+    assert not names_present(t.replace("Kopi Rakyat", "Kopi"), d)
+
+
+def test_focus_marks_and_grade_headings_check():
+    d = data()
+    t = template(d)
+    assert focus_marks_ok(t, d) and grade_headings_ok(t)
+    assert not focus_marks_ok(t.replace(" (di luar fokus)", ""), d)
+    assert not grade_headings_ok(t.replace("*Risiko tinggi (0)*\n", ""))
 
 
 def test_advice_detection():

@@ -36,8 +36,8 @@ def model(env):
 @pytest.fixture
 def world(fs, rules, sent, env):
     env.setattr(db, "now", lambda: T0)
-    seed_proposal(fs, "p1", "Tani Maju", category="sangat_cocok", score=85.0)
-    seed_proposal(fs, "p2", "Kopi Rakyat", category="cocok", score=70.0, sector="f&b")
+    seed_proposal(fs, "p1", "Tani Maju", category="sangat_layak", score=85.0)
+    seed_proposal(fs, "p2", "Kopi Rakyat", category="layak_bersyarat", score=70.0, sector="f&b")
     return fs
 
 
@@ -53,7 +53,7 @@ def test_rks_01_good_ai_text_is_sent_and_recorded(world, model, sent):
     assert sent == [(MANAGER, r["text"])] and "Selamat pagi sekali" in r["text"]
     d = world.get(f"digests/{DIGEST_ID}")
     assert d["usedTemplate"] is False and d["gowaMessageIds"] == ["msg-1"]
-    assert d["counts"]["sangat_cocok"] == 1 and d["counts"]["cocok"] == 1 and d["counts"]["belumDitanggapi"] == 2
+    assert d["counts"]["sangat_layak"] == 1 and d["counts"]["layak_bersyarat"] == 1 and d["counts"]["belumDitanggapi"] == 2
     assert sorted(d["proposalIds"]) == ["p1", "p2"]
     assert job_of(world)["status"] == "selesai"
 
@@ -88,7 +88,7 @@ def test_rks_03_ai_text_failing_checks_falls_back_to_template(world, model, sent
 def test_rks_04_missing_insight_label_falls_back_to_template(world, model, sent):
     # three agritech proposals this week: there is an insight, so the label must stay
     for i in range(3, 6):
-        seed_proposal(world, f"p{i}", f"Agri {i}", category="kurang_cocok", score=50.0,
+        seed_proposal(world, f"p{i}", f"Agri {i}", category="risiko_tinggi", score=50.0,
                       created=T0 - timedelta(days=1))
     model.insight = "ada 3 proposal agritech minggu ini."
     model.ringkasan = lambda draft: draft.replace(digest.INSIGHT_LABEL, "Menarik:")
@@ -100,7 +100,7 @@ def test_rks_04_missing_insight_label_falls_back_to_template(world, model, sent)
 
 def test_rks_05_insight_with_invented_number_uses_code_insight(world, model, sent):
     for i in range(3, 6):
-        seed_proposal(world, f"p{i}", f"Agri {i}", category="kurang_cocok", score=50.0,
+        seed_proposal(world, f"p{i}", f"Agri {i}", category="risiko_tinggi", score=50.0,
                       created=T0 - timedelta(days=1))
     model.insight = "proposal agritech naik 300% minggu ini."
     digest.run_digest("09.00")
@@ -154,15 +154,60 @@ def test_rks_09_without_a_sector_trend_the_fallback_insight_is_sent(world, model
 
 
 def test_rks_10_fallback_insight_with_invented_number_uses_code_text(world, model, sent):
-    model.insight = "3 dari 7 proposal baru masuk Sangat cocok."
+    model.insight = "3 dari 7 proposal baru masuk Sangat layak."
     digest.run_digest("09.00")
     assert world.get(f"digests/{DIGEST_ID}")["insight"] == (
-        "2 dari 2 proposal baru masuk Sangat cocok atau Cocok.")
+        "2 dari 2 proposal baru masuk Sangat layak atau Layak bersyarat.")
 
 
 def test_rks_11_dry_run_shows_the_fallback_candidate(world, model, sent):
     r = digest.run_digest("09.00", send=False)
-    assert r["insightCandidates"] == [{"jenis": "proposalBaruCocok", "proposalBaru": 2,
-                                       "sangatCocok": 1, "cocok": 1}]
-    assert r["insight"] == "2 dari 2 proposal baru masuk Sangat cocok atau Cocok."
+    assert r["insightCandidates"] == [{"jenis": "proposalBaruLayak", "proposalBaru": 2,
+                                       "sangatLayak": 1, "layakBersyarat": 1}]
+    assert r["insight"] == "2 dari 2 proposal baru masuk Sangat layak atau Layak bersyarat."
     assert digest.INSIGHT_LABEL in r["text"] and model.calls == []
+
+
+def _fit(passed: bool) -> dict:
+    item = {"passed": passed, "reason": "x"}
+    return {"passed": passed, "checks": {"sector": item, "stage": item, "funding": item}}
+
+
+@pytest.fixture
+def focus_world(world):
+    """Three Layak bersyarat proposals: the best-scoring one is out of focus."""
+    seed_proposal(world, "p3", "Laut Biru", category="layak_bersyarat", score=82.0,
+                  fit=_fit(False))
+    seed_proposal(world, "p4", "Hutan Hijau", category="layak_bersyarat", score=76.0,
+                  fit=_fit(True))
+    world.document("proposals/p2").update({"fit": _fit(True)})
+    return world
+
+
+def test_collect_orders_in_focus_first_then_score_within_a_grade(focus_world):
+    data, _, _ = digest.collect("09.00", T0)
+    names = [it.name for it in data.groups[digest.Category.layak_bersyarat]]
+    assert names == ["Hutan Hijau", "Kopi Rakyat", "Laut Biru"]
+    assert [it.out_of_focus for it in data.groups[digest.Category.layak_bersyarat]] == [False, False, True]
+    assert data.counts().luarFokus == 1
+    t = digest.template(data)
+    assert "*Layak bersyarat (3)*: Hutan Hijau (76), Kopi Rakyat (70), Laut Biru (82) (di luar fokus)" in t
+
+
+def test_digest_records_out_of_focus_count(focus_world, model, sent):
+    digest.run_digest("09.00")
+    counts = focus_world.get(f"digests/{DIGEST_ID}")["counts"]
+    assert counts["luarFokus"] == 1 and counts["layak_bersyarat"] == 3
+
+
+@pytest.mark.parametrize("bad", [
+    lambda draft: draft.replace(" (di luar fokus)", ""),
+    lambda draft: draft.replace("*Risiko tinggi (0)*\n", ""),
+], ids=["tanda-luar-fokus-hilang", "judul-grade-hilang"])
+def test_rewrite_dropping_a_focus_mark_or_grade_heading_falls_back(focus_world, model, sent, bad):
+    model.ringkasan = bad
+    data, cands, _ = digest.collect("09.00", T0)
+    data.insight = digest.template_insight(cands)
+    r = digest.run_digest("09.00")
+    assert r["usedTemplate"] is True and r["text"] == digest.template(data)
+    assert "Laut Biru (82) (di luar fokus)" in r["text"]

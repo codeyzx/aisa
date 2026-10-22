@@ -40,34 +40,53 @@ class PProfile(BaseModel):
 
 
 class PenilaiOutput(BaseModel):
-    tim: PCriterion
-    pasar: PCriterion
-    produk: PCriterion
-    traksi: PCriterion
-    bisnis: PCriterion
+    # A–E order, the same as `Criterion`.
+    manajemen: PCriterion
+    kinerja: PCriterion
+    risiko: PCriterion
+    rencana: PCriterion
+    dampak: PCriterion
     profile: PProfile
 
 
+CRITERION_LETTER = {c: "ABCDE"[i] for i, c in enumerate(Criterion)}
+
 CRITERION_LABEL = {
-    Criterion.tim: "Tim",
-    Criterion.pasar: "Pasar & masalah",
-    Criterion.produk: "Produk & keunggulan",
-    Criterion.traksi: "Traksi",
-    Criterion.bisnis: "Model bisnis & keuangan",
+    Criterion.manajemen: "Tim manajemen",
+    Criterion.kinerja: "Kinerja bisnis saat ini",
+    Criterion.risiko: "Risiko bisnis & tren makro",
+    Criterion.rencana: "Rencana bisnis & potensi imbal hasil",
+    Criterion.dampak: "Potensi dampak",
+}
+
+# What each criterion asks about, in one line.
+CRITERION_MEANING = {
+    Criterion.manajemen: "rekam jejak, pengalaman, dan kelengkapan tim pendiri dan manajemen",
+    Criterion.kinerja: "bukti bisnis sudah berjalan: pendapatan, pengguna, pertumbuhan, "
+                       "pelanggan yang disebut namanya",
+    Criterion.risiko: "seberapa terkendali risiko bisnisnya (persaingan, regulasi, "
+                      "ketergantungan) dan apakah tren makro/pasar mendukung",
+    Criterion.rencana: "rencana bisnis dan keuangan yang masuk akal: penggunaan dana, proyeksi "
+                       "berdasar data, unit ekonomi, potensi imbal hasil bagi investor",
+    Criterion.dampak: "dampak sosial atau lingkungan yang terukur (mis. lapangan kerja, "
+                      "inklusi, emisi)",
 }
 
 # What counts as hard (verifiable) evidence for each criterion.
 HARD_EVIDENCE = {
-    Criterion.tim: "rekam jejak spesifik founder: nama perusahaan/lembaga sebelumnya, jabatan, "
-                   "lama, dan capaian berangka yang relevan dengan masalah",
-    Criterion.pasar: "masalah dan ukuran pasar didukung data bersumber dan berperiode (statistik "
-                     "resmi yang disebut sumbernya, survei dengan jumlah responden dan waktu)",
-    Criterion.produk: "produk sudah dipakai dengan data kinerja/hasil terukur, atau keunggulan "
-                      "dibuktikan angka pembanding, paten, atau hasil uji yang disebut",
-    Criterion.traksi: "angka pengguna/pendapatan/pertumbuhan/retensi dengan tanggal atau periode, "
-                      "dan pelanggan, mitra, atau pilot yang disebut namanya",
-    Criterion.bisnis: "pendapatan aktual, margin, dan unit ekonomi (mis. CAC, LTV) berperiode; "
-                      "proyeksi saja tidak cukup",
+    Criterion.manajemen: "rekam jejak spesifik pendiri dan manajemen: nama perusahaan/lembaga "
+                         "sebelumnya, jabatan, lama, capaian berangka yang relevan, dan peran "
+                         "kunci (mis. teknologi, keuangan, operasional) yang terisi",
+    Criterion.kinerja: "angka pendapatan/pengguna/pertumbuhan/retensi dengan tanggal atau "
+                       "periode, dan pelanggan, mitra, atau pilot yang disebut namanya",
+    Criterion.risiko: "risiko utama (persaingan, regulasi, ketergantungan pada pemasok, mitra, "
+                      "atau platform) disebut beserta mitigasi yang konkret, dan tren makro atau "
+                      "pasar didukung data bersumber dan berperiode",
+    Criterion.rencana: "rincian penggunaan dana, proyeksi keuangan yang berpijak pada data "
+                       "aktual, unit ekonomi (mis. margin, CAC, LTV), dan perkiraan imbal hasil "
+                       "atau jalan keluar bagi investor; proyeksi tanpa dasar data tidak cukup",
+    Criterion.dampak: "dampak sosial atau lingkungan dengan angka terukur (mis. jumlah lapangan "
+                      "kerja, penerima manfaat, emisi yang dikurangi) dan cara mengukurnya",
 }
 
 
@@ -80,8 +99,12 @@ def system_prompt(rules: Rules) -> str:
     ]
     for c in Criterion:
         a = rules.anchors[c]
-        lines.append(f"- {c.value} ({CRITERION_LABEL[c]}): 1 = {a.one}; 3 = {a.three}; 5 = {a.five}")
+        lines.append(f"- {c.value} ({CRITERION_LETTER[c]}. {CRITERION_LABEL[c]}: "
+                     f"{CRITERION_MEANING[c]}): 1 = {a.one}; 3 = {a.three}; 5 = {a.five}")
     lines += [
+        "- Arah nilai risiko: nilai TINGGI berarti risiko RENDAH. 5 = risiko utama disebut dan "
+        "dimitigasi, dan tren makro/pasar mendukung dengan data; 1 = ada risiko besar yang "
+        "tidak dibahas, informasinya bertentangan, atau deck tidak membahas risiko sama sekali.",
         "Skala yang wajib dipakai (bilangan bulat 1–5):",
         "- 5 = bukti keras yang dapat diverifikasi dan menutup inti kriteria, dari beberapa bukti "
         "yang saling menguatkan tanpa celah penting. Bukti keras: angka dengan periode atau "
@@ -111,7 +134,8 @@ def system_prompt(rules: Rules) -> str:
         "kata dari halaman itu (5–30 kata, tanpa parafrase, tanpa menggabungkan halaman). Kutipan "
         "yang tidak ditemukan di halamannya akan membuat nilai diturunkan.",
         "- Bila informasi untuk kriteria tidak ada di deck: value = 1, notMentioned = true, "
-        "reason = \"tidak disebut\", citations = [].",
+        "reason = \"tidak disebut\", citations = []. Ini juga berlaku untuk dampak: deck yang "
+        "tidak menyebut dampak sosial atau lingkungan sama sekali bernilai 1, tidak disebut.",
         "- Profil: startupName; sector satu kata huruf kecil (pakai persis salah satu dari "
         f"{', '.join(rules.fit.sectors)} bila sesuai, selain itu sektor sebenarnya, mis. f&b, "
         "logistik); stage salah satu dari pre-seed, seed, seri-a, seri-b, seri-c bila disebut; "

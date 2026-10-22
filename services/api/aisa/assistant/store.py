@@ -29,7 +29,6 @@ PROPOSAL_FIELDS = [
     "assessment",
     "fit",
     "category",
-    "qualityOutsideFocus",
     "correction",
     "effectiveCategory",
     "response",

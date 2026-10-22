@@ -6,15 +6,14 @@ import difflib
 import re
 from dataclasses import dataclass
 
-from .models import Category, ResponseKind
+from .models import CATEGORY_LABEL, Category, ResponseKind
 
-CATEGORY_WORDS: dict[str, Category] = {
-    "sangat cocok": Category.sangat_cocok,
-    "cocok": Category.cocok,
-    "kurang cocok": Category.kurang_cocok,
-    "tidak cocok": Category.tidak_cocok,
-}
-_CAT = r"(sangat\s+cocok|kurang\s+cocok|tidak\s+cocok|cocok)"
+# "sangat layak", "layak bersyarat", …: each grade's label, lowercased. "layak" alone is not
+# a grade word.
+CATEGORY_WORDS: dict[str, Category] = {label.lower(): c for c, label in CATEGORY_LABEL.items()}
+# Longest phrase first, so a shorter word can never win over a longer one it is part of.
+_CAT = "(" + "|".join(r"\s+".join(map(re.escape, w.split()))
+                      for w in sorted(CATEGORY_WORDS, key=len, reverse=True)) + ")"
 _KIND = r"(undang|pantau|arsipkan)"
 
 

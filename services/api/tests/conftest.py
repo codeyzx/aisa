@@ -109,7 +109,10 @@ class DocRef:
             cur = doc
             for p in parts[:-1]:
                 cur = cur.setdefault(p, {})
-            cur[parts[-1]] = _transform(cur.get(parts[-1]), v)
+            if v is gfs.DELETE_FIELD:
+                cur.pop(parts[-1], None)
+            else:
+                cur[parts[-1]] = _transform(cur.get(parts[-1]), v)
 
     def delete(self) -> None:
         self.fs.docs.pop(self.path, None)
@@ -295,7 +298,7 @@ def criteria(value: int = 4) -> dict:
             for c in Criterion}
 
 
-def seed_proposal(fs: FakeFirestore, pid: str, name: str, *, category: str | None = "cocok",
+def seed_proposal(fs: FakeFirestore, pid: str, name: str, *, category: str | None = "perlu_penyesuaian",
                   score: float = 70.0, status: str = ProposalStatus.dinilai.value,
                   sector: str | None = "agritech", created: datetime = T0,
                   responded: bool = False, **extra) -> dict:

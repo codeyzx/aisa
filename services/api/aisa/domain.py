@@ -90,17 +90,17 @@ def respond_bulk(category: Category, kind: ResponseKind, via: Via,
 def correct(pid: str, category: Category, reason: str, via: Via) -> Proposal:
     reason = (reason or "").strip()
     if not reason:
-        raise DomainError("koreksi kategori wajib disertai alasan")
+        raise DomainError("koreksi grade wajib disertai alasan")
     p = get_proposal(pid)
     if p.status != ProposalStatus.dinilai:
-        raise DomainError("hanya proposal yang sudah dinilai yang punya kategori", 409)
+        raise DomainError("hanya proposal yang sudah dinilai yang punya grade", 409)
     t = db.now()
     c = Correction(category=category, reason=reason, at=t, via=via)
     _proposals().document(pid).update({"correction": to_doc(c), "effectiveCategory": category.value,
                                        "updatedAt": t})
     write_history(via=via, action="koreksi", proposalId=pid, proposalName=p.name,
                   before=p.effectiveCategory, after=category.value, reason=reason,
-                  detail=f"Kategori {p.name} dipindahkan ke {CATEGORY_LABEL[category]}")
+                  detail=f"Grade {p.name} dipindahkan ke {CATEGORY_LABEL[category]}")
     return get_proposal(pid)
 
 

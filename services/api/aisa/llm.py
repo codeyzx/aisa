@@ -33,15 +33,27 @@ def generate(
     system: str,
     prompt: str,
     schema: Any = None,
-    temperature: float = 0.2,
+    temperature: float | None = 0.2,
     seed: int | None = None,
+    pdf: bytes | None = None,
+    thinking_level: types.ThinkingLevel | None = None,
 ) -> LlmResult:
+    """`temperature=None` keeps the model's default. A `pdf` is sent before the prompt, as
+    the model reads a single document best when it comes first."""
     cfg = types.GenerateContentConfig(system_instruction=system, temperature=temperature, seed=seed)
     if schema is not None:
         cfg.response_mime_type = "application/json"
         cfg.response_schema = schema
+    if thinking_level is not None:
+        cfg.thinking_config = types.ThinkingConfig(thinking_level=thinking_level)
+    contents: Any = prompt
+    if pdf is not None:
+        # Medium is where document OCR quality saturates; higher only spends more tokens.
+        contents = [types.Part.from_bytes(data=pdf, mime_type="application/pdf",
+                                          media_resolution=types.PartMediaResolutionLevel.MEDIA_RESOLUTION_MEDIUM),
+                    prompt]
     t0 = time.monotonic()
-    r = client().models.generate_content(model=model, contents=prompt, config=cfg)
+    r = client().models.generate_content(model=model, contents=contents, config=cfg)
     u = r.usage_metadata
     tin = (u.prompt_token_count or 0) if u else 0
     # Thinking tokens are billed as output, so they count as "token keluar".

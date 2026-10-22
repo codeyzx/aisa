@@ -132,8 +132,15 @@ reply lists candidates and nothing changes. Any other message goes to the Asiste
 - Missing `settings/rules` makes intake and digest fail loudly; there is no runtime default.
 - Intake is idempotent by `proposalId`; a proposal is only assessed while `antre` or
   `dihentikan`. An infrastructure failure puts it back to `antre` (with `statusReason`).
-- Too little text (average < `minCharsPerPage`) or two failed Penilai validations →
-  `perlu_dicek_manual`, no score.
+- Too little text (average < `minCharsPerPage`) means the deck is image-only (a scan, or
+  slides exported as pictures). Then one model step "Baca teks dari gambar" sends the PDF
+  itself to the Penilai model (`aisa/ocr.py`: PDF before the prompt, media resolution
+  medium, thinking low, default temperature) and asks it to copy each page's visible text;
+  that transcript replaces `proposalTexts/{id}` and the Penilai rates from it as usual, its
+  quotes verified against the transcript. A deck over 15 MB or 50 pages, a failed or
+  invalid transcription, or a transcript that is still too little text →
+  `perlu_dicek_manual`, no score, with the reason in `statusReason`.
+- Two failed Penilai validations → `perlu_dicek_manual`, no score.
 - STOP is checked between intake steps (→ `dihentikan`) and before new intake (→ stays
   `antre`). While paused the digest is sent from the template, without model calls, and a
   WhatsApp message that is not a command gets "AISA sedang dijeda (STOP). Kirim LANJUT
@@ -156,7 +163,7 @@ reply lists candidates and nothing changes. Any other message goes to the Asiste
   `get_proposal_detail` for at most 2 named proposals unless asked for more, and to stay
   around 4 tool calls per answer. This is an instruction to the model, not a limit enforced
   by code.
-- A job that ends without any model call (e.g. a deck with too little text) has
+- A job that ends without any model call (e.g. a deck too large to read as images) has
   `model: null`.
 - Every Asisten function call is its own step (`tool` = function name, `read` = its
   arguments), followed by the answer step; the steps' tokens sum to the job total.

@@ -14,7 +14,7 @@ from google.api_core.exceptions import AlreadyExists
 from google.cloud import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
 
-from . import db, storage
+from . import db, ocr, storage
 from .digest import fmt_score
 from .jobs import JobLog, write_history
 from .models import (
@@ -146,7 +146,31 @@ def run_intake(pid: str, pdf: bytes | None = None) -> ProposalStatus | None:
         with job.code_step("Cek jumlah teks", "kode", read=f"proposalTexts/{pid}"):
             little = too_little_text(pages, rules.minCharsPerPage)
         if little:
-            return finish_manual(f"teks terlalu sedikit ({chars} karakter di {len(pages)} halaman)")
+            reason = f"teks terlalu sedikit ({chars} karakter di {len(pages)} halaman)"
+            if not ocr.fits(pdf, len(pages)):
+                return finish_manual(f"{reason}; terlalu besar untuk dibaca sebagai gambar "
+                                     f"(maks. {ocr.MAX_BYTES // (1024 * 1024)} MB dan "
+                                     f"{ocr.MAX_PAGES} halaman)")
+            check_paused()
+            action = "Baca teks dari gambar"
+            job.begin(action, "gemini.generate_content", StepActor.model)
+            read = ocr.transcribe(pdf, len(pages), rules.models.penilai)
+            if read.ok:
+                pages = read.pages
+                chars = sum(len(x) for x in pages)
+                db.client().document(f"proposalTexts/{pid}").set(
+                    to_doc(ProposalText(pages=pages, charCount=chars)))
+            job.step(action, "gemini.generate_content", StepActor.model,
+                     model=rules.models.penilai, read="pitch deck",
+                     wrote=f"proposalTexts/{pid}" if read.ok else None,
+                     tokens_in=read.tokens_in, tokens_out=read.tokens_out,
+                     duration_ms=read.duration_ms, status="ok" if read.ok else "gagal",
+                     error=read.error)
+            if not read.ok:
+                return finish_manual(f"gagal membaca deck sebagai gambar: {read.error}"[:300])
+            if too_little_text(pages, rules.minCharsPerPage):
+                return finish_manual("teks terlalu sedikit, juga setelah dibaca sebagai gambar "
+                                     f"({chars} karakter di {len(pages)} halaman)")
 
         attempt = None
         for i in range(PENILAI_ATTEMPTS):

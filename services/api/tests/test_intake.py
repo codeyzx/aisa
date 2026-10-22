@@ -6,8 +6,9 @@ from __future__ import annotations
 import pytest
 from conftest import criteria
 
-from aisa import intake
+from aisa import intake, ocr
 from aisa.models import CATEGORY_LABEL, Founder, Profile, Source, SourceKind
+from aisa.ocr import OcrOutput, OcrResult
 from aisa.penilai import Attempt
 
 PID = "upload-abc"
@@ -36,6 +37,19 @@ def penilai(env):
     return state
 
 
+@pytest.fixture(autouse=True)
+def image_read(env):
+    """Script the image read: set `.results`; `.calls` records (bytes, page count)."""
+    state = type("O", (), {"results": [], "calls": []})()
+
+    def transcribe(pdf, page_count, model):
+        state.calls.append((len(pdf), page_count))
+        return state.results.pop(0)
+
+    env.setattr(ocr, "transcribe", transcribe)
+    return state
+
+
 @pytest.fixture
 def proposal(fs, rules, env):
     def make(pages, name="Tani Maju"):
@@ -53,13 +67,15 @@ def job_of(fs):
     return p, job, steps
 
 
-def test_eks_01_too_little_text_goes_manual_without_a_model_call(proposal, penilai, rules):
+def test_eks_01_too_large_scan_goes_manual_without_a_model_call(proposal, penilai, rules, image_read):
     fs = proposal(["", "logo", ""])
-    assert intake.run_intake(PID, b"%PDF") == "perlu_dicek_manual"
-    assert penilai.calls == 0
+    big = b"%PDF" + b"0" * ocr.MAX_BYTES
+    assert intake.run_intake(PID, big) == "perlu_dicek_manual"
+    assert penilai.calls == 0 and image_read.calls == []
     p, job, steps = job_of(fs)
     assert p["status"] == "perlu_dicek_manual"
-    assert p["statusReason"] == "teks terlalu sedikit (4 karakter di 3 halaman)"
+    assert p["statusReason"] == ("teks terlalu sedikit (4 karakter di 3 halaman); terlalu besar "
+                                 "untuk dibaca sebagai gambar (maks. 15 MB dan 50 halaman)")
     assert p["assessment"] is None and p["category"] is None and p["effectiveCategory"] is None
     assert p["tokens"] == {"in": 0, "out": 0} and p["pageCount"] == 3
     assert job["status"] == "selesai" and job["model"] is None and job["tokensIn"] == 0
@@ -70,6 +86,71 @@ def test_eks_01_too_little_text_goes_manual_without_a_model_call(proposal, penil
     (stats,) = fs.all("dailyStats").values()
     assert stats["perluDicekManual"] == 1 and stats["proposalsIn"] == 1
     assert "modelCalls" not in stats
+
+
+def test_eks_08_scanned_deck_is_read_as_images_then_assessed(proposal, penilai, rules, image_read):
+    fs = proposal(["", "logo", ""])
+    image_read.results = [OcrResult(True, RICH, None, 2000, 300, 70)]
+    penilai.results = [ok_attempt()]
+    assert intake.run_intake(PID, b"%PDF") == "dinilai"
+    assert image_read.calls == [(4, 3)] and penilai.calls == 1
+    p, job, steps = job_of(fs)
+    assert p["status"] == "dinilai" and p["statusReason"] is None
+    assert fs.get(f"proposalTexts/{PID}") == {"pages": RICH, "charCount": sum(map(len, RICH))}
+    actions = [s["action"] for s in steps]
+    assert actions[:4] == ["Ekstrak teks per halaman", "Cek jumlah teks", "Baca teks dari gambar",
+                           "Menilai 5 kriteria"]
+    read = steps[2]
+    assert read["actor"] == "model" and read["tool"] == "gemini.generate_content"
+    assert read["model"] == rules.models.penilai and read["wrote"] == f"proposalTexts/{PID}"
+    assert (read["tokensIn"], read["tokensOut"], read["status"]) == (2000, 300, "ok")
+    assert p["tokens"] == {"in": 3000, "out": 400}
+
+
+def test_eks_09_scan_still_unreadable_goes_manual(proposal, penilai, rules, image_read):
+    fs = proposal(["", "logo", ""])
+    image_read.results = [OcrResult(True, ["", "LOGO", ""], None, 2000, 10, 70)]
+    assert intake.run_intake(PID, b"%PDF") == "perlu_dicek_manual"
+    assert penilai.calls == 0
+    p, job, steps = job_of(fs)
+    assert p["statusReason"] == ("teks terlalu sedikit, juga setelah dibaca sebagai gambar "
+                                 "(4 karakter di 3 halaman)")
+    assert p["tokens"] == {"in": 2000, "out": 10} and job["model"] == rules.models.penilai
+    assert steps[-1]["action"] == "Baca teks dari gambar" and steps[-1]["status"] == "ok"
+
+
+def test_eks_10_failed_image_read_goes_manual_and_keeps_the_extracted_text(proposal, penilai, rules,
+                                                                          image_read):
+    fs = proposal(["", "logo", ""])
+    image_read.results = [OcrResult(False, None, "halaman 9 tidak ada di deck (3 halaman)", 500, 5, 30)]
+    assert intake.run_intake(PID, b"%PDF") == "perlu_dicek_manual"
+    p, job, steps = job_of(fs)
+    assert p["statusReason"] == "gagal membaca deck sebagai gambar: halaman 9 tidak ada di deck (3 halaman)"
+    assert fs.get(f"proposalTexts/{PID}") == {"pages": ["", "logo", ""], "charCount": 4}
+    read = steps[-1]
+    assert read["status"] == "gagal" and read["wrote"] is None and read["error"]
+
+
+def test_eks_11_stop_before_the_image_read_spends_nothing(proposal, penilai, rules, image_read, env):
+    fs = proposal(["", "logo", ""])
+    paused = iter([False, True])
+    env.setattr(intake.db, "is_paused", lambda: next(paused))
+    assert intake.run_intake(PID, b"%PDF") == "dihentikan"
+    assert image_read.calls == []
+
+
+def test_ocr_to_pages_orders_by_page_and_fills_skipped_pages():
+    out = OcrOutput(pages=[{"page": 3, "text": " c "}, {"page": 1, "text": "a"}])
+    assert ocr.to_pages(out, 3) == ["a", "", "c"]
+    with pytest.raises(ValueError):
+        ocr.to_pages(OcrOutput(pages=[{"page": 4, "text": "x"}]), 3)
+
+
+def test_ocr_fits_caps_size_and_pages():
+    assert ocr.fits(b"x" * ocr.MAX_BYTES, ocr.MAX_PAGES)
+    assert not ocr.fits(b"x" * (ocr.MAX_BYTES + 1), 1)
+    assert not ocr.fits(b"x", ocr.MAX_PAGES + 1)
+    assert not ocr.fits(b"x", 0)
 
 
 def test_pnl_02_two_failed_validations_go_manual(proposal, penilai, rules):

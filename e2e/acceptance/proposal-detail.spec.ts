@@ -447,6 +447,27 @@ test('DSB-31 Pratinjau deck opens the uploaded deck in a panel and keeps a fresh
     panel.getByRole('link', { name: 'Buka di tab baru' }),
   ).toHaveAttribute('href', link.url)
   await expect.poll(() => framed).toEqual([link.previewUrl])
+
+  // The link must open a second tab on the deck, not merely carry the href. A
+  // popup is a new page, so only a context route keeps it off the real host.
+  const opened: string[] = []
+  await page.context().route(
+    (url) => url.href === link.url,
+    async (route) => {
+      opened.push(route.request().url())
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/pdf',
+        body: '%PDF-1.4\n%%EOF\n',
+      })
+    },
+  )
+  const popup = page.waitForEvent('popup')
+  await panel.getByRole('link', { name: 'Buka di tab baru' }).click()
+  await expect.poll(() => opened).toEqual([link.url])
+  await (await popup).close()
+  await expect(panel).toBeVisible()
+
   expect(aisaApi.calls.map(({ method, path }) => `${method} ${path}`)).toEqual([
     'GET /api/proposals/upload-seedklinikdesa/deck-url',
   ])

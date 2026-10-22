@@ -27,7 +27,7 @@ CATEGORY_ACTION = {
     "layak_bersyarat": "Investasi dengan syarat",
     "perlu_penyesuaian": "Sesuaikan dulu sebelum lanjut",
     "risiko_tinggi": "Pertimbangkan menolak",
-    "tidak_layak": "Tolak",
+    "tidak_layak": "Sebaiknya ditolak",
 }
 CATEGORY_RANK = {k: i for i, k in enumerate(CATEGORY_LABEL)}
 # A–E order.

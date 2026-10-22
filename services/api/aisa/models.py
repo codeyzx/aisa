@@ -58,7 +58,7 @@ CATEGORY_ACTION: dict[Category, str] = {
     Category.layak_bersyarat: "Investasi dengan syarat",
     Category.perlu_penyesuaian: "Sesuaikan dulu sebelum lanjut",
     Category.risiko_tinggi: "Pertimbangkan menolak",
-    Category.tidak_layak: "Tolak",
+    Category.tidak_layak: "Sebaiknya ditolak",
 }
 
 # Grade rank for sorting: 0 is the best grade.

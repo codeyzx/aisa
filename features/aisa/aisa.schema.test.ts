@@ -121,6 +121,35 @@ describe('rules', () => {
     expect(parsed.models).toEqual(rules.models)
   })
 
+  it('reads rubric levels 2 and 4 missing from an older document as blank', () => {
+    const parsed = RulesSchema.parse(rules)
+    expect(parsed.anchors.manajemen).toEqual({
+      '1': 'a',
+      '2': '',
+      '3': 'b',
+      '4': '',
+      '5': 'c',
+    })
+  })
+
+  it('keeps all five rubric levels when stored', () => {
+    const full = { '1': 'a', '2': 'x', '3': 'b', '4': 'y', '5': 'c' }
+    const parsed = RulesSchema.parse({
+      ...rules,
+      anchors: { ...rules.anchors, dampak: full },
+    })
+    expect(parsed.anchors.dampak).toEqual(full)
+  })
+
+  it('refuses a rubric missing level 1, 3 or 5', () => {
+    expect(
+      RulesSchema.safeParse({
+        ...rules,
+        anchors: { ...rules.anchors, risiko: { '1': 'a', '3': 'b' } },
+      }).success,
+    ).toBe(false)
+  })
+
   it('refuses a retention below one day', () => {
     expect(RulesSchema.safeParse({ ...rules, retentionDays: 0 }).success).toBe(
       false,

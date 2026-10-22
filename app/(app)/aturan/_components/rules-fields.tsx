@@ -32,6 +32,7 @@ import {
   CRITERION_MEANING,
 } from '@/features/aisa/aisa.labels'
 import {
+  ANCHOR_LEVELS,
   CRITERIA,
   THRESHOLD_KEYS,
   type Rules,
@@ -44,6 +45,7 @@ import { GradeBadge } from '../../_components/badges'
 import { CriterionName } from './criterion-name'
 import { categoryRule, num } from './helpers'
 import {
+  hasPercent,
   livePercent,
   parseThresholds,
   percentTotal,
@@ -52,11 +54,18 @@ import {
   type ModelKey,
   type RulesDraft,
   type ThresholdKey,
+  withPercent,
 } from './rules-draft'
-import { ASISTEN_MODEL_NOTE, EDITABLE_MODEL_LABEL } from './rules-labels'
+import {
+  ASISTEN_MODEL_NOTE,
+  EDITABLE_MODEL_LABEL,
+  RUBRIC_INTRO,
+  SCALE_NOTE,
+} from './rules-labels'
 import { Scale } from './scale'
 import { normalizeToken } from './scoring'
 import { WeightBar } from './weight-bar'
+import { WEIGHT_PRESETS } from './weight-presets'
 
 export interface FieldsProps {
   draft: RulesDraft
@@ -77,6 +86,30 @@ export function WeightsFields({
 
   return (
     <div className="flex flex-col gap-5">
+      <FieldSet className="gap-2">
+        <FieldLegend variant="label">Sesuaikan dengan tesis tim</FieldLegend>
+        <FieldDescription>
+          Tim investasi boleh mengubah bobot sesuai tesis dana, misalnya lebih
+          mementingkan dampak daripada bisnis. Preset hanya mengisi kolom di
+          bawah; atur lagi bila perlu, lalu simpan dengan alasan perubahan.
+        </FieldDescription>
+        <div className="flex flex-wrap gap-2">
+          {WEIGHT_PRESETS.map((preset) => (
+            <Button
+              key={preset.label}
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-pressed={hasPercent(draft, preset.percent)}
+              title={preset.description}
+              className="aria-pressed:border-primary/40 aria-pressed:bg-primary/10 aria-pressed:text-primary"
+              onClick={() => setDraft((d) => withPercent(d, preset.percent))}
+            >
+              {preset.label}
+            </Button>
+          ))}
+        </div>
+      </FieldSet>
       <div
         className={cn(
           'flex flex-col gap-3 rounded-xl border p-4',
@@ -449,26 +482,35 @@ export function FocusFields({
 export function AnchorsFields({ draft, setDraft, errors }: FieldsProps) {
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-[13px] text-muted-foreground">
-        Arti nilai 1, 3, dan 5 untuk tiap kriteria. AI membaca patokan ini saat
-        memberi nilai.
-      </p>
+      <div className="flex flex-col gap-1 text-[13px] text-muted-foreground">
+        <p>
+          {RUBRIC_INTRO} {SCALE_NOTE}
+        </p>
+        <p>
+          Sesuaikan dengan tesis tim, misalnya skor 1 = perusahaan berdiri
+          kurang dari 1 tahun.
+        </p>
+      </div>
       <FieldError errors={errors} />
       {CRITERIA.map((c) => (
         <FieldSet key={c} className="border-b pb-4 last:border-b-0">
           <FieldLegend variant="label">
             <CriterionName criterion={c} />
           </FieldLegend>
-          <div className="grid gap-3 sm:grid-cols-3">
-            {(['1', '3', '5'] as const).map((level) => (
+          <div className="grid gap-2">
+            {ANCHOR_LEVELS.map((level) => (
               <label
                 key={level}
-                className="grid gap-1 text-xs text-muted-foreground"
+                className="grid gap-x-3 gap-y-1 text-xs text-muted-foreground sm:grid-cols-[4.5rem_minmax(0,1fr)] sm:items-start"
               >
-                Nilai {level}
+                <span className="font-medium sm:pt-2">Skor {level}</span>
                 <Textarea
-                  aria-label={`${CRITERION_LABEL[c]} nilai ${level}`}
+                  aria-label={`${CRITERION_LABEL[c]} skor ${level}`}
                   rows={2}
+                  placeholder="Belum didefinisikan — tulis kapan kriteria ini mendapat skor ini"
+                  aria-invalid={
+                    errors && !draft.anchors[c][level].trim() ? true : undefined
+                  }
                   className="text-foreground"
                   value={draft.anchors[c][level]}
                   onChange={(event) => {

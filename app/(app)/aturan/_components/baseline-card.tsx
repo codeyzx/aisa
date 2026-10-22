@@ -6,28 +6,12 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { CRITERION_MEANING } from '@/features/aisa/aisa.labels'
-import {
-  CRITERIA,
-  type Criterion,
-  type Rules,
-} from '@/features/aisa/aisa.schema'
+import { CRITERIA, type Rules } from '@/features/aisa/aisa.schema'
 import { cn } from '@/lib/utils'
 
 import { CriterionName } from './criterion-name'
 import { num, toPercent } from './helpers'
-
-/**
- * The weights of the scoring guide the manager adopted (A–E: 25/20/20/25/10),
- * the same values `default_rules()` in services/api/aisa/models.py starts from.
- * Shown beside the active weights so an edit away from the guide is visible.
- */
-const GUIDE_PERCENT: Record<Criterion, number> = {
-  manajemen: 25,
-  kinerja: 20,
-  risiko: 20,
-  rencana: 25,
-  dampak: 10,
-}
+import { GUIDE_PERCENT } from './weight-presets'
 
 export function BaselineCard({ rules }: { rules: Pick<Rules, 'weights'> }) {
   return (

@@ -679,7 +679,7 @@ dengan **Batal**.
 
 - Dialog berjudul **Ubah aturan penilaian** dengan keterangan "Disimpan sebagai versi N+1. Berlaku
   untuk proposal yang masuk setelah ini.". Ada tab **Bobot kriteria**, **Batas grade**, **Fokus
-  investasi**, **Patokan nilai**, **Model**.
+  investasi**, **Patokan skor**, **Model**.
 - Sebelum ada perubahan, panel berbunyi "Belum ada perubahan. Geser bobot atau ubah batas, hasilnya
   langsung terlihat di sini." dan tombol **Simpan versi N+1** nonaktif.
 - Di bawah judul panel tertulis bahwa ini simulasi pada proposal yang sudah dinilai, hanya

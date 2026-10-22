@@ -5,6 +5,7 @@
 
 import { CATEGORY_LABEL } from '@/features/aisa/aisa.labels'
 import {
+  ANCHOR_LEVELS,
   CATEGORIES,
   CRITERIA,
   THRESHOLD_KEYS,
@@ -57,6 +58,23 @@ export function draftFromRules(rules: Rules): RulesDraft {
 
 /** A typed number, or NaN for blank text (so blank never reads as 0). */
 const parse = (text: string) => (text.trim() === '' ? Number.NaN : Number(text))
+
+/** The draft with every weight set to `percent` (a preset); nothing else changes. */
+export const withPercent = (
+  draft: RulesDraft,
+  percent: Record<Criterion, number>,
+): RulesDraft => ({
+  ...draft,
+  percent: Object.fromEntries(
+    CRITERIA.map((c) => [c, String(percent[c])]),
+  ) as Record<Criterion, string>,
+})
+
+/** Whether the typed weights are exactly `percent`. */
+export const hasPercent = (
+  draft: RulesDraft,
+  percent: Record<Criterion, number>,
+) => CRITERIA.every((c) => parse(draft.percent[c]) === percent[c])
 
 /** Weights as typed, blank as 0 — for the live total and the bar only. */
 export function livePercent(draft: RulesDraft): Record<Criterion, number> {
@@ -143,11 +161,9 @@ export function checkDraft(
   else if (min > max) add('fokus', 'Dana minimum melebihi maksimum.')
 
   if (
-    CRITERIA.some((c) =>
-      (['1', '3', '5'] as const).some((l) => !draft.anchors[c][l].trim()),
-    )
+    CRITERIA.some((c) => ANCHOR_LEVELS.some((l) => !draft.anchors[c][l].trim()))
   )
-    add('patokan', 'Setiap patokan nilai 1, 3, dan 5 wajib diisi.')
+    add('patokan', 'Setiap patokan skor 1 sampai 5 wajib diisi.')
 
   const minChars = parse(draft.minChars)
   if (
@@ -198,11 +214,7 @@ const scoringKey = (r: ScoringPart) => [
 const rulesKey = (r: EditableRules | Rules) =>
   JSON.stringify([
     scoringKey(r),
-    CRITERIA.map((c) => [
-      r.anchors[c]['1'],
-      r.anchors[c]['3'],
-      r.anchors[c]['5'],
-    ]),
+    CRITERIA.map((c) => ANCHOR_LEVELS.map((l) => r.anchors[c][l])),
     [r.models.penilai, r.models.ringkasan, r.models.insight],
     r.minCharsPerPage,
   ])

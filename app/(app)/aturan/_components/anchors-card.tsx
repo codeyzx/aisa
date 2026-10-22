@@ -9,13 +9,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { CRITERIA, type Rules } from '@/features/aisa/aisa.schema'
+import {
+  ANCHOR_LEVELS,
+  CRITERIA,
+  type Rules,
+} from '@/features/aisa/aisa.schema'
+import { cn } from '@/lib/utils'
 
 import { CriterionName } from './criterion-name'
+import { ANCHOR_UNDEFINED, RUBRIC_INTRO, SCALE_NOTE } from './rules-labels'
 
-const LEVELS = ['1', '3', '5'] as const
-
-/** The 1/3/5 patokan the Penilai reads for every criterion. */
+/** The 1–5 rubric (patokan skor) the Penilai reads for every criterion. */
 export function AnchorsCard({
   rules,
   onEdit,
@@ -26,10 +30,11 @@ export function AnchorsCard({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-semibold">Patokan nilai</CardTitle>
+        <CardTitle className="font-semibold">Patokan skor</CardTitle>
         <CardDescription>
-          Arti nilai 1, 3, dan 5 untuk tiap kriteria. AI membaca patokan ini
-          saat memberi nilai.
+          {RUBRIC_INTRO} {SCALE_NOTE} Tim investasi dapat menyesuaikan
+          definisinya dengan tesis dana, misalnya skor 1 untuk perusahaan yang
+          berdiri kurang dari 1 tahun.
         </CardDescription>
         {onEdit ? (
           <CardAction>
@@ -42,15 +47,15 @@ export function AnchorsCard({
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto rounded-lg border">
-          <table className="w-full min-w-[40rem] text-[13px]">
+          <table className="w-full min-w-[56rem] text-[13px]">
             <thead className="bg-muted/50 text-xs text-muted-foreground">
               <tr>
-                <th className="w-48 px-3 py-2 text-left font-medium">
+                <th className="w-44 px-3 py-2 text-left font-medium">
                   Kriteria
                 </th>
-                {LEVELS.map((level) => (
+                {ANCHOR_LEVELS.map((level) => (
                   <th key={level} className="px-3 py-2 text-left font-medium">
-                    Nilai {level}
+                    Skor {level}
                   </th>
                 ))}
               </tr>
@@ -64,14 +69,20 @@ export function AnchorsCard({
                       className="[&>span:last-child]:whitespace-normal"
                     />
                   </td>
-                  {LEVELS.map((level) => (
-                    <td
-                      key={level}
-                      className="px-3 py-2.5 leading-snug text-muted-foreground"
-                    >
-                      {rules.anchors[c][level]}
-                    </td>
-                  ))}
+                  {ANCHOR_LEVELS.map((level) => {
+                    const text = rules.anchors[c][level].trim()
+                    return (
+                      <td
+                        key={level}
+                        className={cn(
+                          'px-3 py-2.5 leading-snug text-muted-foreground',
+                          !text && 'text-warning italic',
+                        )}
+                      >
+                        {text || ANCHOR_UNDEFINED}
+                      </td>
+                    )
+                  })}
                 </tr>
               ))}
             </tbody>

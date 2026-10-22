@@ -44,7 +44,7 @@ const TABS: { value: RulesTab; label: string; short: string }[] = [
   { value: 'bobot', label: 'Bobot kriteria', short: 'Bobot' },
   { value: 'batas', label: 'Batas grade', short: 'Batas' },
   { value: 'fokus', label: 'Fokus investasi', short: 'Fokus' },
-  { value: 'patokan', label: 'Patokan nilai', short: 'Patokan' },
+  { value: 'patokan', label: 'Patokan skor', short: 'Patokan' },
   { value: 'lanjutan', label: 'Model', short: 'Model' },
 ]
 

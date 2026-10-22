@@ -250,13 +250,31 @@ export const THRESHOLD_KEYS = [
   'risikoTinggi',
 ] as const satisfies readonly (keyof Thresholds)[]
 
+/** The rubric levels of one criterion, lowest first: what earns a 1, 2, 3, 4 or 5. */
+export const ANCHOR_LEVELS = ['1', '2', '3', '4', '5'] as const
+export type AnchorLevel = (typeof ANCHOR_LEVELS)[number]
+
+/**
+ * One criterion's rubric. Levels 2 and 4 came later: a document stored with
+ * only 1/3/5 still parses, with those two read as `''` so the dashboard can say
+ * they are not defined yet rather than invent a text. aisa-api fills them from
+ * its own defaults when it reads such a document; a save from the dashboard
+ * must carry all five filled in.
+ */
+export const AnchorsSchema = z.object({
+  '1': z.string(),
+  '2': z.string().default(''),
+  '3': z.string(),
+  '4': z.string().default(''),
+  '5': z.string(),
+})
+export type Anchors = z.infer<typeof AnchorsSchema>
+
 export const RulesSchema = z.object({
   id: z.string(),
   version: z.number().int(),
   weights: perCriterion(z.number()),
-  anchors: perCriterion(
-    z.object({ '1': z.string(), '3': z.string(), '5': z.string() }),
-  ),
+  anchors: perCriterion(AnchorsSchema),
   fit: z.object({
     sectors: z.array(z.string()),
     stages: z.array(z.string()),

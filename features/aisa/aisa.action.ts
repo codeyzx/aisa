@@ -181,10 +181,18 @@ const criterionNumbers = z.object({
   rencana: z.number().finite(),
   dampak: z.number().finite(),
 })
+// All five levels, each filled in: a document read with level 2 or 4 blank
+// (stored before those levels existed) cannot be saved back until they are.
+const anchorText = z
+  .string()
+  .trim()
+  .min(1, 'Patokan skor 1–5 tiap kriteria wajib diisi (Aturan penilaian).')
 const anchor = z.object({
-  '1': z.string().trim().min(1),
-  '3': z.string().trim().min(1),
-  '5': z.string().trim().min(1),
+  '1': anchorText,
+  '2': anchorText,
+  '3': anchorText,
+  '4': anchorText,
+  '5': anchorText,
 })
 const modelName = z.string().trim().min(1).max(100)
 

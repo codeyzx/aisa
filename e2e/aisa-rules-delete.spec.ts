@@ -44,7 +44,7 @@ test('a read-only seat sees every rule but no form', async ({ page }) => {
     page.locator('[data-slot="card"]').filter({
       has: page.locator('[data-slot="card-title"]', { hasText: title }),
     })
-  await expect(card('Patokan nilai')).toBeVisible()
+  await expect(card('Patokan skor')).toBeVisible()
   await expect(
     card('Model dan pembacaan proposal').getByText(
       'berlaku setelah Asisten di-deploy ulang',

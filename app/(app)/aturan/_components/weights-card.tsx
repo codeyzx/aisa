@@ -42,7 +42,9 @@ export function WeightsCard({
         <CardTitle className="font-semibold">Bobot kriteria</CardTitle>
         <CardDescription>
           Lima kriteria (A–E) dan seberapa besar pengaruh tiap kriteria terhadap
-          skor. Totalnya selalu 100%.
+          skor kualitas 0–100. Totalnya selalu 100%. Tim investasi dapat
+          mengubahnya sesuai tesis dana, misalnya lebih mementingkan dampak
+          daripada bisnis.
         </CardDescription>
         {onEdit ? (
           <CardAction>

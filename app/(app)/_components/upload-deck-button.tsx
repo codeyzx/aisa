@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label'
 import { uploadDeckAction } from '@/features/aisa/aisa.action'
 import { deckRefusal } from '@/features/aisa/aisa.limits'
 
+import { notifyDeckUploaded } from './tour/tour-events'
 import { useApiAction } from './use-api-action'
 
 /**
@@ -53,6 +54,9 @@ export function UploadDeckButton({ className }: { className?: string }) {
           ? 'Proposal diterima dan sedang diproses.'
           : 'Proposal ini sudah pernah diunggah. Membuka yang sudah ada.',
       onSuccess: ({ proposalId }) => {
+        // Before the dialog closes, so a running tour never mistakes the
+        // close for a cancel.
+        if (proposalId) notifyDeckUploaded(proposalId)
         formRef.current?.reset()
         setOpen(false)
         if (proposalId)
@@ -64,11 +68,14 @@ export function UploadDeckButton({ className }: { className?: string }) {
   const shown = localError ?? error
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className={className} />}>
+      <DialogTrigger
+        render={<Button className={className} />}
+        data-tour="upload"
+      >
         <UploadIcon data-icon="inline-start" />
         Unggah proposal
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent data-tour="upload-dialog">
         <DialogHeader>
           <DialogTitle>Unggah proposal</DialogTitle>
           <DialogDescription>

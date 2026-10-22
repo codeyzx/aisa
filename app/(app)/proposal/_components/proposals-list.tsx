@@ -405,7 +405,10 @@ export function ProposalsList({
 
   if (all.length === 0) {
     return (
-      <div className="flex flex-col items-center rounded-xl border border-dashed px-6 py-16 text-center">
+      <div
+        className="flex flex-col items-center rounded-xl border border-dashed px-6 py-16 text-center"
+        data-tour="proposal-empty"
+      >
         <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
           <InboxIcon className="size-5" />
         </span>
@@ -710,13 +713,14 @@ export function ProposalsList({
                   </td>
                 </tr>
               ) : null}
-              {visible.map((row) => {
+              {visible.map((row, index) => {
                 const checked = selected.has(row.id)
                 const href = `/proposal/${encodeURIComponent(row.id)}`
                 return (
                   <tr
                     key={row.id}
                     data-state={checked ? 'selected' : undefined}
+                    data-tour={index === 0 ? 'proposal-first' : undefined}
                     className="group relative cursor-pointer border-b transition-colors outline-none last:border-0 focus-within:bg-muted/50 hover:bg-muted/50 data-[state=selected]:bg-primary/5"
                   >
                     <td className="relative z-10 py-3 pr-0 pl-4">

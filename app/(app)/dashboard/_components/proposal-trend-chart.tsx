@@ -226,7 +226,7 @@ export function ProposalTrendChart({
   // the manual pile appears only when there is one.
   const series = TREND_SERIES.filter((s) => s !== 'manual' || trend.hasManual)
   return (
-    <Card className={cn('h-full', className)}>
+    <Card className={cn('h-full', className)} data-tour="dash-trend">
       <CardHeader>
         <CardTitle>Tren proposal</CardTitle>
         <CardDescription>{description}</CardDescription>

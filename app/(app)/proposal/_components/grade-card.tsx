@@ -173,7 +173,7 @@ export function GradeCard({
   const insight = gradeInsight(grade, assessment.criteria, weights)
 
   return (
-    <Card data-testid="grade-card" className="gap-4">
+    <Card data-testid="grade-card" data-tour="grade" className="gap-4">
       <CardHeader>
         <CardTitle>Grade</CardTitle>
         <CardDescription>
@@ -206,6 +206,7 @@ export function GradeCard({
 
         <div
           data-testid="grade-action"
+          data-tour="grade-action"
           className={cn('rounded-xl p-4', CATEGORY_SOFT[grade])}
         >
           <p className="text-xs font-medium text-muted-foreground">

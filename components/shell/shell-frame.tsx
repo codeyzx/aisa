@@ -148,6 +148,8 @@ export function ShellFrame({
                       // to assistive tech from the same computation.
                       aria-current={active ? 'page' : undefined}
                       title={item.title}
+                      // Anchor for the onboarding tour, keyed by the route.
+                      data-tour={`nav:${item.href}`}
                     >
                       {item.icon}
                       <span className="a-label">{item.title}</span>
@@ -162,7 +164,7 @@ export function ShellFrame({
           </nav>
 
           <div className="a-sidefoot">
-            <div className="a-next">
+            <div className="a-next" data-tour="whatsapp">
               <p className="a-next-label">Ringkasan WhatsApp</p>
               <p>
                 Berikutnya {next.tomorrow ? 'besok ' : ''}

@@ -417,6 +417,8 @@ export function AssessmentProgressCard({
     return (
       <section
         aria-label="Penilaian selesai"
+        data-tour="assessment-progress"
+        data-phase="selesai"
         className="flex flex-wrap items-center gap-3 rounded-xl border border-success/30 bg-success-soft/60 px-4 py-3 text-sm"
       >
         {live}
@@ -448,6 +450,7 @@ export function AssessmentProgressCard({
     <section
       aria-labelledby="assessment-progress-title"
       data-phase={phase}
+      data-tour="assessment-progress"
       className={cn(
         'overflow-hidden rounded-xl border bg-card shadow-xs',
         phase === 'berjalan' && 'border-primary/30',

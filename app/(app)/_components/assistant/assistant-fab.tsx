@@ -50,6 +50,7 @@ export function AssistantFab({
         onClick={onToggle}
         aria-expanded={open}
         aria-controls="aisa-assistant"
+        data-tour="assistant"
         aria-label={open ? 'Tutup Tanya AISA' : 'Buka Tanya AISA'}
         className={cn(
           'fixed right-4 bottom-4 z-40 flex size-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md transition-[transform,opacity,box-shadow] duration-200 outline-none hover:scale-105 hover:shadow-lg focus-visible:ring-4 focus-visible:ring-primary/30 active:scale-95 sm:right-5 sm:bottom-5',

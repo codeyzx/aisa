@@ -3,7 +3,12 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { onAuthStateChanged } from 'firebase/auth'
-import { ChevronDownIcon, LogOutIcon, UserIcon } from 'lucide-react'
+import {
+  ChevronDownIcon,
+  CompassIcon,
+  LogOutIcon,
+  UserIcon,
+} from 'lucide-react'
 
 import {
   DropdownMenu,
@@ -18,6 +23,8 @@ import { ROLE_LABEL } from '@/lib/auth/rbac'
 import { type Session } from '@/lib/auth/session.contract'
 import { useSignOut } from '@/lib/auth/use-sign-out'
 import { firebaseAuth } from '@/lib/firebase/client-auth'
+
+import { startTour } from './tour-event'
 
 function initials(text: string): string {
   const words = text.split(/[\s._@-]+/).filter(Boolean)
@@ -43,7 +50,7 @@ function useDisplayName(): string | null {
   return name
 }
 
-/** Account menu at the right of the header: view profile, sign out. */
+/** Account menu at the right of the header: view profile, replay the tour, sign out. */
 export function UserMenu({ session }: { session: Session }) {
   const handleSignOut = useSignOut()
   const displayName = useDisplayName()
@@ -95,6 +102,10 @@ export function UserMenu({ session }: { session: Session }) {
         <DropdownMenuItem render={<Link href="/pengaturan?tab=profil" />}>
           <UserIcon />
           Lihat profil
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={startTour}>
+          <CompassIcon />
+          Panduan: mulai tur
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={handleSignOut}>

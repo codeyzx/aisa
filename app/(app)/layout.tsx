@@ -7,6 +7,7 @@ import { cookies } from 'next/headers'
 
 import { APP_NAV_SECTIONS } from '@/app/navigation'
 import { AssistantDock } from '@/app/(app)/_components/assistant/assistant-dock'
+import { TourController } from '@/app/(app)/_components/tour/tour-controller'
 import { AppShell } from '@/components/shell/app-shell'
 import { filterNavByAvailability } from '@/components/shell/nav-config'
 import { type ShellData } from '@/components/shell/shell-data'
@@ -15,7 +16,7 @@ import {
   SIDEBAR_COOKIE_NAME,
   sidebarOpenFromCookie,
 } from '@/components/ui/sidebar-cookie'
-import { AISA_READ } from '@/features/aisa/aisa.capability'
+import { AISA_READ, AISA_RESPOND } from '@/features/aisa/aisa.capability'
 import {
   CATEGORY_LABEL,
   HISTORY_ACTION_LABEL,
@@ -127,9 +128,18 @@ export default async function AppLayout({
       data={data}
       sidebarOpen={sidebarOpen}
       initialNext={nextDigest(new Date())}
-      // The key is for React's dev check, which flags a server-created element
+      // The keys are for React's dev check, which flags a server-created element
       // rendered among the client frame's children as an unkeyed list child.
-      dock={<AssistantDock key="assistant" />}
+      // The tour only steers the UI; every action it points at is still
+      // guarded by its own capability check.
+      dock={[
+        <AssistantDock key="assistant" />,
+        <TourController
+          key="tour"
+          uid={session.uid}
+          canRespond={can(session, AISA_RESPOND)}
+        />,
+      ]}
     >
       {children}
     </AppShell>

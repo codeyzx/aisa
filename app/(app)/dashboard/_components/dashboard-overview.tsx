@@ -107,6 +107,7 @@ function StatCard({
   value,
   hint,
   primary = false,
+  tour,
 }: {
   href: string
   icon: LucideIcon
@@ -114,9 +115,11 @@ function StatCard({
   value: number
   hint: string
   primary?: boolean
+  /** The onboarding tour's anchor, when the tour points at this card. */
+  tour?: string
 }) {
   return (
-    <Link href={href} className="group block">
+    <Link href={href} className="group block" data-tour={tour}>
       <Card
         className={cn(
           'gap-0 py-0 transition-colors',
@@ -255,6 +258,7 @@ export function DashboardOverview({
           href="/proposal?tanggapan=belum"
           icon={InboxIcon}
           label="Menunggu keputusan"
+          tour="dash-pending"
           value={pending.length}
           hint="Belum Anda tanggapi"
         />
@@ -325,7 +329,7 @@ export function DashboardOverview({
       ) : null}
 
       <div className="grid gap-5 lg:grid-cols-3">
-        <Card className="gap-0 pb-0 lg:col-span-2">
+        <Card className="gap-0 pb-0 lg:col-span-2" data-tour="dash-top">
           <CardHeader className="border-b pb-4">
             <CardTitle>Paling layak untuk Anda</CardTitle>
             <CardDescription>

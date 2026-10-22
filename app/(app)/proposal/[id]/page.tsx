@@ -290,7 +290,10 @@ export default async function ProposalDetailPage({
                 ) : null}
               </div>
             </div>
-            <div className="w-full shrink-0 rounded-xl bg-muted/50 p-4 md:w-56">
+            <div
+              className="w-full shrink-0 rounded-xl bg-muted/50 p-4 md:w-56"
+              data-tour="score"
+            >
               <p className="text-xs font-medium text-muted-foreground">
                 Skor kualitas
               </p>
@@ -334,6 +337,7 @@ export default async function ProposalDetailPage({
                 variant="outline"
                 size="sm"
                 className="mt-3 w-full bg-card"
+                data-tour="log"
               >
                 <ListTreeIcon />
                 Lihat log penilaian
@@ -448,7 +452,7 @@ export default async function ProposalDetailPage({
               <CardContent className="p-0">
                 {assessment ? (
                   <ul>
-                    {CRITERIA.map((criterion) => {
+                    {CRITERIA.map((criterion, index) => {
                       const item = assessment.criteria[criterion]
                       // Anchors are keyed "1".."5"; older rules may store a
                       // level empty, and an empty one is simply not shown.
@@ -459,6 +463,7 @@ export default async function ProposalDetailPage({
                         <li
                           key={criterion}
                           data-criterion={criterion}
+                          data-tour={index === 0 ? 'criterion' : undefined}
                           className="grid gap-3 border-b px-6 py-4 last:border-0 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-6"
                         >
                           <div>
@@ -698,7 +703,7 @@ export default async function ProposalDetailPage({
           </div>
 
           <aside className="flex flex-col gap-5 xl:sticky xl:top-0">
-            <Card>
+            <Card data-tour="decision">
               <CardHeader>
                 <CardTitle>
                   {canRespond ? 'Keputusan Anda' : 'Keputusan'}

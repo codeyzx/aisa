@@ -89,7 +89,7 @@ async function openUpload(page: Page) {
   const dialog = page.getByRole('dialog')
   await expect(
     dialog.getByText(
-      'PDF dinilai lewat alur yang sama dengan Form. Hanya teks yang dikirim ke model.',
+      'PDF dinilai lewat alur yang sama dengan Form. Hanya teksnya yang dikirim ke model, kecuali deck hasil pindai: PDF-nya dibaca AI sebagai gambar.',
     ),
   ).toBeVisible()
   return dialog

@@ -222,6 +222,83 @@ describe('buildAssessmentLog', () => {
     expect(log.counts.ai).toBe(0)
   })
 
+  it('says a scanned deck read as images had too little text, then enough', () => {
+    const job = productionJob()
+    job.steps.splice(
+      2,
+      0,
+      step('Baca teks dari gambar', 'gemini.generate_content', 9_000, 7_000, {
+        actor: 'model',
+        model: 'gemini-3.8-flash',
+        tokensIn: 5_000,
+        tokensOut: 800,
+      }),
+    )
+    const log = buildAssessmentLog(job, proposal, [], rules)
+    const [, cek, gambar, nilai] = log.steps
+    expect(cek?.result).toBe('Teks terlalu sedikit')
+    expect(gambar).toMatchObject({
+      by: 'ai',
+      title: 'AI membaca deck sebagai gambar',
+      result: 'Teks terbaca',
+      recorded: 'Baca teks dari gambar · gemini.generate_content',
+      tokens: 5_800,
+      detail: null,
+    })
+    expect(gambar?.explain).toContain('hasil pindai')
+    expect(nilai?.detail?.type).toBe('criteria')
+    expect(log.counts).toEqual({ ai: 2, sistem: 6, manajer: 0 })
+  })
+
+  it('says a deck still unreadable after the image read ended perlu dicek manual', () => {
+    const job = productionJob()
+    job.steps = [
+      ...job.steps.slice(0, 2),
+      step('Baca teks dari gambar', 'gemini.generate_content', 9_000, 7_000, {
+        actor: 'model',
+      }),
+    ]
+    const manual = {
+      ...proposal,
+      status: 'perlu_dicek_manual',
+      assessment: null,
+      fit: null,
+      category: null,
+    } as Proposal
+    const log = buildAssessmentLog(job, manual, [], rules)
+    expect(log.steps.map((s) => s.result)).toEqual([
+      '10 halaman',
+      'Teks terlalu sedikit',
+      'Teks tetap terlalu sedikit',
+    ])
+  })
+
+  it('gives a failed image read no result, only its error', () => {
+    const job = productionJob()
+    job.steps = [
+      ...job.steps.slice(0, 2),
+      step('Baca teks dari gambar', 'gemini.generate_content', 9_000, 7_000, {
+        actor: 'model',
+        status: 'gagal',
+        error: 'model tidak menjawab',
+      }),
+    ]
+    const manual = {
+      ...proposal,
+      status: 'perlu_dicek_manual',
+      assessment: null,
+      fit: null,
+      category: null,
+    } as Proposal
+    const [, cek, gambar] = buildAssessmentLog(job, manual, [], rules).steps
+    expect(cek?.result).toBe('Teks terlalu sedikit')
+    expect(gambar).toMatchObject({
+      result: null,
+      status: 'gagal',
+      error: 'model tidak menjawab',
+    })
+  })
+
   it('omits category thresholds that changed since scoring', () => {
     const log = buildAssessmentLog(productionJob(), proposal, [], {
       ...rules,

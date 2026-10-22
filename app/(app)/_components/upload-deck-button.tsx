@@ -72,8 +72,9 @@ export function UploadDeckButton({ className }: { className?: string }) {
         <DialogHeader>
           <DialogTitle>Unggah pitch deck</DialogTitle>
           <DialogDescription>
-            PDF dinilai lewat alur yang sama dengan Form. Hanya teks yang
-            dikirim ke model.
+            PDF dinilai lewat alur yang sama dengan Form. Hanya teksnya yang
+            dikirim ke model, kecuali deck hasil pindai: PDF-nya dibaca AI
+            sebagai gambar.
           </DialogDescription>
         </DialogHeader>
         <form ref={formRef} onSubmit={submit} className="grid gap-4">

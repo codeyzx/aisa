@@ -12,6 +12,7 @@ export type StepKey =
   | 'ambil'
   | 'ekstrak'
   | 'cek_teks'
+  | 'baca_gambar'
   | 'nilai'
   | 'skor'
   | 'cocok'
@@ -58,8 +59,17 @@ export const PIPELINE: readonly StepInfo[] = [
     action: 'Cek jumlah teks',
     title: 'Memeriksa deck bisa dibaca',
     explain:
-      'Deck yang hampir tanpa teks (mis. hasil pindai) tidak dikirim ke AI dan ditandai perlu dicek manual.',
+      'Deck yang hampir tanpa teks (mis. hasil pindai) dibaca AI sebagai gambar dulu; bila tetap tidak terbaca, ditandai perlu dicek manual.',
     by: 'sistem',
+  },
+  {
+    key: 'baca_gambar',
+    action: 'Baca teks dari gambar',
+    title: 'AI membaca deck sebagai gambar',
+    explain:
+      'Deck tampaknya hasil pindai atau gambar, jadi AI menyalin teks yang terlihat di tiap halaman, termasuk angka di grafik, sebelum dinilai.',
+    by: 'ai',
+    optional: true,
   },
   {
     key: 'nilai',

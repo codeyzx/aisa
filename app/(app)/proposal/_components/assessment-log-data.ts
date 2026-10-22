@@ -199,24 +199,31 @@ function stepDetail(
   }
 }
 
-/** What a finished step concluded, in one short phrase. */
+/**
+ * What a finished step concluded, in one short phrase. `next` is the key of
+ * the step recorded after it, or undefined when it is the last one.
+ */
 function stepResult(
   key: StepKey | null,
   step: Step,
   proposal: Proposal,
-  last: boolean,
+  next: StepKey | null | undefined,
 ): string | null {
   if (step.status !== 'ok') return null
   const { assessment, fit } = proposal
+  const endedManual =
+    next === undefined && proposal.status === 'perlu_dicek_manual'
   switch (key) {
     case 'ekstrak':
       return proposal.pageCount > 0 ? `${proposal.pageCount} halaman` : null
     case 'cek_teks':
-      // Too little text ends the run right here, as perlu dicek manual.
-      if (!last) return 'Teks cukup'
-      return proposal.status === 'perlu_dicek_manual'
-        ? 'Teks terlalu sedikit'
-        : null
+      // Too little text sends the deck to the image read, or, when the deck
+      // is too big for that, ends the run right here as perlu dicek manual.
+      if (next === 'baca_gambar' || endedManual) return 'Teks terlalu sedikit'
+      return next === 'nilai' ? 'Teks cukup' : null
+    case 'baca_gambar':
+      if (next === 'nilai') return 'Teks terbaca'
+      return endedManual ? 'Teks tetap terlalu sedikit' : null
     case 'nilai': {
       if (!assessment) return null
       const quotes = CRITERIA.reduce(
@@ -253,6 +260,7 @@ export function buildAssessmentLog(
   history: History[],
   rules: Rules | null,
 ): AssessmentLogData {
+  const keys = job.steps.map((step) => describeStep(step).key)
   const steps = job.steps.map<LogStep>((step, index) => {
     const info = describeStep(step)
     const fallback = [
@@ -270,12 +278,7 @@ export function buildAssessmentLog(
         (fallback
           ? `${fallback.charAt(0).toUpperCase()}${fallback.slice(1)}.`
           : ''),
-      result: stepResult(
-        info.key,
-        step,
-        proposal,
-        index === job.steps.length - 1,
-      ),
+      result: stepResult(info.key, step, proposal, keys[index + 1]),
       recorded: `${step.action} · ${step.tool}`,
       model: step.model ?? null,
       startedAt: new Date(step.at.getTime() - step.durationMs),

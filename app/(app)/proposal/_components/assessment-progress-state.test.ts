@@ -217,6 +217,80 @@ describe('deriveProgress', () => {
     ])
   })
 
+  it('shows the image read of a scanned deck as an AI step before the criteria', () => {
+    const rows = deriveProgress(
+      progress(
+        {},
+        {
+          steps: [
+            step(1, 'Ekstrak teks per halaman'),
+            step(2, 'Cek jumlah teks'),
+          ],
+          currentStep: {
+            action: 'Baca teks dari gambar',
+            tool: 'gemini.generate_content',
+            actor: 'model',
+            startedAt: at(300),
+          },
+        },
+      ),
+    ).rows
+    expect(rows.map((r) => [r.key, r.state])).toEqual([
+      ['ekstrak', 'selesai'],
+      ['cek_teks', 'selesai'],
+      ['baca_gambar', 'berjalan'],
+      ['nilai', 'menunggu'],
+      ['skor', 'menunggu'],
+      ['cocok', 'menunggu'],
+      ['kategori', 'menunggu'],
+      ['simpan', 'menunggu'],
+    ])
+    expect(rows[2]).toMatchObject({
+      by: 'ai',
+      title: 'AI membaca deck sebagai gambar',
+    })
+  })
+
+  it('does not list the image read for a deck with enough text', () => {
+    const rows = deriveProgress(
+      progress({}, { steps: [step(1, 'Ekstrak teks per halaman')] }),
+    ).rows
+    expect(rows.some((r) => r.key === 'baca_gambar')).toBe(false)
+  })
+
+  it('ends a deck still unreadable after the image read at perlu dicek manual', () => {
+    const p = progress(
+      {
+        status: 'perlu_dicek_manual',
+        statusReason:
+          'teks terlalu sedikit, juga setelah dibaca sebagai gambar (12 karakter di 4 halaman)',
+      },
+      {
+        status: 'selesai',
+        endedAt: at(9000),
+        steps: [
+          step(1, 'Ekstrak teks per halaman'),
+          step(2, 'Cek jumlah teks'),
+          step(3, 'Baca teks dari gambar', {
+            actor: 'model',
+            tool: 'gemini.generate_content',
+          }),
+        ],
+      },
+    )
+    expect(deriveProgress(p).phase).toBe('perlu_dicek_manual')
+    expect(states(p)).toEqual([
+      ['ekstrak', 'selesai'],
+      ['cek_teks', 'selesai'],
+      ['baca_gambar', 'selesai'],
+      ['nilai', 'dilewati'],
+      ['skor', 'dilewati'],
+      ['cocok', 'dilewati'],
+      ['kategori', 'dilewati'],
+      ['simpan', 'dilewati'],
+    ])
+  })
+
   it('shows a STOP mid-run as dihentikan', () => {
     const p = progress(
       { status: 'dihentikan', statusReason: 'dihentikan oleh STOP' },

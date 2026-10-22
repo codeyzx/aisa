@@ -296,3 +296,17 @@ Belum teruji: jalur penghapusan memory yang menyebut proposal. Memory Bank tidak
 memory tentang "QA Hapus 0105", jadi `memories` 0 dan hanya terbukti bahwa memory lain tidak
 ikut terhapus. Semua session engine terhapus, termasuk session WhatsApp manajer; pertanyaan
 berikutnya mulai dari session baru, sesuai README.
+
+### Deck hasil pindai dibaca sebagai gambar (`aisa-api-00015-bbp`, 22 Oktober 2026)
+
+Image `aisa-api:20261022-083626`; hanya image yang berubah, env, secret, service account,
+`cpu-throttling` false dan timeout 600 d sama dengan `00014-vcf`. Tanpa pesan WhatsApp. Data
+uji: `fixtures/decks/pitch-deck.pdf` (22 halaman) dirender ulang menjadi JPEG per halaman dan
+digabung lagi menjadi PDF 4,7 MB tanpa teks (pypdf membaca 0 karakter), diunggah dengan nama
+"UJI Scan Gambar". Baris EKS-01 di matriks atas mencatat perilaku sebelum jalur ini ada.
+
+| ID     | Hasil | Bukti                                                                                                                                                                                                                                                                                                                                                        |
+| ------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| EKS-08 | Lulus | `upload-0945533208aa6017` `dinilai`, skor 70,0. Langkah: Ekstrak teks (kode) → Cek jumlah teks (kode) → **Baca teks dari gambar** (model, 11.822 masuk / 3.011 keluar, 19,6 d) → Menilai 5 kriteria (model, 4.894 / 2.706, 17,0 d) → Hitung skor → Cek kecocokan → Tentukan kategori → Simpan. `proposalTexts` 6.548 karakter; token proposal 16.716 / 5.717 |
+| EKS-08 | Lulus | Sebelum deploy, transkrip dan penilaian yang sama dijalankan langsung ke Gemini dari mesin lokal: nilai kelima kriteria dari transkrip (3, 4, 3, 4, 4) sama dengan nilai dari PDF berteks aslinya; angka grafik halaman 13 (1468, 4689, 219%) tersalin                                                                                                       |
+| HPS    | Lulus | `DELETE … {"reason":"uji QA baca gambar"}` → 200 `{"deleted":true,"assistantScrub":{"sessions":0,"memories":0}}`; `proposals` dan `proposalTexts` tidak ada lagi, deck di GCS terhapus                                                                                                                                                                       |

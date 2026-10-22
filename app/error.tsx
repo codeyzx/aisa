@@ -34,14 +34,14 @@ import { cn } from '@/lib/utils'
 interface ErrorPageProps {
   error: Error & { digest?: string }
   /**
-   * Re-fetches AND re-renders the segment (Next >= 16.2). Prefer this over the
+   * Re-fetches AND re-renders the segment (stable since Next 16.3). Prefer this over the
    * older `reset`, which only clears boundary state without re-fetching and so
    * cannot recover a Server Component error — which is exactly what ours are.
    */
-  unstable_retry: () => void
+  retry: () => void
 }
 
-export default function ErrorPage({ error, unstable_retry }: ErrorPageProps) {
+export default function ErrorPage({ error, retry }: ErrorPageProps) {
   useEffect(() => {
     // Dev: full message + stack. Prod: the generic error and its digest.
     console.error('[error boundary]', error)
@@ -82,7 +82,7 @@ export default function ErrorPage({ error, unstable_retry }: ErrorPageProps) {
           </EmptyHeader>
           <EmptyContent>
             <div className="flex items-center justify-center gap-2">
-              {/* Deliberately NOT `unstable_retry`: a re-render fetches the same
+              {/* Deliberately NOT `retry`: a re-render fetches the same
                   missing chunk. Only a full reload can recover this. */}
               <Button onClick={() => globalThis.location.reload()}>
                 Muat ulang halaman
@@ -106,7 +106,7 @@ export default function ErrorPage({ error, unstable_retry }: ErrorPageProps) {
         </EmptyHeader>
         <EmptyContent>
           <div className="flex items-center justify-center gap-2">
-            <Button onClick={() => unstable_retry()}>Coba lagi</Button>
+            <Button onClick={() => retry()}>Coba lagi</Button>
             <Link
               href="/dashboard"
               className={cn(buttonVariants({ variant: 'outline' }))}

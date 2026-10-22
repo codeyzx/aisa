@@ -33,13 +33,10 @@ import './globals.css'
 
 interface GlobalErrorProps {
   error: Error & { digest?: string }
-  unstable_retry: () => void
+  retry: () => void
 }
 
-export default function GlobalError({
-  error,
-  unstable_retry,
-}: GlobalErrorProps) {
+export default function GlobalError({ error, retry }: GlobalErrorProps) {
   // Same branch as app/error.tsx, and it belongs here too: a chunk 404 in the
   // ROOT LAYOUT's own tree never reaches app/error.tsx, and a stale deploy is
   // exactly the kind of failure that takes the root layout down. The shared
@@ -74,13 +71,13 @@ export default function GlobalError({
             {/* Plain <button>: the UI kit is not guaranteed to render if the
                 root layout is what crashed.
 
-                On a stale deploy this must RELOAD, never `unstable_retry` — a
+                On a stale deploy this must RELOAD, never `retry` — a
                 re-render fetches the same missing chunk and cannot ever
                 succeed. */}
             <button
               type="button"
               onClick={() =>
-                staleDeploy ? globalThis.location.reload() : unstable_retry()
+                staleDeploy ? globalThis.location.reload() : retry()
               }
               className="inline-flex h-8 items-center rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground"
             >

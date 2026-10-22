@@ -1,130 +1,232 @@
 # AISA
 
-> Dashboard manajer **AISA**: membaca data proposal dari Firestore di sisi server,
-> mengirim setiap perubahan ke `aisa-api` (Python), dan dimasuki manajer lewat akun
-> Firebase Auth (email + kata sandi). Dibangun di atas starter Next.js + Firestore Aixel.
+Asisten investasi yang menyaring proposal startup dengan AI.
 
 <!-- readme:product -->
 
-## Product
+## Masalah dan pengguna
 
-- **Masalah** — manajer butuh satu tempat untuk melihat proposal yang dinilai AI,
-  menanggapinya, dan mengatur aturan penilaian, tanpa menyentuh Firestore atau layanan
-  Python secara langsung.
-- **Untuk** — manajer program (akun Firebase dengan klaim `role`), developer yang
-  merawat dashboard ini, dan coding agent yang bekerja di dalamnya.
-- **Outcome** — halaman Dashboard, Proposal, Tren, Aktivitas AI, Biaya AI, Riwayat, Aturan
-  penilaian, dan Pengaturan yang membaca Firestore di server, plus panel **Tanya AISA**
-  yang bertanya ke Asisten lewat `aisa-api`; setiap tombol yang mengubah data memanggil
-  `aisa-api` lewat server action dengan header `X-AISA-Key`, jadi Next tidak pernah
-  menulis data AISA ke Firestore.
-- **Workflow utama** — jalan lokal sampai masuk ke dashboard
-  ([tutorial](docs/tutorials/local-development.md)), memverifikasi perubahan
-  ([verify](docs/how-to/verify-change.md)), lalu membangun dan menjalankan artefak
-  container ([deploy](docs/how-to/deploy.md)).
-- **Termasuk** — sign-in Firebase email/password yang ditukar menjadi session cookie
-  Firebase httpOnly (diverifikasi dengan cek pencabutan di setiap request), RBAC
-  berbasis capability dari klaim `role` (`aisa:read`, `aisa:respond`,
-  `aisa:configure`), pembacaan Firestore yang typed, dan error monitoring opsional.
-  Yang punya env sendiri terdaftar di
-  [capability reference](docs/reference/capabilities.md).
-- **Tidak termasuk** — pendaftaran akun, manajemen pengguna, serta reset atau ganti
-  kata sandi dari UI (akun dan klaim `role` dibuat di luar aplikasi — lihat
-  [deploy](docs/how-to/deploy.md)). Bukan multi-tenant dan bukan untuk trafik publik
-  anonim.
+AISA dipakai manajer investasi dan tim investasinya untuk menyaring proposal startup yang
+masuk. Setiap pekan bisa datang banyak pitch deck, dan membaca serta menilainya satu per satu
+memakan waktu. Penilaian manual juga mudah tidak konsisten antarpenilai dan antarhari. AISA
+menilai setiap deck dengan rubrik yang sama, menghitung skor dan grade dengan kode, lalu
+menyajikan hasilnya di dashboard dan WhatsApp supaya manajer cukup memutuskan setuju atau
+tolak.
 
-Alasan lengkap di balik bentuknya ada di
-[product context](docs/explanation/product-context.md).
+## Arsitektur agent
+
+```text
+Google Form ──▶ Apps Script ───(HMAC)──────┐
+Dashboard (unggah PDF) ──(X-AISA-Key)──────┤
+WhatsApp ──▶ GOWA webhook ───(HMAC)────────┼──▶ aisa-api (FastAPI, Cloud Run)
+Cloud Scheduler ──(OIDC)──▶ digest/retensi ┘           │ semua penulisan data AISA
+                                                       ▼
+aisa-dashboard (Next.js, Cloud Run) ──membaca──▶ Firestore
+```
+
+Dua layanan Cloud Run:
+
+- **`aisa-api`** (`services/api/`, Python + FastAPI) — satu-satunya penulis data AISA ke
+  Firestore. Menangani intake, penilaian, ringkasan, webhook WhatsApp, dan API tulis untuk
+  dashboard.
+- **`aisa-dashboard`** (root repo, Next.js) — membaca Firestore di server. Setiap perubahan
+  (tanggapan, koreksi grade, hapus, aturan, unggah deck, pertanyaan ke Asisten) dikirim ke
+  `aisa-api` lewat server action dengan header `X-AISA-Key`.
+
+Alur sebuah proposal:
+
+1. **Intake.** Founder mengisi Google Form; Apps Script (`integrations/apps-script/`)
+   mengirim data form yang ditandatangani HMAC ke `POST /intake/form`, lalu `aisa-api`
+   mengunduh deck dari Drive. Manajer juga bisa mengunggah PDF dari dashboard
+   (`POST /intake/upload`, maksimal 20 MB, harus diawali `%PDF`).
+2. **Ekstraksi teks** (`pdftext.py`, pypdf) per halaman. Jika teksnya terlalu sedikit (deck
+   berupa gambar), `ocr.py` mengirim PDF ke Gemini untuk menyalin teks tiap halaman.
+3. **Penilai** (`penilai.py`) menilai lima kriteria (manajemen, kinerja, risiko, rencana,
+   dampak) dengan rubrik 1–5, masing-masing dengan kutipan dan halaman. Kutipan dicek
+   terhadap teks halaman; dua kali gagal validasi membuat proposal berstatus
+   `perlu_dicek_manual` tanpa skor.
+4. **Skor** (`scoring.py`, tanpa I/O dan tanpa model): `skor = Σ bobot × (nilai − 1) / 4`,
+   diskalakan 0–100. Grade ditentukan dari skor saja (Sangat layak, Layak bersyarat, Perlu
+   penyesuaian, Risiko tinggi, Tidak layak). Cek kecocokan sektor, tahap, dan nilai
+   pendanaan disimpan terpisah dan tidak mengubah grade.
+5. **Ringkasan** (`digest.py`) — Cloud Scheduler memanggil `/digest/run` dengan token OIDC:
+   ringkasan harian pukul 09.00 dan ringkasan mingguan pukul 17.00 (dijadwalkan hari Jumat)
+   dikirim lewat WhatsApp ke nomor di `MANAGER_PHONES`, kadang disertai satu insight tren.
+   `/retention/run` menjalankan retensi data.
+6. **WhatsApp** — pesan masuk lewat webhook GOWA. `orchestrator.py` mengenali perintah
+   dengan kode (`setuju <nama>`, `tolak <nama>`, `setuju semua <grade>`,
+   `pindahkan <nama> ke <grade> karena <alasan>`, `STOP`, `LANJUT`); pesan lain diteruskan
+   ke Asisten. Siapa pun yang chat 1:1 ke nomor bot dijawab, bukan hanya `MANAGER_PHONES`.
+7. **Asisten** (`aisa/assistant/`, Google ADK) — menjawab pertanyaan dari WhatsApp dan panel
+   **Tanya AISA** di dashboard. Berjalan di Vertex AI Agent Runtime bila
+   `ASSISTANT_ENGINE_ID` diisi (tanpa itu berjalan di dalam proses `aisa-api`), memakai
+   Memory Bank untuk mengingat preferensi manajer, dan hanya punya tool baca Firestore;
+   tidak ada tool tulis.
+
+Model untuk Penilai, ringkasan, insight, dan Asisten disimpan di `settings/rules`
+(bawaannya `gemini-3.8-flash`) dan dipanggil lewat Vertex AI di location `global`
+(`GENAI_LOCATION`). Bentuk data Firestore dimiliki model Pydantic di
+`services/api/aisa/models.py`; kontraknya di
+[aisa-firestore](docs/reference/contracts/aisa-firestore.md).
 
 <!-- readme:quickstart -->
 
-## Mulai Cepat
+## Cara instalasi dan menjalankan
 
 ### Prasyarat
 
-- **Node 24.22.1, persis** — `.node-version` adalah sumber yang dibaca version manager
-  (fnm, nvm, asdf, nodenv, mise).
-- **pnpm** — jangan `npm`; lockfile-nya punya pnpm.
-- **Docker atau Podman, opsional** — hanya untuk pemeriksaan container
-  (`pnpm smoke:image`, `pnpm test:e2e:ci`) dan stack compose.
-- **Tidak ada database yang perlu dipasang** — Firestore itu hosted service,
-  penggantinya di lokal adalah Firebase emulator suite yang jalan langsung di host.
-- **`aisa-api` untuk menulis** — server menolak boot tanpa `AISA_API_URL` dan
-  `AISA_API_KEY`. Isi `AISA_API_KEY` di `.env` dengan kunci yang dipakai `aisa-api`
-  lokalmu (`services/api/`); halaman tetap bisa dibaca tanpa layanan itu, tombol yang
-  mengubah data tidak.
-- **Linux** adalah platform yang repo ini punya buktinya (itu yang dijalankan CI dan
-  itu bentuk container-nya). macOS diperkirakan jalan tapi tidak diuji; di Windows
-  pakai WSL2.
+- **Node 24.22.1** — dari `.node-version` (juga `mise.toml`).
+- **pnpm** versi 11.17.0 — dari `packageManager` di `package.json`. Jangan pakai `npm`.
+- **Python 3.13** dan **uv** — dari `services/api/.python-version`.
+- **Java** untuk Firebase emulator.
+- Untuk `aisa-api`: akses ke project Google Cloud (Firestore, Vertex AI, Cloud Storage,
+  Drive) lewat `gcloud auth application-default login`.
+- Linux adalah platform yang diuji CI; macOS tidak diuji, di Windows pakai WSL2.
+
+### Dashboard
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-`pnpm dev` menyalakan semuanya dalam satu perintah: emulator Firebase (datanya
-disimpan lintas restart di `.emulator-data/`), `pnpm setup:local` yang membuat `.env`
-dan menyemai data saat database masih kosong, lalu `next dev`. Ctrl+C mengekspor data
-emulator dan mematikan emulator-nya.
+`pnpm dev` menyalakan Firebase emulator, menjalankan `pnpm setup:local` (membuat `.env` dari
+`.env.example` dan menyemai data saat database kosong), lalu `next dev`.
 
-Mau emulator tetap hidup di terminal terpisah — supaya server bisa restart tanpa
-mematikan emulator? Jalankan `pnpm emulators` di satu terminal, lalu `pnpm dev:next`
-(cuma `next dev`) di terminal lain.
+**Berhasil kalau** <http://localhost:3000> membawa ke `/login`, kamu masuk sebagai
+`manager@aisa.test` atau `viewer@aisa.test` dengan kata sandi `password123`, lalu sampai di
+`/dashboard`. Akun ini hanya ada di Auth emulator.
 
-**Berhasil kalau**: <http://localhost:3000> membawa kamu ke `/login`, kamu masuk sebagai
-`manager@aisa.test` dengan kata sandi `password123` (akun emulator yang dibuat
-`pnpm seed` dan dicetak oleh `pnpm setup:local`), dan kamu sampai di `/dashboard`.
-Akun ini hanya ada di Auth emulator.
+Halaman bisa dibaca tanpa `aisa-api`, tetapi tombol yang mengubah data butuh layanan itu.
+Server menolak boot jika `AISA_API_KEY` kosong, jadi isi nilainya di `.env` sama dengan
+`INTERNAL_API_KEY` milik `aisa-api` lokal.
 
-`pnpm setup:local` tidak menghapus apa pun, jadi aman diulang kapan saja. Rincian apa
-yang dia kerjakan, cara mengosongkan ulang database lokal, dan apa yang harus dilakukan
-kalau ada yang macet ada di
-[tutorial local development](docs/tutorials/local-development.md).
+### aisa-api
+
+```bash
+cd services/api
+uv sync
+gcloud auth application-default login
+uv run aisa seed-rules                       # menulis settings/rules v1 jika belum ada
+uv run uvicorn aisa.main:app --port 8787     # sesuai AISA_API_URL di .env.example
+```
+
+Port 8080 dipakai Firestore emulator, jadi `aisa-api` lokal jalan di 8787. Perintah CLI
+lain (`aisa intake-file`, `aisa digest`, `aisa seed-demo`, dan lainnya) ada di
+[`services/api/README.md`](services/api/README.md).
 
 <!-- readme:verification -->
 
-## Verifikasi Perubahan
+### Pengujian
 
 ```bash
-pnpm verify
+pnpm verify                     # dashboard: static + unit + integration + build
+cd services/api && uv run pytest
 ```
 
-Itu gerbang statis + unit + integration + build. Yang **tidak** dia cakup dan tetap
-harus kamu jalankan sendiri: sign-in di browser lewat emulator, env fail-fast saat boot, smoke
-artefak container produksi, dan suite E2E (`pnpm test:e2e:ci`). Hijau perlu, tapi tidak
-pernah cukup — prosedur lengkapnya di
+`pnpm verify` tidak mencakup sign-in di browser, env fail-fast saat boot, smoke image
+container, dan E2E (`pnpm test:e2e:ci`). Prosedur lengkapnya di
 [verify a change](docs/how-to/verify-change.md).
-
-<!-- readme:navigation -->
-
-## Dokumentasi
-
-[`docs/README.md`](docs/README.md) adalah indeks lengkapnya. Rute tercepat:
-
-- **Baru pertama kali** — [local development](docs/tutorials/local-development.md),
-  lalu [first change](docs/tutorials/first-change.md).
-- **Mulai project nyata** — [adapt the starter](docs/how-to/adapt-starter.md) untuk
-  rename dan hapus, [remove a capability](docs/how-to/remove-capability.md) untuk
-  membuang yang tidak dipakai.
-- **Menambah kode** — [add a feature](docs/how-to/add-feature.md), lalu kontrak layer
-  yang kamu sentuh di [`docs/reference/contracts/`](docs/reference/contracts/). Baca
-  kontraknya sebelum menebak konvensi dari kode pertama yang kamu buka.
-- **Fakta yang di-generate dari source** —
-  [commands](docs/reference/commands.md) ·
-  [configuration](docs/reference/configuration.md) ·
-  [capabilities](docs/reference/capabilities.md) ·
-  [project layout](docs/reference/project-layout.md).
-- **Kenapa bentuknya begini** — [architecture](docs/explanation/architecture.md) dan
-  [product context](docs/explanation/product-context.md).
-
-README ini sendiri tunduk pada
-[kontrak project README](docs/reference/contracts/project-readme.md); cara merawatnya
-ada di [maintain a project README](docs/how-to/maintain-project-readme.md).
 
 <!-- readme:deployment -->
 
-## Deployment
+### Deploy
 
-Artefaknya satu **image container** (`Containerfile`) yang dijalankan di Cloud Run;
-`compose.prod.yaml` adalah contoh menjalankannya di host sendiri. Runbook-nya di [deploy](docs/how-to/deploy.md), alasannya di
-[deployment model](docs/explanation/deployment-model.md).
+Kedua layanan dijalankan sebagai image container di Cloud Run. Langkahnya di
+[deploy](docs/how-to/deploy.md); pemasangan Google Form di
+[setup Google Form](docs/how-to/setup-google-form.md).
+
+<!-- readme:navigation -->
+
+### Dokumen lanjutan
+
+[`docs/README.md`](docs/README.md) adalah indeks dokumentasi. Mulai dari
+[local development](docs/tutorials/local-development.md),
+[architecture](docs/explanation/architecture.md), dan kontrak per layer di
+[`docs/reference/contracts/`](docs/reference/contracts/). README ini mengikuti
+[kontrak project README](docs/reference/contracts/project-readme.md).
+
+## Dependensi
+
+Versi di bawah adalah rentang yang ditulis di `package.json` dan
+`services/api/pyproject.toml`; versi pasti ada di lockfile.
+
+| Bagian       | Dependensi utama                                                                                                                                                                                                                                                                 |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard    | `next` ^16.3.8, `react` ^19.2.7, `firebase` ^12.19.0, `firebase-admin` ^14.5.0, `zod` ^4.4.3, `recharts` 3.8.0, `driver.js` 1.9.0, `@tanstack/react-table` 8.21.3, `@sentry/nextjs` ^10.76.2 (opsional)                                                                          |
+| aisa-api     | `fastapi` >=0.141.1, `uvicorn` >=0.54.0, `google-genai` >=2.32.0, `google-adk` >=2.12.0, `google-cloud-aiplatform[agent-engines]` >=2.6.0, `google-cloud-firestore` >=2.34.1, `google-cloud-storage` >=3.17.1, `pypdf` >=6.21.1, `httpx` >=0.28.1; `pydantic` ikut lewat FastAPI |
+| Layanan luar | Firestore, Firebase Auth, Vertex AI (Gemini), Vertex AI Agent Runtime + Memory Bank, Cloud Run, Cloud Storage, Cloud Scheduler, Secret Manager, Google Drive, Google Form + Apps Script, GOWA (gateway WhatsApp)                                                                 |
+
+## Konfigurasi (contoh tanpa rahasia)
+
+Daftar lengkap variabel dashboard ada di
+[configuration reference](docs/reference/configuration.md); variabel `aisa-api` di
+[`services/api/README.md`](services/api/README.md). Rahasia di Cloud Run diambil dari
+Secret Manager.
+
+Dashboard (`.env`, untuk project nyata; nilai lokal emulator sudah ada di `.env.example`):
+
+```bash
+NEXT_PUBLIC_FIREBASE_API_KEY=<isi-sendiri>          # publik, konfigurasi web Firebase
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=<project>.firebaseapp.com
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=<project>
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=<project>.appspot.com
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=<isi-sendiri>
+NEXT_PUBLIC_FIREBASE_APP_ID=<isi-sendiri>
+FIREBASE_PROJECT_ID=<project>
+FIREBASE_CLIENT_EMAIL=                              # RAHASIA; kosongkan berdua untuk ADC
+FIREBASE_PRIVATE_KEY=                               # RAHASIA
+AISA_API_URL=https://<url-aisa-api>
+AISA_API_KEY=<isi-sendiri>                          # RAHASIA, sama dengan INTERNAL_API_KEY
+```
+
+aisa-api:
+
+```bash
+GOOGLE_CLOUD_PROJECT=<project>
+GENAI_LOCATION=global
+FIRESTORE_DATABASE=(default)
+DECKS_BUCKET=<bucket-deck>
+INTERNAL_API_KEY=<isi-sendiri>                      # RAHASIA
+INTAKE_SECRET=<isi-sendiri>                         # RAHASIA, sama dengan di Apps Script
+GOWA_BASE_URL=https://<host-gowa>
+GOWA_BASIC_AUTH=<user:pass>                         # RAHASIA
+GOWA_DEVICE_ID=<isi-sendiri>
+GOWA_WEBHOOK_SECRET=<isi-sendiri>                   # RAHASIA
+MANAGER_PHONES=<62xxxx,62yyyy>                      # penerima ringkasan
+MANAGER_SALUTATION=Pak
+MANAGER_NAME=<isi-sendiri>
+ASSISTANT_ENGINE_ID=projects/<project>/locations/<region>/reasoningEngines/<id>
+ASSISTANT_MODEL=gemini-3.8-flash
+SCHEDULER_SA_EMAIL=<sa-scheduler>@<project>.iam.gserviceaccount.com
+SCHEDULER_AUDIENCE=https://<url-aisa-api>
+SIGNER_SERVICE_ACCOUNT=                             # opsional
+```
+
+## Keterbatasan
+
+- **Bot WhatsApp terbuka untuk semua pengirim.** Siapa pun yang chat 1:1 bisa memakai semua
+  perintah (termasuk `setuju`/`tolak`) dan bertanya ke Asisten. Tidak ada rate limit.
+- **Pengirim dengan nomor tersembunyi (LID, `…@lid`) diabaikan**, karena balasan dikirim ke
+  `<nomor>@s.whatsapp.net`.
+- **Bahasa Asisten masih mengasumsikan satu manajer investasi**, juga saat yang bertanya
+  orang lain.
+- **Gemini 3.x hanya tersedia di location `global`** untuk project ini, sementara Agent
+  Runtime dan Memory Bank berada di region; lokasi model dipisah di kode.
+- **Deck harus PDF.** Deck berupa gambar dibaca lewat OCR Gemini, tetapi deck di atas 15 MB
+  atau 50 halaman, OCR yang gagal, atau hasil yang tetap terlalu sedikit teks menjadi
+  `perlu_dicek_manual` tanpa skor.
+- **Menghapus proposal tidak mengurangi `dailyStats`**, jadi angka agregat harian tetap
+  menghitung proposal yang sudah dihapus.
+- **Satu deployment untuk satu tim.** Hanya ada satu `settings/rules`; tidak multi-tenant.
+- **Data demo bisa ada.** `uv run aisa seed-demo --apply` menulis data fiktif berawalan
+  `demo-`; hapus dengan `uv run aisa seed-demo --remove --apply`.
+
+## Pembagian kontribusi anggota
+
+### Pembagian Kontribusi Tim Aixel
+
+- **Muhammad Fadhil Abbas (Hustler, Project Manager & Solution Engineer).** Memimpin proyek. Ia menyusun ruang lingkup, alur solusi, dan rubrik penilaian, mengatur jadwal tim, serta membuka dan menutup pitch.
+- **Elang Fajar Buana (Hustler, Co-Founder & COO).** Memastikan masalahnya nyata dan solusinya layak didanai, berbekal pengalamannya sebagai investment analyst. Ia menyusun model bisnis, harga, dan validasi pasar, lalu menjawab pertanyaan bisnis dari juri.
+- **Muhammad Martio Alanshori (Hipster, IT Business Development).** Mewakili sudut pandang pengguna. Ia merancang pengalaman di WhatsApp dan dashboard, menyusun analisis kompetitor, dan membawakan bagian masalah pengguna.
+- **Yahya Alfon Sinaga (Hacker, Software Engineer).** Membangun AISA dari ujung ke ujung, mulai dari agen AI, integrasi Gemini, Cloud Run, dan Firestore sampai webhook WhatsApp. Ia juga menjalankan pengujian serta membawakan demo dan pertanyaan teknis.

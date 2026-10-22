@@ -7,7 +7,14 @@ from aisa import orchestrator
 from aisa.assistant_client import StepRecorder, args_summary, remote_calls
 from aisa.auth import oidc_ok, scheduler_or_key
 from aisa.domain import DELETED_NAME, scrub_name, scrubbed_history
-from aisa.models import CriterionResult, Rules, StepActor, default_rules, to_doc
+from aisa.models import (
+    DEFAULT_ANCHORS,
+    CriterionResult,
+    Rules,
+    StepActor,
+    default_rules,
+    to_doc,
+)
 from aisa.penilai import verify_citations
 from aisa.retention import due
 
@@ -59,6 +66,18 @@ def test_rules_retention_default_and_legacy_orchestrator_tolerated():
     assert r.retentionDays == 90 and "orchestrator" not in to_doc(r)["models"]
     with pytest.raises(ValueError):
         Rules.model_validate({**doc, "retentionDays": 0})
+
+
+def test_rules_stored_before_levels_2_and_4_load_with_the_default_texts():
+    doc = to_doc(default_rules(NOW))
+    old = {k: {n: a[n] for n in ("1", "3", "5")} for k, a in doc["anchors"].items()}
+    old["manajemen"]["2"] = "tersimpan"  # a level the doc does carry is never overwritten
+    r = Rules.model_validate({**doc, "anchors": old})
+    assert r.anchors["manajemen"].two == "tersimpan"
+    assert r.anchors["manajemen"].four == DEFAULT_ANCHORS["manajemen"].four
+    assert r.anchors["dampak"].two == DEFAULT_ANCHORS["dampak"].two
+    assert r.anchors["dampak"].one == doc["anchors"]["dampak"]["1"]
+    assert set(to_doc(r)["anchors"]["kinerja"]) == {"1", "2", "3", "4", "5"}
 
 
 # ---------- scheduler auth ----------

@@ -1,6 +1,6 @@
-import pytest
-
 from datetime import UTC, datetime
+
+import pytest
 
 from aisa.models import Criterion, default_rules
 from aisa.penilai import (
@@ -125,3 +125,14 @@ def test_system_prompt_names_the_criteria_a_to_e_and_the_risiko_direction():
     assert "nilai TINGGI berarti risiko RENDAH" in prompt
     assert "5 = risiko utama disebut dan dimitigasi" in prompt
     assert "tidak menyebut dampak sosial atau lingkungan sama sekali bernilai 1" in prompt
+
+
+def test_system_prompt_lists_all_five_levels_of_every_criterion_in_order():
+    rules = default_rules(datetime(2026, 10, 22, tzinfo=UTC))
+    prompt = system_prompt(rules)
+    for c in Criterion:
+        line = next(x for x in prompt.splitlines() if x.startswith(f"- {c.value} ("))
+        pos = [line.index(f"{n} = {t}") for n, t in rules.anchors[c].levels()]
+        assert pos == sorted(pos)
+    # The reason must say why this level and not the next, naming the evidence and its page.
+    assert "bukan satu tingkat di atasnya" in prompt and "beserta halamannya" in prompt

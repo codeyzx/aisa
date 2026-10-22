@@ -98,9 +98,9 @@ def system_prompt(rules: Rules) -> str:
         "Patokan dari aturan penilaian:",
     ]
     for c in Criterion:
-        a = rules.anchors[c]
+        levels = "; ".join(f"{n} = {t}" for n, t in rules.anchors[c].levels())
         lines.append(f"- {c.value} ({CRITERION_LETTER[c]}. {CRITERION_LABEL[c]}: "
-                     f"{CRITERION_MEANING[c]}): 1 = {a.one}; 3 = {a.three}; 5 = {a.five}")
+                     f"{CRITERION_MEANING[c]}): {levels}")
     lines += [
         "- Arah nilai risiko: nilai TINGGI berarti risiko RENDAH. 5 = risiko utama disebut dan "
         "dimitigasi, dan tren makro/pasar mendukung dengan data; 1 = ada risiko besar yang "
@@ -128,8 +128,12 @@ def system_prompt(rules: Rules) -> str:
     lines += [
         "Aturan keluaran:",
         "- Untuk setiap kriteria tulis dulu kutipan, lalu alasan, baru nilai.",
-        "- Setiap nilai wajib disertai alasan singkat (bahasa Indonesia, 1–2 kalimat) yang "
-        "menyebut bukti mana yang membuat nilainya tidak lebih tinggi, dan minimal satu kutipan "
+        "- Setiap nilai wajib disertai alasan singkat (bahasa Indonesia sederhana, 1–2 "
+        "kalimat) yang menjelaskan mengapa nilainya tepat SEGINI dan bukan satu tingkat di "
+        "atasnya: sebut bukti yang memenuhi patokan nilai ini beserta halamannya, lalu apa "
+        "yang belum ada untuk naik ke nilai berikutnya. Contoh: \"Nilai 3: tim disebut dengan "
+        "peran (hal. 4), tetapi belum ada rekam jejak berangka untuk naik ke 4.\" Untuk nilai "
+        "5 sebut bukti yang menutup patokan 5. Sertakan juga minimal satu kutipan "
         "{page, quote}. page adalah nomor dari penanda [hal. n]; quote disalin PERSIS kata demi "
         "kata dari halaman itu (5–30 kata, tanpa parafrase, tanpa menggabungkan halaman). Kutipan "
         "yang tidak ditemukan di halamannya akan membuat nilai diturunkan.",

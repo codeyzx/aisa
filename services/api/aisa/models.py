@@ -257,9 +257,18 @@ class ProposalText(_M):
 
 
 class Anchors(_M):
+    """What each value 1–5 means for one criterion. All five are required, so every write
+    carries a complete scale; a stored doc from before levels 2 and 4 existed is completed on
+    read by `Rules`."""
+
     one: str = Field(alias="1")
+    two: str = Field(alias="2")
     three: str = Field(alias="3")
+    four: str = Field(alias="4")
     five: str = Field(alias="5")
+
+    def levels(self) -> list[tuple[int, str]]:
+        return [(1, self.one), (2, self.two), (3, self.three), (4, self.four), (5, self.five)]
 
 
 class FitRules(_M):
@@ -310,6 +319,26 @@ class Rules(_M):
     retentionDays: int = Field(90, ge=1)
     changedAt: datetime
     reason: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _fill_levels_2_and_4(cls, data: Any) -> Any:
+        """A rules doc stored before levels 2 and 4 existed carries only "1", "3" and "5".
+        A missing "2" or "4" of a known criterion is read from DEFAULT_ANCHORS; nothing is
+        written back. Writes through `domain.update_rules` are checked complete before this
+        runs, so a request can never lean on the fill."""
+        if not isinstance(data, dict) or not isinstance(data.get("anchors"), dict):
+            return data
+        anchors = {}
+        for key, a in data["anchors"].items():
+            if isinstance(a, dict) and key in set(Criterion):
+                default = DEFAULT_ANCHORS[Criterion(key)]
+                a = dict(a)
+                for alias, name in (("2", "two"), ("4", "four")):
+                    if alias not in a and name not in a:
+                        a[alias] = getattr(default, name)
+            anchors[key] = a
+        return {**data, "anchors": anchors}
 
 
 class Runtime(_M):
@@ -501,36 +530,56 @@ DEFAULT_WEIGHTS: dict[Criterion, float] = {
 }
 
 
-def _a(one: str, three: str, five: str) -> Anchors:
-    return Anchors(**{"1": one, "3": three, "5": five})
+def _a(one: str, two: str, three: str, four: str, five: str) -> Anchors:
+    return Anchors(**{"1": one, "2": two, "3": three, "4": four, "5": five})
 
 
 DEFAULT_ANCHORS: dict[Criterion, Anchors] = {
     Criterion.manajemen: _a(
         "Tim tidak dikenalkan, atau hanya disebut tanpa latar belakang",
+        "Tim hanya digambarkan dengan klaim umum (mis. 'berpengalaman', 'tim solid') tanpa "
+        "peran atau latar belakang yang jelas",
         "Tim disebut dengan peran dan pengalaman umum, tanpa rekam jejak yang bisa dicek",
+        "Rekam jejak yang bisa dicek (tempat kerja atau jabatan sebelumnya disebut), tetapi "
+        "belum lengkap: tanpa capaian berangka (mis. lama pengalaman, pendanaan yang pernah "
+        "diraih) atau ada peran kunci yang belum terisi",
         "Rekam jejak spesifik dan relevan (tempat kerja, jabatan, capaian berangka) dan peran "
         "kunci lengkap"),
     Criterion.kinerja: _a(
         "Belum ada bukti bisnis berjalan, atau angkanya saling bertentangan",
+        "Traksi hanya diklaim secara umum (mis. 'banyak pengguna', 'tumbuh pesat') tanpa angka",
         "Ada pengguna atau pendapatan awal, tetapi angkanya tanpa periode atau tanpa nama "
         "pelanggan",
+        "Angka pendapatan atau pengguna berperiode dan pelanggan atau mitra disebut namanya, "
+        "tetapi pertumbuhan belum ditunjukkan atau baru satu-dua angka",
         "Pendapatan, pengguna, dan pertumbuhan berperiode, dengan pelanggan atau mitra yang "
         "disebut namanya"),
     Criterion.risiko: _a(
         "Ada risiko besar yang tidak dibahas, informasinya bertentangan, atau risiko tidak "
         "dibahas sama sekali",
+        "Risiko dan tren pasar hanya disinggung secara umum (mis. 'persaingan ketat', 'pasar "
+        "besar') tanpa mitigasi",
         "Sebagian risiko disebut, tetapi mitigasinya umum atau tren pasar tidak didukung data",
+        "Risiko utama disebut dengan mitigasi yang konkret dan tren pasar didukung data, "
+        "tetapi belum lengkap: ada risiko utama yang belum dibahas, atau datanya tanpa sumber "
+        "atau periode",
         "Risiko utama (persaingan, regulasi, ketergantungan) disebut beserta mitigasinya, dan "
         "tren makro/pasar yang mendukung dibuktikan data bersumber"),
     Criterion.rencana: _a(
         "Tidak ada rencana penggunaan dana atau proyeksi keuangan",
+        "Rencana hanya klaim umum (mis. 'dana untuk ekspansi') tanpa rincian atau angka",
         "Ada rencana penggunaan dana atau proyeksi, tetapi tanpa dasar data atau unit ekonomi",
+        "Penggunaan dana dirinci dan proyeksi berpijak pada data aktual, tetapi unit ekonomi "
+        "atau potensi imbal hasil bagi investor belum dijelaskan",
         "Penggunaan dana rinci, proyeksi berdasar data aktual, unit ekonomi, dan potensi imbal "
         "hasil bagi investor dijelaskan"),
     Criterion.dampak: _a(
         "Dampak sosial atau lingkungan tidak disebut",
+        "Dampak hanya diklaim secara umum (mis. 'berdampak sosial') tanpa siapa atau apa yang "
+        "terdampak",
         "Dampak disebut tetapi belum diukur (mis. 'membantu petani')",
+        "Ada angka dampak aktual (mis. jumlah penerima manfaat), tetapi cara mengukurnya belum "
+        "dijelaskan atau angkanya tanpa sumber atau periode",
         "Dampak terukur dengan angka (mis. lapangan kerja, inklusi, emisi) dan cara mengukurnya"),
 }
 
@@ -556,6 +605,16 @@ def default_rules(now: datetime) -> Rules:
 
 
 WEIGHT_TOLERANCE = 0.001
+
+
+def anchors_complete(anchors: Any) -> bool:
+    """Every criterion, each with a non-empty text for all five levels 1–5. A write must pass
+    this: the read-time fill in `Rules` is for old stored docs, never for a request."""
+    if not isinstance(anchors, dict) or {str(k) for k in anchors} != {c.value for c in Criterion}:
+        return False
+    return all(isinstance(a, dict) and all(isinstance(a.get(n), str) and a[n].strip()
+                                           for n in ("1", "2", "3", "4", "5"))
+               for a in anchors.values())
 
 
 def weights_valid(weights: dict[Criterion, float] | dict[str, float]) -> bool:

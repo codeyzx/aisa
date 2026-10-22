@@ -22,6 +22,7 @@ from .models import (
     Rules,
     Runtime,
     Via,
+    anchors_complete,
     to_doc,
     weights_valid,
 )
@@ -122,6 +123,9 @@ def update_rules(new: dict[str, Any], reason: str, via: Via) -> Rules:
         raise DomainError("perubahan aturan wajib disertai alasan")
     if not weights_valid(new.get("weights") or {}):
         raise DomainError("bobot harus berisi kelima kriteria dan berjumlah 1,0")
+    if not anchors_complete(new.get("anchors")):
+        raise DomainError("patokan nilai harus berisi kelima kriteria, masing-masing dengan "
+                          "penjelasan nilai 1, 2, 3, 4, dan 5")
     rules_ref = db.client().document("settings/rules")
 
     @firestore.transactional

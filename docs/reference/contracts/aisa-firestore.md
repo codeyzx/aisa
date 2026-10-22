@@ -88,11 +88,17 @@ page 1). Kept apart so list queries never load deck text.
 `rulesVersions/{version}` plus a `history` row with the reason.
 
 `Rules`: `{version: int, weights: {<Criterion>: float}` (sum 1.0), `anchors: {<Criterion>:
-{1, 3, 5: string}}`, `fit: {sectors: [string], stages: [string], fundingMinIdr,
+{1, 2, 3, 4, 5: string}}`, `fit: {sectors: [string], stages: [string], fundingMinIdr,
 fundingMaxIdr}`, `thresholds: {sangatLayak: 85, layakBersyarat: 75, perluPenyesuaian: 65,
 risikoTinggi: 50}` (strictly descending, each in (0, 100]), `models: {penilai, ringkasan, insight, asisten}`,
 `minCharsPerPage: int, retentionDays: int, changedAt, reason}`. `retentionDays` defaults
 to 90.
+
+`anchors` says what each value 1–5 means for each criterion, and the Penilai prompt lists
+all five. `PUT /api/rules` rejects (422) a body whose `anchors` lacks a criterion or a
+non-blank text for any of the five levels. A stored doc written before levels 2 and 4
+existed still loads: a missing `"2"` or `"4"` is read from the code's default text for that
+criterion (`DEFAULT_ANCHORS`); reading does not write the filled text back.
 
 There is no Orchestrator model: commands are recognised by code. `models.asisten` is
 informational only; the Asisten's model is fixed when it is deployed to Agent Runtime.

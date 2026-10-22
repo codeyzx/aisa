@@ -87,30 +87,43 @@ const FIT = {
   fundingMaxIdr: 20_000_000_000,
 }
 // Same text as `DEFAULT_ANCHORS` in services/api/aisa/models.py.
-const ANCHORS: Record<Criterion, Record<'1' | '3' | '5', string>> = {
+const ANCHORS: Record<
+  Criterion,
+  Record<'1' | '2' | '3' | '4' | '5', string>
+> = {
   manajemen: {
     '1': 'Tim tidak dikenalkan, atau hanya disebut tanpa latar belakang',
+    '2': "Tim hanya digambarkan dengan klaim umum (mis. 'berpengalaman', 'tim solid') tanpa peran atau latar belakang yang jelas",
     '3': 'Tim disebut dengan peran dan pengalaman umum, tanpa rekam jejak yang bisa dicek',
+    '4': 'Rekam jejak yang bisa dicek (tempat kerja atau jabatan sebelumnya disebut), tetapi belum lengkap: tanpa capaian berangka (mis. lama pengalaman, pendanaan yang pernah diraih) atau ada peran kunci yang belum terisi',
     '5': 'Rekam jejak spesifik dan relevan (tempat kerja, jabatan, capaian berangka) dan peran kunci lengkap',
   },
   kinerja: {
     '1': 'Belum ada bukti bisnis berjalan, atau angkanya saling bertentangan',
+    '2': "Traksi hanya diklaim secara umum (mis. 'banyak pengguna', 'tumbuh pesat') tanpa angka",
     '3': 'Ada pengguna atau pendapatan awal, tetapi angkanya tanpa periode atau tanpa nama pelanggan',
+    '4': 'Angka pendapatan atau pengguna berperiode dan pelanggan atau mitra disebut namanya, tetapi pertumbuhan belum ditunjukkan atau baru satu-dua angka',
     '5': 'Pendapatan, pengguna, dan pertumbuhan berperiode, dengan pelanggan atau mitra yang disebut namanya',
   },
   risiko: {
     '1': 'Ada risiko besar yang tidak dibahas, informasinya bertentangan, atau risiko tidak dibahas sama sekali',
+    '2': "Risiko dan tren pasar hanya disinggung secara umum (mis. 'persaingan ketat', 'pasar besar') tanpa mitigasi",
     '3': 'Sebagian risiko disebut, tetapi mitigasinya umum atau tren pasar tidak didukung data',
+    '4': 'Risiko utama disebut dengan mitigasi yang konkret dan tren pasar didukung data, tetapi belum lengkap: ada risiko utama yang belum dibahas, atau datanya tanpa sumber atau periode',
     '5': 'Risiko utama (persaingan, regulasi, ketergantungan) disebut beserta mitigasinya, dan tren makro/pasar yang mendukung dibuktikan data bersumber',
   },
   rencana: {
     '1': 'Tidak ada rencana penggunaan dana atau proyeksi keuangan',
+    '2': "Rencana hanya klaim umum (mis. 'dana untuk ekspansi') tanpa rincian atau angka",
     '3': 'Ada rencana penggunaan dana atau proyeksi, tetapi tanpa dasar data atau unit ekonomi',
+    '4': 'Penggunaan dana dirinci dan proyeksi berpijak pada data aktual, tetapi unit ekonomi atau potensi imbal hasil bagi investor belum dijelaskan',
     '5': 'Penggunaan dana rinci, proyeksi berdasar data aktual, unit ekonomi, dan potensi imbal hasil bagi investor dijelaskan',
   },
   dampak: {
     '1': 'Dampak sosial atau lingkungan tidak disebut',
+    '2': "Dampak hanya diklaim secara umum (mis. 'berdampak sosial') tanpa siapa atau apa yang terdampak",
     '3': "Dampak disebut tetapi belum diukur (mis. 'membantu petani')",
+    '4': 'Ada angka dampak aktual (mis. jumlah penerima manfaat), tetapi cara mengukurnya belum dijelaskan atau angkanya tanpa sumber atau periode',
     '5': 'Dampak terukur dengan angka (mis. lapangan kerja, inklusi, emisi) dan cara mengukurnya',
   },
 }

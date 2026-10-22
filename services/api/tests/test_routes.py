@@ -416,6 +416,25 @@ def test_dsb_rute11b_rules_with_bad_thresholds_is_422(client, fs, rules, thresho
     assert fs.all("history") == {}
 
 
+@pytest.mark.parametrize("level", ["1", "2", "3", "4", "5"])
+def test_rules_missing_an_anchor_level_is_422_not_filled(client, fs, rules, level):
+    new = _rules_body(rules)
+    del new["anchors"]["kinerja"][level]
+    r = api(client, "PUT", "/api/rules", {"rules": new, "reason": "uji"})
+    assert r.status_code == 422 and "1, 2, 3, 4, dan 5" in r.json()["detail"]
+    assert fs.get("settings/rules")["version"] == 1 and fs.all("history") == {}
+
+
+def test_rules_with_a_blank_level_or_a_missing_criterion_is_422(client, fs, rules):
+    new = _rules_body(rules)
+    new["anchors"]["dampak"]["4"] = "  "
+    assert api(client, "PUT", "/api/rules", {"rules": new, "reason": "uji"}).status_code == 422
+    new = _rules_body(rules)
+    del new["anchors"]["dampak"]
+    assert api(client, "PUT", "/api/rules", {"rules": new, "reason": "uji"}).status_code == 422
+    assert fs.get("settings/rules")["version"] == 1
+
+
 def test_dsb_rute11c_valid_new_scale_rules_bump_the_version(client, fs, rules):
     new = _rules_body(rules)
     new["weights"] = {"manajemen": 0.30, "kinerja": 0.20, "risiko": 0.15, "rencana": 0.25,
@@ -427,6 +446,7 @@ def test_dsb_rute11c_valid_new_scale_rules_bump_the_version(client, fs, rules):
     stored = fs.get("settings/rules")
     assert stored["version"] == 2 and stored["thresholds"] == new["thresholds"]
     assert stored["weights"] == new["weights"] and fs.get("rulesVersions/2") == stored
+    assert stored["anchors"] == new["anchors"]
 
 
 @pytest.mark.parametrize("path,body", [

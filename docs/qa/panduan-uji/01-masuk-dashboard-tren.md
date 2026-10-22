@@ -633,7 +633,7 @@ angka persisnya.
 
 1. Di sidebar, grup **Ruang kerja**, klik **Tren**.
 2. Baca tiga sampai empat poin di bawah judul **Tren 14 hari terakhir**.
-3. Di kartu **Proposal masuk per hari**, arahkan mouse ke salah satu hari di grafik.
+3. Di kartu **Tren proposal di semua kategori**, arahkan mouse ke salah satu hari di grafik.
 4. Klik **Lihat sebagai tabel** di bawah grafik.
 
 **Yang seharusnya terlihat:**

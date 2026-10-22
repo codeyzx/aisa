@@ -98,7 +98,7 @@ test('DSB-30 Tren shows the latest insight and the 14 days of dailyStats', async
 
   // Every day's counts, per grade and perlu dicek manual, read through the
   // chart's table.
-  const perDay = panel(page, 'Proposal masuk per hari')
+  const perDay = panel(page, 'Tren proposal di semua kategori')
   await perDay.getByText('Lihat sebagai tabel').click()
   await Promise.all(
     stats.map((row) => {

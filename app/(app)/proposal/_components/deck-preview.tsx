@@ -19,12 +19,13 @@ import {
 
 import { Button, buttonVariants } from '@/components/ui/button'
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet'
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Spinner } from '@/components/ui/spinner'
 import { getDeckUrlAction, type DeckLink } from '@/features/aisa/aisa.action'
 import { formatNumber } from '@/lib/format/number'
@@ -53,16 +54,16 @@ function withPage(url: string, page: number | null): string {
 
 export type OpenPreview = (page?: number) => void
 const PreviewContext = createContext<OpenPreview | null>(null)
-/** Whether the panel is open, and how to close it: see `useDeckPreviewPanel`. */
+/** Whether the preview dialog is open, and how to close it: see `useDeckPreviewPanel`. */
 const PanelContext = createContext<{ open: boolean; close: () => void }>({
   open: false,
   close: () => {},
 })
 
 /**
- * One "Pratinjau deck" panel per page, opened from the button in the Founder
+ * One "Pratinjau proposal" dialog per page, opened from the button in the Founder
  * card or from any page citation — so the link is fetched once and shared. It
- * is fetched when the panel opens, not at render: the signed link lives 15
+ * is fetched when the dialog opens, not at render: the signed link lives 15
  * minutes, and a page left open longer would hand out a dead one. Reopening
  * after that fetches a fresh link.
  *
@@ -126,30 +127,35 @@ export function DeckPreviewProvider({
     <PreviewContext.Provider value={deck ? openAt : null}>
       <PanelContext.Provider value={panel}>{children}</PanelContext.Provider>
       {deck ? (
-        <Sheet open={open} onOpenChange={setOpen}>
-          <SheetContent className="gap-0 p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-2xl data-[side=right]:lg:max-w-4xl">
-            <SheetHeader className="flex-row items-center gap-3 border-b px-5 py-4 pr-14">
+        <Dialog open={open} onOpenChange={setOpen}>
+          {/* Near full-page: a deck page is read, not glanced at. Below `sm`
+              it fills the screen, as the Log penilaian dialog does. */}
+          <DialogContent
+            size="content"
+            className="h-[90svh] max-h-[90svh] max-sm:h-svh max-sm:max-h-svh max-sm:max-w-full max-sm:rounded-none sm:w-[90vw] sm:max-w-[min(90vw,100rem)]"
+          >
+            <DialogHeader className="flex-row items-center gap-3 py-3.5 pr-14 max-sm:px-4">
               <div className="min-w-0 flex-1 space-y-1">
                 <div className="flex items-center gap-2">
-                  <SheetTitle className="flex items-center gap-2 text-base">
+                  <DialogTitle className="flex items-center gap-2 text-base font-semibold">
                     <PresentationIcon className="size-4 text-primary" />
-                    Pratinjau deck
-                  </SheetTitle>
+                    Pratinjau proposal
+                  </DialogTitle>
                   {page !== null ? (
                     <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
                       hal. {page}
                     </span>
                   ) : null}
                 </div>
-                <SheetDescription className="flex min-w-0 items-center gap-1.5">
+                <DialogDescription className="flex min-w-0 items-center gap-1.5 text-[13px]">
                   <FileTextIcon className="size-3.5 shrink-0" />
                   <span className="truncate">{deck.fileName}</span>
                   <span className="shrink-0">
                     · {formatNumber(deck.pageCount)} halaman
                   </span>
-                </SheetDescription>
+                </DialogDescription>
               </div>
-              {/* Without a frame the body's own "Buka deck" is the one way out. */}
+              {/* Without a frame the body's own "Buka proposal" is the one way out. */}
               {src && newTabUrl ? (
                 <a
                   href={newTabUrl}
@@ -161,7 +167,7 @@ export function DeckPreviewProvider({
                   <span className="max-sm:sr-only">Buka di tab baru</span>
                 </a>
               ) : null}
-            </SheetHeader>
+            </DialogHeader>
             <div className="relative min-h-0 flex-1 bg-muted/60">
               {src ? (
                 <>
@@ -174,14 +180,16 @@ export function DeckPreviewProvider({
                     // A new src (another page, a fresh link) is a new document.
                     key={src}
                     src={src}
-                    title={`Pitch deck ${deck.fileName}`}
+                    title={`Proposal ${deck.fileName}`}
                     onLoad={() => setLoadedSrc(src)}
                     className="absolute inset-0 size-full border-0 bg-background"
                   />
-                  {loadedSrc !== src ? <Loading label="Membuka deck…" /> : null}
+                  {loadedSrc !== src ? (
+                    <Loading label="Membuka proposal…" />
+                  ) : null}
                 </>
               ) : pending || (!fetched && !error) ? (
-                <Loading label="Menyiapkan tautan deck…" />
+                <Loading label="Menyiapkan tautan proposal…" />
               ) : (
                 <div className="grid h-full place-items-center p-6">
                   <div className="max-w-sm space-y-3 text-center">
@@ -189,7 +197,7 @@ export function DeckPreviewProvider({
                     {error ? (
                       <>
                         <p className="text-sm font-medium">
-                          Deck tidak bisa dibuka.
+                          Proposal tidak bisa dibuka.
                         </p>
                         <p className="text-[13px] text-destructive">{error}</p>
                         <Button variant="outline" size="sm" onClick={load}>
@@ -200,10 +208,10 @@ export function DeckPreviewProvider({
                     ) : (
                       <>
                         <p className="text-sm font-medium">
-                          Pratinjau tidak tersedia untuk deck ini.
+                          Pratinjau tidak tersedia untuk proposal ini.
                         </p>
                         <p className="text-[13px] text-muted-foreground">
-                          Buka deck di tab baru untuk membacanya
+                          Buka proposal di tab baru untuk membacanya
                           {page !== null ? ` di hal. ${page}` : ''}.
                         </p>
                         {newTabUrl ? (
@@ -214,7 +222,7 @@ export function DeckPreviewProvider({
                             className={buttonVariants({ size: 'sm' })}
                           >
                             <ExternalLinkIcon data-icon="inline-start" />
-                            Buka deck
+                            Buka proposal
                           </a>
                         ) : null}
                       </>
@@ -224,14 +232,14 @@ export function DeckPreviewProvider({
               )}
             </div>
             {src ? (
-              <p className="border-t px-5 py-2.5 text-xs text-muted-foreground">
+              <DialogFooter className="block py-2.5 text-xs text-muted-foreground max-sm:px-4">
                 {drive
                   ? `${page !== null ? `Pratinjau Drive selalu mulai dari halaman 1; gulir ke hal. ${page}. ` : ''}Pratinjau Drive hanya tampil bila akun Google Anda bisa membuka berkas ini. Kosong? Pakai Buka di tab baru.`
-                  : `${fetched?.expiresIn ? `Tautan pratinjau berlaku ${Math.round(fetched.expiresIn / 60)} menit; buka ulang panel ini untuk tautan baru. ` : ''}Kosong? Pakai Buka di tab baru.`}
-              </p>
+                  : `${fetched?.expiresIn ? `Tautan pratinjau berlaku ${Math.round(fetched.expiresIn / 60)} menit; buka ulang pratinjau ini untuk tautan baru. ` : ''}Kosong? Pakai Buka di tab baru.`}
+              </DialogFooter>
             ) : null}
-          </SheetContent>
-        </Sheet>
+          </DialogContent>
+        </Dialog>
       ) : null}
     </PreviewContext.Provider>
   )
@@ -250,7 +258,7 @@ function Loading({ label }: { label: string }) {
 
 /**
  * The page's preview opener, for a trigger this file does not ship: call it
- * with a page number to open the panel there, or with none for page 1. Null
+ * with a page number to open the preview there, or with none for page 1. Null
  * outside a `DeckPreviewProvider` or when the proposal has no deck.
  */
 export function useDeckPreview(): OpenPreview | null {
@@ -258,16 +266,16 @@ export function useDeckPreview(): OpenPreview | null {
 }
 
 /**
- * The panel's open state, for a dialog that opens it from inside itself (Log
+ * The preview dialog's open state, for a dialog that opens it from inside itself (Log
  * penilaian): the two are separate dialogs, so an Escape pressed before focus
- * has moved into the panel would reach the dialog underneath and close it
- * instead. That dialog asks here first and closes the panel.
+ * has moved into the preview would reach the dialog underneath and close it
+ * instead. That dialog asks here first and closes the preview.
  */
 export function useDeckPreviewPanel() {
   return useContext(PanelContext)
 }
 
-/** "Pratinjau deck": opens the panel at the first page; nothing without a deck. */
+/** "Pratinjau proposal": opens the preview at the first page; nothing without a deck. */
 export function DeckPreviewButton(
   props: Omit<ComponentProps<typeof Button>, 'onClick' | 'children'>,
 ) {
@@ -276,7 +284,7 @@ export function DeckPreviewButton(
   return (
     <Button {...props} onClick={() => openAt()}>
       <PresentationIcon data-icon="inline-start" />
-      Pratinjau deck
+      Pratinjau proposal
     </Button>
   )
 }
@@ -300,7 +308,7 @@ export function DeckPageLink({
   return (
     <button
       type="button"
-      aria-label={`Buka pratinjau deck di halaman ${page}`}
+      aria-label={`Buka pratinjau proposal di halaman ${page}`}
       onClick={() => openAt(page)}
       className={cn(
         'cursor-pointer underline-offset-2 transition-colors outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring/50',

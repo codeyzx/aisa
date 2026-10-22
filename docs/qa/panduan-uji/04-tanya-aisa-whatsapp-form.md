@@ -5,7 +5,7 @@
 Panduan ini untuk Anda yang menguji sendiri tiga pintu AISA: **Tanya AISA** di dashboard (tombol
 bulat kanan bawah, kartu di detail proposal, dan ⌘K), **bot WhatsApp AISA** (pertanyaan,
 perintah, STOP/LANJUT, ringkasan pukul 09.00 dan 17.00), dan **Google Form founder** (proposal
-masuk lalu dinilai, termasuk deck hasil scan). Dashboard produksi:
+masuk lalu dinilai, termasuk proposal hasil scan). Dashboard produksi:
 <https://aisa-dashboard-lk5jbo3eza-et.a.run.app>, masuk sebagai `manager@aisa.local` dengan
 sandi admin dari tim. Bot WhatsApp AISA bernomor **+62 877-8116-8546** (`6287781168546`); bot
 hanya membalas nomor manajer yang terdaftar di AISA. Pesan dari nomor lain tidak dibalas sama
@@ -14,7 +14,7 @@ adalah data produksi saat panduan ditulis; data bisa berubah, jadi ganti dengan 
 layar Anda.
 
 Use case bertanda ⚠️ **mengubah data**. Untuk itu, pakai proposal uji: di **Dashboard** atau
-**Proposal**, klik **Unggah pitch deck**, pilih PDF sintetis, dan isi **Nama startup (opsional)**
+**Proposal**, klik **Unggah proposal**, pilih PDF sintetis, dan isi **Nama startup (opsional)**
 dengan nama berawalan `UJI` (mis. `UJI Satu`, `UJI Dua`). Setelah selesai, hapus proposal uji:
 buka detailnya, klik **Hapus data**, isi **Alasan (wajib)** (mis. `proposal uji`), lalu
 **Hapus permanen**. Tanggapan (undang/pantau/arsipkan) tidak bisa dibatalkan menjadi "Belum
@@ -74,7 +74,7 @@ ditanggapi" lagi, jadi jangan jalankan perintah ⚠️ ke proposal sungguhan.
 - [UC-FRM-02 · Persetujuan wajib di form](#uc-frm-02--persetujuan-wajib-di-form)
 - [UC-FRM-03 · File yang sama dikirim ulang ⚠️](#uc-frm-03--file-yang-sama-dikirim-ulang-️)
 - [UC-FRM-04 · Melihat proposal yang perlu dicek manual](#uc-frm-04--melihat-proposal-yang-perlu-dicek-manual)
-- [UC-FRM-05 · Deck hasil scan dibaca sebagai gambar ⚠️](#uc-frm-05--deck-hasil-scan-dibaca-sebagai-gambar-️)
+- [UC-FRM-05 · Proposal hasil scan dibaca sebagai gambar ⚠️](#uc-frm-05--proposal-hasil-scan-dibaca-sebagai-gambar-️)
 - [UC-FRM-06 · Proposal masuk saat AISA dijeda ⚠️](#uc-frm-06--proposal-masuk-saat-aisa-dijeda-️)
 
 ---
@@ -330,7 +330,7 @@ saat AISA sedang menyiapkan jawaban, jawabannya menjadi "Jawaban dibatalkan kare
 **Yang seharusnya terlihat:** panel Tanya AISA terbuka sendiri dan langsung mengirim
 "Buatkan pertanyaan untuk founder Kopi Teras Senja". Jawabannya berupa daftar pertanyaan di
 dalam kotak **💡 Saran AI (bukan dari data proposal):**, berdasarkan kriteria bernilai rendah atau
-yang tidak disebut di deck. Langkah 4 mengirim "Apa risiko Kopi Teras Senja?", juga dengan
+yang tidak disebut di proposal. Langkah 4 mengirim "Apa risiko Kopi Teras Senja?", juga dengan
 bagian 💡. Bila Anda mengklik tombol kedua saat jawaban pertama belum datang, pertanyaan kedua
 menunggu dan baru terkirim setelah jawaban pertama selesai.
 **Kalau berbeda:** bila panel terbuka tapi tidak mengirim apa-apa, catat.
@@ -811,8 +811,8 @@ founder**, **Email founder**, **Persetujuan**, dan **Pitch deck (PDF)** (satu PD
 ### UC-FRM-01 · Founder mengirim proposal lewat Google Form ⚠️
 
 **Situasi:** seorang founder mengisi form dan Anda ingin melihat proposalnya dinilai.
-**Sebelum mulai:** link form dari tim; PDF pitch deck berteks yang belum pernah dikirim (boleh
-deck sintetis). AISA tidak dijeda.
+**Sebelum mulai:** link form dari tim; PDF proposal berteks yang belum pernah dikirim (boleh
+PDF sintetis). AISA tidak dijeda.
 **Langkah:**
 
 1. Buka link form, isi **Nama startup** `UJI Form Satu`, nama dan email founder (boleh email
@@ -857,9 +857,9 @@ di Google.
 **Yang seharusnya terlihat:** AISA mengenali proposal form dari ID berkasnya di Google Drive,
 bukan dari isi PDF. Setiap respons form baru menyimpan berkas Drive baru, jadi kiriman kedua
 muncul sebagai proposal kedua bernama sama. Itu perilaku yang diharapkan; yang dicegah hanyalah
-satu respons yang terkirim dua kali. Bandingkan dengan **Unggah pitch deck** di dashboard: PDF
-yang isinya sama persis tidak membuat proposal baru: muncul toast "Pitch deck ini sudah pernah
-diunggah. Membuka proposalnya." dan Anda dibawa ke proposal yang sudah ada.
+satu respons yang terkirim dua kali. Bandingkan dengan **Unggah proposal** di dashboard: PDF
+yang isinya sama persis tidak membuat proposal baru: muncul toast "Proposal ini sudah pernah
+diunggah. Membuka yang sudah ada." dan Anda dibawa ke proposal yang sudah ada.
 Hapus proposal kedua dengan **Hapus data**.
 **Kalau berbeda:** bila satu kali **Submit** menghasilkan dua proposal, catat.
 
@@ -874,34 +874,34 @@ membaca.
 
 **Yang seharusnya terlihat:** badge kuning **Perlu dicek manual** di bawah nama, disertai alasan
 mis. "teks terlalu sedikit (0 karakter di 10 halaman)". Kotak **Skor kualitas** berisi "—" dan
-"Tidak dinilai: deck perlu dicek manual, tanpa skor dan grade." Tidak ada grade dan tidak
+"Tidak dinilai: proposal perlu dicek manual, tanpa skor dan grade." Tidak ada grade dan tidak
 ada kartu **Grade kurang pas?**. Proposal ini tetap muncul di ringkasan WA pada baris
 **Perlu dicek manual**.
 **Kalau berbeda:** bila proposal ini punya skor atau grade, catat.
 
-### UC-FRM-05 · Deck hasil scan dibaca sebagai gambar ⚠️
+### UC-FRM-05 · Proposal hasil scan dibaca sebagai gambar ⚠️
 
-**Situasi:** founder mengirim deck hasil scan (gambar saja, tanpa teks yang bisa dipilih).
+**Situasi:** founder mengirim proposal hasil scan (gambar saja, tanpa teks yang bisa dipilih).
 **Sebelum mulai:** buat PDF berisi gambar saja, mis. foto/tangkapan layar slide yang disimpan
 sebagai PDF, sehingga teksnya tidak bisa diblok di pembaca PDF. Jaga ukurannya paling besar
 15 MB dan 50 halaman.
 **Langkah:**
 
-1. Kirim lewat Google Form dengan **Nama startup** `UJI Scan` (atau lewat **Unggah pitch deck**
-   di dashboard dengan nama yang sama).
+1. Kirim lewat Google Form dengan **Nama startup** `UJI Scan` (atau lewat **Unggah proposal** di
+   dashboard dengan nama yang sama).
 2. Di dashboard, buka **Proposal** dan tunggu sekitar satu menit, lalu klik **UJI Scan**.
 
-**Yang seharusnya terlihat:** karena teksnya tidak bisa diambil, AI membaca deck sebagai
+**Yang seharusnya terlihat:** karena teksnya tidak bisa diambil, AI membaca proposal sebagai
 gambar dan menyalin teks yang terlihat di tiap halaman. Bila slide-nya terbaca, status akhirnya
-**Dinilai** dengan skor dan grade seperti deck biasa, dan kutipannya berasal dari teks
-salinan itu. Di **Log penilaian** muncul langkah **AI membaca deck sebagai gambar** (bertanda
-**AI**) di antara **Memeriksa deck bisa dibaca** dan **AI menilai 5 kriteria**. Status
-**Perlu dicek manual** (tanpa skor dan grade, seperti UC-FRM-04) hanya muncul bila deck
+**Dinilai** dengan skor dan grade seperti proposal biasa, dan kutipannya berasal dari teks
+salinan itu. Di **Log penilaian** muncul langkah **AI membaca proposal sebagai gambar** (bertanda
+**AI**) di antara **Memeriksa proposal bisa dibaca** dan **AI menilai 5 kriteria**. Status
+**Perlu dicek manual** (tanpa skor dan grade, seperti UC-FRM-04) hanya muncul bila proposal
 tetap tidak terbaca, dengan alasan "teks terlalu sedikit, juga setelah dibaca sebagai gambar
-(…)", atau bila deck lebih dari 15 MB atau 50 halaman, dengan alasan "… terlalu besar untuk
+(…)", atau bila berkasnya lebih dari 15 MB atau 50 halaman, dengan alasan "… terlalu besar untuk
 dibaca sebagai gambar (maks. 15 MB dan 50 halaman)". Hapus dengan **Hapus data** setelah
 selesai.
-**Kalau berbeda:** bila deck kecil yang slide-nya jelas terbaca tetap menjadi Perlu dicek
+**Kalau berbeda:** bila proposal kecil yang slide-nya jelas terbaca tetap menjadi Perlu dicek
 manual, atau bila kutipan di **Nilai per kriteria** tidak ada di slide, catat.
 
 ### UC-FRM-06 · Proposal masuk saat AISA dijeda ⚠️

@@ -168,8 +168,8 @@ export function CostMethod({
               tercatat di aplikasi.
             </li>
             <li>
-              Cloud Run, Firestore, dan penyimpanan deck. Semua angka di halaman
-              ini perkiraan, bukan jumlah tagihan.
+              Cloud Run, Firestore, dan penyimpanan berkas proposal. Semua angka
+              di halaman ini perkiraan, bukan jumlah tagihan.
             </li>
           </ul>
         </div>

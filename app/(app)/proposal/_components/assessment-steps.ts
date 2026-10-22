@@ -43,7 +43,7 @@ export const PIPELINE: readonly StepInfo[] = [
   {
     key: 'ambil',
     action: 'Ambil pitch deck',
-    title: 'Mengambil pitch deck',
+    title: 'Mengambil proposal',
     explain: 'Sistem mengambil berkas PDF dari penyimpanan.',
     by: 'sistem',
     optional: true,
@@ -59,17 +59,17 @@ export const PIPELINE: readonly StepInfo[] = [
   {
     key: 'cek_teks',
     action: 'Cek jumlah teks',
-    title: 'Memeriksa deck bisa dibaca',
+    title: 'Memeriksa proposal bisa dibaca',
     explain:
-      'Deck yang hampir tanpa teks (mis. hasil pindai) dibaca AI sebagai gambar dulu; bila tetap tidak terbaca, ditandai perlu dicek manual.',
+      'Proposal yang hampir tanpa teks (mis. hasil pindai) dibaca AI sebagai gambar dulu; bila tetap tidak terbaca, ditandai perlu dicek manual.',
     by: 'sistem',
   },
   {
     key: 'baca_gambar',
     action: 'Baca teks dari gambar',
-    title: 'AI membaca deck sebagai gambar',
+    title: 'AI membaca proposal sebagai gambar',
     explain:
-      'Deck tampaknya hasil pindai atau gambar, jadi AI menyalin teks yang terlihat di tiap halaman, termasuk angka di grafik, sebelum dinilai.',
+      'Proposal tampaknya hasil pindai atau gambar, jadi AI menyalin teks yang terlihat di tiap halaman, termasuk angka di grafik, sebelum dinilai.',
     by: 'ai',
     optional: true,
   },
@@ -78,7 +78,7 @@ export const PIPELINE: readonly StepInfo[] = [
     action: 'Menilai 5 kriteria',
     title: 'AI menilai 5 kriteria',
     explain:
-      'AI membaca isi deck dan memberi nilai 1–5 untuk tiap kriteria beserta kutipan halaman sebagai bukti.',
+      'AI membaca isi proposal dan memberi nilai 1–5 untuk tiap kriteria beserta kutipan halaman sebagai bukti.',
     by: 'ai',
     typical: 'biasanya 15–25 detik',
   },
@@ -95,7 +95,7 @@ export const PIPELINE: readonly StepInfo[] = [
     action: 'Cek kecocokan',
     title: 'Mencocokkan dengan fokus investasi',
     explain:
-      'Sektor, tahap, dan besar dana dari deck dibandingkan dengan fokus di aturan penilaian. Hasilnya tidak mengubah grade; yang di luar fokus hanya diberi prioritas lebih rendah.',
+      'Sektor, tahap, dan besar dana dari proposal dibandingkan dengan fokus di aturan penilaian. Hasilnya tidak mengubah grade; yang di luar fokus hanya diberi prioritas lebih rendah.',
     by: 'sistem',
   },
   {

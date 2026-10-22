@@ -149,7 +149,7 @@ export function Kalibrasi({ calibration }: { calibration: Calibration }) {
             Kalibrasi analis <Badge variant="outline">belum ada data</Badge>
           </h3>
           <p className="text-muted-foreground">
-            Data kalibrasi belum ada. Rencananya 10–20 deck lama dinilai 2–3
+            Data kalibrasi belum ada. Rencananya 10–20 proposal lama dinilai 2–3
             analis dengan matriks yang sama, lalu tingkat kesepakatan AI dengan
             analis ditampilkan di sini.
           </p>

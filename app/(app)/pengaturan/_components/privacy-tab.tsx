@@ -13,8 +13,8 @@ const STORED = [
     note: 'Untuk mengenali pengirim dan mengundang founder',
   },
   {
-    title: 'Pitch deck dan teksnya per halaman',
-    note: 'Deck dari formulir di Google Drive; deck yang diunggah di penyimpanan AISA',
+    title: 'Berkas proposal dan teksnya per halaman',
+    note: 'Berkas dari formulir di Google Drive; berkas yang diunggah di penyimpanan AISA',
   },
   {
     title: 'Nilai, kutipan, dan nomor halaman',
@@ -29,14 +29,17 @@ const STORED = [
 // What `domain.delete_proposal` removes or scrubs — the path both "Hapus data"
 // and retention take.
 const ON_DELETE = [
-  { title: 'Proposal, teks deck, dan log penilaiannya', note: 'Dihapus' },
-  { title: 'Deck yang diunggah ke AISA', note: 'Dihapus dari penyimpanan' },
+  { title: 'Proposal, teksnya, dan log penilaiannya', note: 'Dihapus' },
+  {
+    title: 'Berkas proposal yang diunggah ke AISA',
+    note: 'Dihapus dari penyimpanan',
+  },
   {
     title: 'Riwayat dan catatan ringkasan terkirim',
     note: 'Tetap ada sebagai jejak audit, tanpa nama proposal',
   },
   {
-    title: 'Deck dari formulir di Google Drive',
+    title: 'Berkas proposal dari formulir di Google Drive',
     note: 'Tidak disentuh AISA; hapus dari Drive bila diminta',
   },
 ]

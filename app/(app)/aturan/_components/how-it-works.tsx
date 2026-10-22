@@ -34,7 +34,7 @@ export function HowItWorks({
     {
       icon: FileSearchIcon,
       by: 'AI',
-      title: 'AI membaca pitch deck',
+      title: 'AI membaca proposal',
       text: `AI memberi nilai 1–5 untuk lima kriteria: ${criteria}. Setiap nilai disertai kutipan dan nomor halaman sebagai bukti.`,
       result: '5 nilai, skala 1–5',
     },
@@ -61,7 +61,7 @@ export function HowItWorks({
           Cara AISA menilai proposal
         </h2>
         <p className="text-sm text-muted-foreground">
-          Tiga langkah yang sama untuk setiap pitch deck yang masuk.
+          Tiga langkah yang sama untuk setiap proposal yang masuk.
         </p>
       </div>
 

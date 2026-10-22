@@ -118,7 +118,7 @@ export function CostBreakdown({
         </div>
         <p className="text-xs leading-relaxed text-muted-foreground">
           Token adalah potongan kecil teks yang dibaca atau ditulis model. Token
-          masuk adalah yang dibaca: isi deck, aturan penilaian, pertanyaan.
+          masuk adalah yang dibaca: isi proposal, aturan penilaian, pertanyaan.
           Token keluar adalah yang ditulis, termasuk proses berpikir sebelum
           menjawab
           {ratio

@@ -181,7 +181,7 @@ export function CostCalculator({
               hint={`Bawaan: laju ${formatNumber(pace.days)} hari tercatat terakhir (${formatNumber(pace.perMonth)}/bulan)`}
             />
             <NumberField
-              label="Menit analis per deck"
+              label="Menit analis per proposal"
               value={q.menit}
               onCommit={(v) => void setQ({ menit: v })}
               suffix="menit"
@@ -189,7 +189,7 @@ export function CostCalculator({
               hint={
                 <>
                   Asumsi, ubah sesuai tim Anda. Pembanding: investor rata-rata 3
-                  menit 44 detik hanya untuk membuka-baca deck (
+                  menit 44 detik hanya untuk membuka-baca proposal (
                   <a
                     className="a-navlink"
                     href="https://techcrunch.com/?p=1167693"

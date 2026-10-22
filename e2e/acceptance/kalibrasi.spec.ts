@@ -143,7 +143,7 @@ test('DSB-99 Kalibrasi counts manager reviews and lists every koreksi', async ({
     kalibrasi.getByText('belum ada data', { exact: true }),
   ).toBeVisible()
   await expect(
-    kalibrasi.getByText(/10–20 deck lama dinilai 2–3\s+analis/u),
+    kalibrasi.getByText(/10–20 proposal lama dinilai 2–3\s+analis/u),
   ).toBeVisible()
 
   // A row's link opens that proposal's detail.

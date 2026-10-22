@@ -6,10 +6,10 @@ perlu paham pemrograman. Penjelasan teknis yang lengkap ada di
 
 ## AISA itu apa?
 
-AISA adalah **asisten AI untuk tim investasi**. Setiap ada startup yang mengirim pitch deck
-(berkas presentasi PDF), AISA:
+AISA adalah **asisten AI untuk tim investasi**. Setiap ada startup yang mengirim proposal
+(berkas presentasi PDF, biasa disebut _pitch deck_), AISA:
 
-1. **membaca dan menilai** deck itu dengan lima kriteria (A–E, lihat
+1. **membaca dan menilai** proposal itu dengan lima kriteria (A–E, lihat
    [di bawah](#lima-kriteria-dan-lima-grade));
 2. **memberi grade** dari skornya, misalnya _Sangat layak_ atau _Layak bersyarat_, dan
    menandai startup yang _Di luar fokus_ investasi;
@@ -26,7 +26,7 @@ Bayangkan AISA seperti sebuah kantor kecil:
 - **Dashboard** adalah **ruang depan**. Di sinilah manajer melihat daftar proposal, nilai,
   grafik, dan biaya AI.
 - **aisa-api** adalah **ruang kerja di belakang**. Di sinilah semua pekerjaan dilakukan:
-  menerima deck, memanggil AI, menghitung skor, dan mengirim WhatsApp.
+  menerima proposal, memanggil AI, menghitung skor, dan mengirim WhatsApp.
 - **Firestore** adalah **lemari arsip**. Semua data disimpan di sini.
 - **Para agent AI** adalah **staf ahli** yang dipanggil saat perlu membaca atau menulis.
 
@@ -49,10 +49,10 @@ dijaga dan diperiksa.
 
 ## Dua aplikasi utama
 
-| Aplikasi      | Tugasnya                                                                               | Dibuat dengan                      |
-| ------------- | -------------------------------------------------------------------------------------- | ---------------------------------- |
-| **Dashboard** | Tampilan web untuk manajer: daftar proposal, detail, tren, riwayat, aturan, biaya AI.  | Next.js (React), bahasa TypeScript |
-| **aisa-api**  | Mesin di belakang: menerima deck, menilai, mengirim ringkasan, membalas WhatsApp, dll. | FastAPI, bahasa Python             |
+| Aplikasi      | Tugasnya                                                                                   | Dibuat dengan                      |
+| ------------- | ------------------------------------------------------------------------------------------ | ---------------------------------- |
+| **Dashboard** | Tampilan web untuk manajer: daftar proposal, detail, tren, riwayat, aturan, biaya AI.      | Next.js (React), bahasa TypeScript |
+| **aisa-api**  | Mesin di belakang: menerima proposal, menilai, mengirim ringkasan, membalas WhatsApp, dll. | FastAPI, bahasa Python             |
 
 Keduanya dibungkus sebagai **container** (semacam paket siap jalan) lalu dijalankan di
 **Cloud Run**, di wilayah Jakarta (`asia-southeast2`).
@@ -61,10 +61,10 @@ Keduanya dibungkus sebagai **container** (semacam paket siap jalan) lalu dijalan
 
 ```mermaid
 flowchart TD
-    A[Deck masuk<br/>dari Form atau unggahan] --> B[Ambil berkas PDF]
+    A[Proposal masuk<br/>dari Form atau unggahan] --> B[Ambil berkas PDF]
     B --> C[Ambil teks tiap halaman]
     C --> D{Teksnya cukup?}
-    D -- tidak --> G[AI membaca deck sebagai gambar]
+    D -- tidak --> G[AI membaca proposal sebagai gambar]
     G --> G2{Teksnya cukup?}
     G2 -- tidak --> X[Tandai: Perlu dicek manual]
     G2 -- ya --> E
@@ -73,14 +73,14 @@ flowchart TD
     H --> I[Simpan ke Firestore<br/>dan tampil di dashboard]
 ```
 
-Deck hasil pindai yang hampir tanpa teks tidak langsung ditolak: AI menyalin dulu teks yang
-terlihat di tiap halamannya, lalu deck dinilai seperti biasa. Hanya deck yang tetap tidak
+Proposal hasil pindai yang hampir tanpa teks tidak langsung ditolak: AI menyalin dulu teks yang
+terlihat di tiap halamannya, lalu proposal dinilai seperti biasa. Hanya proposal yang tetap tidak
 terbaca, atau yang lebih dari 15 MB atau 50 halaman, yang ditandai _Perlu dicek manual_.
 
 Pembagian kerjanya disengaja:
 
-- **AI hanya memberi nilai per kriteria**, lengkap dengan kutipan dan nomor halaman dari deck
-  sebagai bukti.
+- **AI hanya memberi nilai per kriteria**, lengkap dengan kutipan dan nomor halaman dari
+  proposal sebagai bukti.
 - **Skor akhir dan grade dihitung oleh kode biasa**, memakai bobot dari halaman _Aturan
   penilaian_. Jadi angka akhirnya bisa ditelusuri, dan bila bobot diubah, hasilnya berubah
   dengan cara yang bisa diprediksi.
@@ -123,11 +123,11 @@ proposal diurutkan menurut grade, lalu yang sesuai fokus lebih dulu, lalu skor.
 
 Semua agent memakai model **Gemini 3.8 Flash** dari Google, lewat **Vertex AI**.
 
-| Agent                         | Tugas                                                                                              | Batasannya                                                                                  |
-| ----------------------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
-| **Penilai**                   | Membaca deck, memberi nilai 1–5 per kriteria dengan kutipan halaman, dan mengambil profil startup. | Tidak menentukan skor akhir maupun grade; itu dihitung kode.                                |
-| **Insight** dan **Ringkasan** | Merangkai kalimat untuk laporan WhatsApp pukul 09.00 dan 17.00.                                    | Angka dihitung kode. Bila AI menulis angka yang tidak ada di data, laporan memakai templat. |
-| **Asisten**                   | Menjawab pertanyaan manajer di Tanya AISA dan di WhatsApp.                                         | **Hanya bisa membaca** data; tidak bisa mengubah apa pun.                                   |
+| Agent                         | Tugas                                                                                                  | Batasannya                                                                                  |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| **Penilai**                   | Membaca proposal, memberi nilai 1–5 per kriteria dengan kutipan halaman, dan mengambil profil startup. | Tidak menentukan skor akhir maupun grade; itu dihitung kode.                                |
+| **Insight** dan **Ringkasan** | Merangkai kalimat untuk laporan WhatsApp pukul 09.00 dan 17.00.                                        | Angka dihitung kode. Bila AI menulis angka yang tidak ada di data, laporan memakai templat. |
+| **Asisten**                   | Menjawab pertanyaan manajer di Tanya AISA dan di WhatsApp.                                             | **Hanya bisa membaca** data; tidak bisa mengubah apa pun.                                   |
 
 ### Asisten dan Google ADK
 
@@ -189,7 +189,7 @@ pesan.
 
 ## Ringkasnya
 
-> Founder mengirim deck → **aisa-api** mengambil dan menilainya dengan bantuan **Gemini** →
+> Founder mengirim proposal → **aisa-api** mengambil dan menilainya dengan bantuan **Gemini** →
 > hasilnya disimpan di **Firestore** → manajer melihatnya di **dashboard**, menerima
 > ringkasan di **WhatsApp**, dan bisa bertanya kapan saja ke **Asisten**. Semua berjalan di
 > **Google Cloud**, dan keputusan akhir tetap di tangan manusia.

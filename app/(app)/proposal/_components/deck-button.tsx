@@ -51,7 +51,7 @@ export function DeckButton({
         }}
       >
         <ExternalLinkIcon data-icon="inline-start" />
-        Buka deck
+        Buka proposal
       </Button>
       {url ? (
         <a
@@ -60,7 +60,7 @@ export function DeckButton({
           rel="noopener noreferrer"
           className="text-xs underline"
         >
-          Tautan deck (sementara)
+          Tautan proposal (sementara)
         </a>
       ) : null}
       {error ? <span className="text-xs text-destructive">{error}</span> : null}

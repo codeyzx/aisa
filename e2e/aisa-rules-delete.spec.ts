@@ -44,7 +44,7 @@ test('a read-only seat sees every rule but no form', async ({ page }) => {
     })
   await expect(card('Patokan nilai')).toBeVisible()
   await expect(
-    card('Model dan pembacaan deck').getByText(
+    card('Model dan pembacaan proposal').getByText(
       'berlaku setelah Asisten di-deploy ulang',
     ),
   ).toBeVisible()

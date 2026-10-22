@@ -23,7 +23,7 @@ const ABILITIES: { capability: Capability; title: string; note: string }[] = [
   {
     capability: AISA_RESPOND,
     title: 'Menanggapi proposal',
-    note: 'Undang, pantau, arsipkan, koreksi kategori, dan unggah deck.',
+    note: 'Undang, pantau, arsipkan, koreksi kategori, dan unggah proposal.',
   },
   {
     capability: AISA_CONFIGURE,

@@ -294,7 +294,7 @@ test('DSB-50 Riwayat lists every audit row, newest first, and leaves a deleted p
 
   const pasar = event('Grade Pasar Ikan dikoreksi')
   await expect(pasar).toContainText(
-    'Penjualan di Muncar lebih kuat dari yang terbaca di deck',
+    'Penjualan di Muncar lebih kuat dari yang terbaca di proposal',
   )
   await expect(pasar).toContainText('Risiko tinggi')
   await expect(pasar).toContainText('Perlu penyesuaian')

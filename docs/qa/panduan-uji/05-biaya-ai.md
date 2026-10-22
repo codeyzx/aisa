@@ -5,7 +5,7 @@
 Panduan ini untuk Anda yang menguji halaman **Biaya AI** (`/biaya`) di produksi
 (https://aisa-dashboard-lk5jbo3eza-et.a.run.app). Halaman ini menjawab tiga pertanyaan: berapa
 biaya AI AISA sejauh ini, berapa biaya untuk satu proposal, satu pertanyaan, dan satu ringkasan,
-dan berapa yang dihemat dibanding analis yang menyaring setiap deck sendiri. Semua use case di
+dan berapa yang dihemat dibanding analis yang menyaring setiap proposal sendiri. Semua use case di
 sini hanya membaca. Kalkulator hanya mengubah alamat halaman, tidak menyimpan apa pun.
 
 Semua angka di halaman ini **perkiraan**, bukan angka tagihan: jumlah token yang dicatat AISA
@@ -20,17 +20,17 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
 Pakai angka ini untuk menghitung ulang dengan kalkulator biasa. Semuanya juga tertulis di bagian
 **Cara menghitung dan sumber** di bawah halaman (UC-BYA-09).
 
-| Hal                                         | Nilai                                                 |
-| ------------------------------------------- | ----------------------------------------------------- |
-| Harga `gemini-3.8-flash` s.d. 31 Des 2026   | $0,75 per 1 juta token masuk, $3,75 per 1 juta keluar |
-| Harga `gemini-3.8-flash` mulai 1 Jan 2027   | $1,50 per 1 juta token masuk, $7,50 per 1 juta keluar |
-| Kurs acuan                                  | Rp 17.917 per USD (Bank Indonesia JISDOR, 6 Okt 2026) |
-| Kredit uji coba Google Cloud                | $300                                                  |
-| Bawaan kalkulator: gaji analis per bulan    | Rp 14.500.000                                         |
-| Bawaan kalkulator: jam kerja per bulan      | 173 jam                                               |
-| Bawaan kalkulator: menit analis per deck    | 15 menit                                              |
-| Bawaan kalkulator: menit membaca hasil AISA | 2 menit                                               |
-| Ringkasan WhatsApp yang dihitung kalkulator | 60 per bulan (09.00 dan 17.00 setiap hari)            |
+| Hal                                          | Nilai                                                 |
+| -------------------------------------------- | ----------------------------------------------------- |
+| Harga `gemini-3.8-flash` s.d. 31 Des 2026    | $0,75 per 1 juta token masuk, $3,75 per 1 juta keluar |
+| Harga `gemini-3.8-flash` mulai 1 Jan 2027    | $1,50 per 1 juta token masuk, $7,50 per 1 juta keluar |
+| Kurs acuan                                   | Rp 17.917 per USD (Bank Indonesia JISDOR, 6 Okt 2026) |
+| Kredit uji coba Google Cloud                 | $300                                                  |
+| Bawaan kalkulator: gaji analis per bulan     | Rp 14.500.000                                         |
+| Bawaan kalkulator: jam kerja per bulan       | 173 jam                                               |
+| Bawaan kalkulator: menit analis per proposal | 15 menit                                              |
+| Bawaan kalkulator: menit membaca hasil AISA  | 2 menit                                               |
+| Ringkasan WhatsApp yang dihitung kalkulator  | 60 per bulan (09.00 dan 17.00 setiap hari)            |
 
 Rumus dasarnya:
 
@@ -133,7 +133,7 @@ menulis satu ringkasan WhatsApp.
 
 1. Lihat kotak **Per proposal dinilai**, **Per pertanyaan Asisten**, dan **Per ringkasan WA**.
 2. Buka satu proposal yang sudah dinilai di tab baru. Di kartu Ringkasan AI, catat tulisan kecil
-   "Dibuat dari pitch deck · … token". Klik **Lihat log penilaian**, lalu **Semua aktivitas AI**,
+   "Dibuat dari proposal · … token". Klik **Lihat log penilaian**, lalu **Semua aktivitas AI**,
    dan arahkan kursor ke angka token kartunya untuk melihat "… masuk / … keluar" (sama seperti
    UC-AKT-07 di panduan Aktivitas).
 3. Hitung biaya proposal itu dengan rumus di atas.
@@ -146,7 +146,7 @@ menulis satu ringkasan WhatsApp.
   dinilai model**, **Belum ada pertanyaan ke Asisten**, atau **Belum ada ringkasan yang ditulis
   model**.
 - Biaya proposal yang Anda hitung di langkah 3 seharusnya sekelas dengan rata-rata di kotak
-  (rata-rata bisa lebih tinggi atau lebih rendah karena deck berbeda panjangnya).
+  (rata-rata bisa lebih tinggi atau lebih rendah karena proposal berbeda panjangnya).
 
 **Yang perlu diketahui:**
 
@@ -169,7 +169,7 @@ model dengan tarif yang tersedia.**
 Rumus kalkulator (n = **Proposal per bulan**):
 
 - Biaya per menit orang = **Gaji analis per bulan** ÷ **Jam kerja per bulan** ÷ 60.
-- **Cek manual per bulan** = n × **Menit analis per deck** × biaya per menit.
+- **Cek manual per bulan** = n × **Menit analis per proposal** × biaya per menit.
 - **AISA per bulan** = n × (biaya AI per proposal + **Menit membaca hasil AISA** × biaya per
   menit) + 60 × biaya AI per ringkasan.
 - **Hemat per bulan** = cek manual − AISA. "× lebih murah" = cek manual ÷ AISA. "% lebih hemat" =
@@ -183,7 +183,7 @@ Dengan bawaan (Rp 14.500.000, 173 jam): biaya per menit = Rp 1.396,92. Cek manua
 
 ### UC-BYA-04 · Membandingkan dengan analis yang cek manual
 
-**Situasi:** Owner bertanya, "Lebih murah mana: AISA atau analis yang membaca setiap deck?"
+**Situasi:** Owner bertanya, "Lebih murah mana: AISA atau analis yang membaca setiap proposal?"
 
 **Sebelum mulai:** di halaman **Biaya AI**, alamat masih `/biaya` tanpa tanda tanya.
 
@@ -191,7 +191,7 @@ Dengan bawaan (Rp 14.500.000, 173 jam): biaya per menit = Rp 1.396,92. Cek manua
 
 1. Di kotak **AISA vs cek manual**, baca keterangan di bawah judulnya.
 2. Lihat kolom kiri (form **Asumsi perbandingan**): **Proposal per bulan**, **Menit analis per
-   deck**, **Menit membaca hasil AISA**, **Gaji analis per bulan**, **Jam kerja per bulan**, dan
+   proposal**, **Menit membaca hasil AISA**, **Gaji analis per bulan**, **Jam kerja per bulan**, dan
    **Tarif AI**. Baca keterangan kecil di bawah setiap kolom.
 3. Lihat kolom kanan: angka besar, dua batang, dua kotak kecil, dan tabel **Per proposal**.
 4. Ganti **Proposal per bulan** menjadi `100`.
@@ -201,9 +201,9 @@ Dengan bawaan (Rp 14.500.000, 173 jam): biaya per menit = Rp 1.396,92. Cek manua
 - Keterangan di bawah **Proposal per bulan** berbunyi `Bawaan: laju 30 hari tercatat terakhir
   (…/bulan)`. Angka bawaannya adalah proposal masuk dalam 30 hari terakhir, disetarakan ke 30 hari
   (kalau catatan baru ada kurang dari 30 hari, dipakai sebanyak hari yang ada).
-- Keterangan **Menit analis per deck** menyebut pembanding DocSend × HBS 2015 (3 menit 44 detik
-  hanya untuk membuka-baca deck), keterangan **Gaji analis per bulan** menyebut GrabJobs 2026, dan
-  keterangan **Jam kerja per bulan** berbunyi `40 jam × 52 minggu ÷ 12`. Kedua sumber adalah
+- Keterangan **Menit analis per proposal** menyebut pembanding DocSend × HBS 2015 (3 menit 44
+  detik hanya untuk membuka-baca proposal), keterangan **Gaji analis per bulan** menyebut GrabJobs
+  2026, dan keterangan **Jam kerja per bulan** berbunyi `40 jam × 52 minggu ÷ 12`. Kedua sumber adalah
   tautan yang terbuka di tab baru.
 - **Tarif AI** punya dua tombol: **s.d. 31 Des 2026** (aktif, karena sekarang masih 2026) dan
   **Mulai 1 Jan 2027**.
@@ -245,7 +245,7 @@ Kembalikan setiap kolom ke bawaan sebelum langkah berikutnya.
 
 **Langkah dan yang seharusnya terlihat:**
 
-1. **Menit analis per deck** = `30`. Biaya waktu orang cek manual menjadi **Rp 41.908**, cek
+1. **Menit analis per proposal** = `30`. Biaya waktu orang cek manual menjadi **Rp 41.908**, cek
    manual per bulan **Rp 4.190.751**, **Jam analis kembali** `46,7 jam`. Kembalikan ke `15`.
 2. **Menit membaca hasil AISA** = `5`. Biaya waktu orang AISA menjadi **Rp 6.985**, **Jam analis
    kembali** `16,7 jam`, dan hemat per bulan turun. Kembalikan ke `2`.
@@ -254,15 +254,15 @@ Kembalikan setiap kolom ke bawaan sebelum langkah berikutnya.
    Setelah Anda klik di luar kolom, angkanya ditulis `29.000.000`. Kembalikan ke `14500000`.
 4. **Jam kerja per bulan** = `346`. Kedua biaya waktu orang turun setengah: Rp 10.477 dan
    Rp 1.397. Kembalikan ke `173`.
-5. **Menit analis per deck** = `2` (sama dengan menit membaca). Judul angka besar berganti menjadi
-   **Selisih per bulan** dan barisnya berbunyi **Dengan asumsi ini AISA tidak lebih murah dari cek
+5. **Menit analis per proposal** = `2` (sama dengan menit membaca). Judul angka besar berganti
+   menjadi **Selisih per bulan** dan barisnya berbunyi **Dengan asumsi ini AISA tidak lebih murah dari cek
    manual.** **Jam analis kembali** `0 jam`. Ini benar: kalau analis sama cepatnya dengan membaca
    hasil AISA, AISA hanya menambah biaya AI. Kembalikan ke `15`.
-6. Klik **Menit analis per deck**, hapus semua isinya, lalu klik di luar kolom. Selama kolom
+6. Klik **Menit analis per proposal**, hapus semua isinya, lalu klik di luar kolom. Selama kolom
    kosong, angka di kanan tidak berubah. Setelah keluar dari kolom, kolom kembali berisi angka
    terakhir yang sah.
 7. Ketik huruf, mis. `abc`, di kolom mana saja. Huruf tidak masuk; hanya angka yang diterima.
-8. Ketik angka di atas batas: **Menit analis per deck** `999`. Hasil di kanan langsung dihitung
+8. Ketik angka di atas batas: **Menit analis per proposal** `999`. Hasil di kanan langsung dihitung
    dengan `600`, dan setelah Anda klik di luar kolom, isinya menjadi `600`. Batas lainnya:
    **Proposal per bulan** 100.000, **Menit membaca hasil AISA** 600, **Gaji analis per bulan**
    1.000.000.000, **Jam kerja per bulan** 744.
@@ -282,9 +282,9 @@ bawaan.
 1. Catat **Biaya AI** di tabel **Per proposal** dan **Biaya AI per bulan**.
 2. Klik tombol **Mulai 1 Jan 2027**. Arahkan kursor ke tombol untuk melihat nama lengkapnya.
 3. Lihat alamat di browser.
-4. Ganti **Menit analis per deck** menjadi `20`, lalu salin alamat dari browser.
+4. Ganti **Menit analis per proposal** menjadi `20`, lalu salin alamat dari browser.
 5. Buka alamat itu di tab baru.
-6. Klik **s.d. 31 Des 2026** dan ganti **Menit analis per deck** kembali ke `15`.
+6. Klik **s.d. 31 Des 2026** dan ganti **Menit analis per proposal** kembali ke `15`.
 
 **Yang seharusnya terlihat:**
 
@@ -321,7 +321,7 @@ jadi tautan tanpa `proposal` bisa menunjukkan angka berbeda di hari lain.
 
 **Yang seharusnya terlihat:**
 
-- Tiga baris, diurutkan dari yang paling mahal: **Penilai** (Membaca dan menilai deck proposal),
+- Tiga baris, diurutkan dari yang paling mahal: **Penilai** (Membaca dan menilai proposal),
   **Pembuat ringkasan** (Ringkasan WhatsApp 09.00 dan 17.00, termasuk insight-nya), dan
   **Asisten** (Menjawab pertanyaan manajer). Setiap baris: rupiah, persentase dari total, batang
   berwarna agent, jumlah token, dan dolarnya.
@@ -402,7 +402,7 @@ kolom **Total** ≈ **Total biaya AI** di atas. Hari ditentukan menurut jam WIB.
   pekerjaan AI (jumlah pekerjaan yang dibaca, paling banyak 500); token masuk dihargai penuh.
 - **Yang tidak dihitung**: memori Asisten (Memory Bank), komputasi dan penyimpanan Agent Runtime,
   panggilan model di luar aplikasi (pengembangan dan uji coba), serta Cloud Run, Firestore, dan
-  penyimpanan deck.
+  penyimpanan berkas proposal.
 - Kedua tautan terbuka di tab baru.
 
 **Kalau berbeda:** kalau nama model di daftar agent bukan `gemini-3.8-flash` padahal tabel harga

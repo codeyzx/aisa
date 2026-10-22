@@ -6,11 +6,11 @@ AISA membantu satu manajer investasi memilah proposal startup: setiap proposal d
 
 **Proposal**:
 Satu pengajuan startup beserta pitch deck-nya, masuk lewat Form atau unggahan PDF di dashboard.
-_Avoid_: deck (untuk proposal), submission, lead
+_Avoid_: deck (di teks dashboard), submission, lead
 
 **Pitch deck**:
-Berkas PDF yang dilampirkan founder; yang dinilai hanya teks per halamannya (untuk deck hasil pindai, teks yang disalin AI dari gambarnya).
-_Avoid_: dokumen, file
+Berkas PDF yang dilampirkan founder; yang dinilai hanya teks per halamannya (untuk pitch deck hasil pindai, teks yang disalin AI dari gambarnya). Teks dashboard tidak memakai kata "deck": berkasnya disebut "proposal", atau "berkas proposal" bila yang dimaksud khusus PDF-nya (mis. **Unggah proposal**, **Pratinjau proposal**). Kata "pitch deck" tetap dipakai bot WhatsApp, pesan aisa-api, dan pertanyaan Google Form.
+_Avoid_: deck (di teks dashboard), dokumen, file
 
 **Skor kualitas**:
 Angka 0–100 yang dihitung kode dari nilai 1–5 lima kriteria (A–E) dan bobot aturan penilaian aktif.
@@ -68,7 +68,7 @@ _Avoid_: dimatikan, dibatalkan
 ## Data pribadi
 
 **Penghapusan data**:
-Penghapusan proposal beserta teks dan deck-nya atas permintaan founder, dengan alasan; Riwayat tetap ada tetapi tanpa nama dan isi proposal.
+Penghapusan proposal beserta teks dan berkas proposalnya atas permintaan founder, dengan alasan; Riwayat tetap ada tetapi tanpa nama dan isi proposal.
 _Avoid_: arsipkan (arsip adalah tanggapan, bukan penghapusan)
 
 **Retensi**:

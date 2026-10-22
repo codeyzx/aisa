@@ -30,10 +30,11 @@ export function ModelsCard({
     <Card>
       <CardHeader>
         <CardTitle className="font-semibold">
-          Model dan pembacaan deck
+          Model dan pembacaan proposal
         </CardTitle>
         <CardDescription>
-          Model AI untuk tiap pekerjaan, dan batas teks agar deck bisa dinilai.
+          Model AI untuk tiap pekerjaan, dan batas teks agar proposal bisa
+          dinilai.
         </CardDescription>
         {onEdit ? (
           <CardAction>
@@ -86,8 +87,8 @@ export function ModelsCard({
             {formatNumber(rules.minCharsPerPage)}
           </p>
           <p className="text-[13px] leading-snug text-muted-foreground">
-            Deck yang rata-rata teks per halamannya kurang dari ini masuk “Perlu
-            dicek manual” dan tidak dinilai AI.
+            Proposal yang rata-rata teks per halamannya kurang dari ini masuk
+            “Perlu dicek manual” dan tidak dinilai AI.
           </p>
         </div>
       </CardContent>

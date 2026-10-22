@@ -325,7 +325,7 @@ export default async function ProposalDetailPage({
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {proposal.status === 'perlu_dicek_manual'
-                      ? 'Tidak dinilai: deck perlu dicek manual, tanpa skor dan grade.'
+                      ? 'Tidak dinilai: proposal perlu dicek manual, tanpa skor dan grade.'
                       : 'Belum ada penilaian.'}
                   </p>
                 </>
@@ -360,7 +360,7 @@ export default async function ProposalDetailPage({
                       className="text-xs text-muted-foreground"
                       title={`${formatNumber(proposal.tokens.in)} token masuk / ${formatNumber(proposal.tokens.out)} token keluar`}
                     >
-                      Dibuat dari pitch deck · {compactNumber(tokens)} token
+                      Dibuat dari proposal · {compactNumber(tokens)} token
                     </span>
                   </div>
                   <CardAction>
@@ -431,7 +431,7 @@ export default async function ProposalDetailPage({
                 <CardTitle>Nilai per kriteria</CardTitle>
                 <CardDescription>
                   Lima kriteria A–E. AI memberi nilai 1–5 beserta kutipan dari
-                  pitch deck; skor akhir dihitung dari bobotnya.
+                  proposal; skor akhir dihitung dari bobotnya.
                   {assessment
                     ? ` Aturan v${assessment.rulesVersion} · model ${assessment.model}.`
                     : ''}
@@ -500,7 +500,7 @@ export default async function ProposalDetailPage({
                               {item.notMentioned ? (
                                 <p className="flex items-center gap-1.5 text-sm text-warning">
                                   <CircleHelpIcon className="size-4" />
-                                  Tidak dibahas di pitch deck
+                                  Tidak dibahas di proposal
                                   <span className="sr-only">
                                     (tidak disebut)
                                   </span>
@@ -541,7 +541,7 @@ export default async function ProposalDetailPage({
                 ) : (
                   <p className="px-6 py-6 text-sm text-muted-foreground">
                     {proposal.status === 'perlu_dicek_manual'
-                      ? 'Tidak dinilai: deck perlu dicek manual, tanpa skor dan grade.'
+                      ? 'Tidak dinilai: proposal perlu dicek manual, tanpa skor dan grade.'
                       : 'Belum ada penilaian.'}
                   </p>
                 )}

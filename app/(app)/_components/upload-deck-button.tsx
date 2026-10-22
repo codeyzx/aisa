@@ -23,7 +23,7 @@ import { deckRefusal } from '@/features/aisa/aisa.limits'
 import { useApiAction } from './use-api-action'
 
 /**
- * "Unggah pitch deck": a PDF plus an optional startup name, forwarded to the
+ * "Unggah proposal": a PDF plus an optional startup name, forwarded to the
  * same intake `aisa-api` runs for the Form. Scoring is asynchronous, so success
  * opens the new proposal, which shows `Antre`/`Sedang dinilai` and refreshes
  * itself until it is done. A deck uploaded before opens its existing proposal
@@ -50,8 +50,8 @@ export function UploadDeckButton({ className }: { className?: string }) {
     run(() => uploadDeckAction(data), {
       success: ({ created }) =>
         created
-          ? 'Pitch deck diterima dan sedang diproses.'
-          : 'Pitch deck ini sudah pernah diunggah. Membuka proposalnya.',
+          ? 'Proposal diterima dan sedang diproses.'
+          : 'Proposal ini sudah pernah diunggah. Membuka yang sudah ada.',
       onSuccess: ({ proposalId }) => {
         formRef.current?.reset()
         setOpen(false)
@@ -66,14 +66,14 @@ export function UploadDeckButton({ className }: { className?: string }) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button className={className} />}>
         <UploadIcon data-icon="inline-start" />
-        Unggah pitch deck
+        Unggah proposal
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Unggah pitch deck</DialogTitle>
+          <DialogTitle>Unggah proposal</DialogTitle>
           <DialogDescription>
             PDF dinilai lewat alur yang sama dengan Form. Hanya teksnya yang
-            dikirim ke model, kecuali deck hasil pindai: PDF-nya dibaca AI
+            dikirim ke model, kecuali proposal hasil pindai: PDF-nya dibaca AI
             sebagai gambar.
           </DialogDescription>
         </DialogHeader>

@@ -7,7 +7,7 @@ import { SettingsPanel } from './settings-panel'
 
 const FLOW = [
   { title: 'Google Form', text: 'Founder mengirim proposal' },
-  { title: 'Google Drive', text: 'Pitch deck disimpan' },
+  { title: 'Google Drive', text: 'Berkas proposal disimpan' },
   { title: 'aisa-api', text: 'Teks dibaca, lalu dinilai AI' },
   { title: 'Firestore', text: 'Hasil dan aturan disimpan' },
   { title: 'GOWA', text: 'Ringkasan masuk WhatsApp' },

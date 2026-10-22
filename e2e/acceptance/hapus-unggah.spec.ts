@@ -85,17 +85,17 @@ test('DSB-83 a refused Hapus data keeps the dialog open with the API message', a
 
 async function openUpload(page: Page) {
   await page.goto('/dashboard')
-  await page.getByRole('button', { name: 'Unggah pitch deck' }).click()
+  await page.getByRole('button', { name: 'Unggah proposal' }).click()
   const dialog = page.getByRole('dialog')
   await expect(
     dialog.getByText(
-      'PDF dinilai lewat alur yang sama dengan Form. Hanya teksnya yang dikirim ke model, kecuali deck hasil pindai: PDF-nya dibaca AI sebagai gambar.',
+      'PDF dinilai lewat alur yang sama dengan Form. Hanya teksnya yang dikirim ke model, kecuali proposal hasil pindai: PDF-nya dibaca AI sebagai gambar.',
     ),
   ).toBeVisible()
   return dialog
 }
 
-test('DSB-84 Unggah pitch deck forwards the PDF and the name, then opens the new proposal', async ({
+test('DSB-84 Unggah proposal forwards the PDF and the name, then opens the new proposal', async ({
   page,
   aisaApi,
 }) => {
@@ -107,7 +107,7 @@ test('DSB-84 Unggah pitch deck forwards the PDF and the name, then opens the new
   await dialog.getByRole('button', { name: 'Unggah', exact: true }).click()
 
   await expect(
-    toast(page, 'Pitch deck diterima dan sedang diproses.'),
+    toast(page, 'Proposal diterima dan sedang diproses.'),
   ).toBeVisible()
   await expect(page).toHaveURL(
     new RegExp(`/proposal/${UPLOAD_ANSWER_ID}$`, 'u'),
@@ -138,7 +138,7 @@ test('DSB-85 Unggah without a name sends no name field', async ({
   await dialog.getByRole('button', { name: 'Unggah', exact: true }).click()
 
   await expect(
-    toast(page, 'Pitch deck diterima dan sedang diproses.'),
+    toast(page, 'Proposal diterima dan sedang diproses.'),
   ).toBeVisible()
   expect(Object.keys(aisaApi.calls[0]?.body as object)).toEqual(['file'])
 })
@@ -213,10 +213,10 @@ test('DSB-89 a deck uploaded before says so and opens the existing proposal', as
   await dialog.getByRole('button', { name: 'Unggah', exact: true }).click()
 
   await expect(
-    toast(page, 'Pitch deck ini sudah pernah diunggah. Membuka proposalnya.'),
+    toast(page, 'Proposal ini sudah pernah diunggah. Membuka yang sudah ada.'),
   ).toBeVisible()
   await expect(
-    toast(page, 'Pitch deck diterima dan sedang diproses.'),
+    toast(page, 'Proposal diterima dan sedang diproses.'),
   ).toHaveCount(0)
   await expect(page).toHaveURL(
     new RegExp(`/proposal/${UPLOAD_ANSWER_ID}$`, 'u'),

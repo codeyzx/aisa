@@ -247,7 +247,7 @@ describe('deriveProgress', () => {
     ])
     expect(rows[2]).toMatchObject({
       by: 'ai',
-      title: 'AI membaca deck sebagai gambar',
+      title: 'AI membaca proposal sebagai gambar',
     })
   })
 

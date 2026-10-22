@@ -61,7 +61,7 @@ const PanelContext = createContext<{ open: boolean; close: () => void }>({
 })
 
 /**
- * One "Pratinjau deck" dialog per page, opened from the button in the Founder
+ * One "Pratinjau proposal" dialog per page, opened from the button in the Founder
  * card or from any page citation — so the link is fetched once and shared. It
  * is fetched when the dialog opens, not at render: the signed link lives 15
  * minutes, and a page left open longer would hand out a dead one. Reopening
@@ -139,7 +139,7 @@ export function DeckPreviewProvider({
                 <div className="flex items-center gap-2">
                   <DialogTitle className="flex items-center gap-2 text-base font-semibold">
                     <PresentationIcon className="size-4 text-primary" />
-                    Pratinjau deck
+                    Pratinjau proposal
                   </DialogTitle>
                   {page !== null ? (
                     <span className="rounded-md bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
@@ -155,7 +155,7 @@ export function DeckPreviewProvider({
                   </span>
                 </DialogDescription>
               </div>
-              {/* Without a frame the body's own "Buka deck" is the one way out. */}
+              {/* Without a frame the body's own "Buka proposal" is the one way out. */}
               {src && newTabUrl ? (
                 <a
                   href={newTabUrl}
@@ -180,14 +180,16 @@ export function DeckPreviewProvider({
                     // A new src (another page, a fresh link) is a new document.
                     key={src}
                     src={src}
-                    title={`Pitch deck ${deck.fileName}`}
+                    title={`Proposal ${deck.fileName}`}
                     onLoad={() => setLoadedSrc(src)}
                     className="absolute inset-0 size-full border-0 bg-background"
                   />
-                  {loadedSrc !== src ? <Loading label="Membuka deck…" /> : null}
+                  {loadedSrc !== src ? (
+                    <Loading label="Membuka proposal…" />
+                  ) : null}
                 </>
               ) : pending || (!fetched && !error) ? (
-                <Loading label="Menyiapkan tautan deck…" />
+                <Loading label="Menyiapkan tautan proposal…" />
               ) : (
                 <div className="grid h-full place-items-center p-6">
                   <div className="max-w-sm space-y-3 text-center">
@@ -195,7 +197,7 @@ export function DeckPreviewProvider({
                     {error ? (
                       <>
                         <p className="text-sm font-medium">
-                          Deck tidak bisa dibuka.
+                          Proposal tidak bisa dibuka.
                         </p>
                         <p className="text-[13px] text-destructive">{error}</p>
                         <Button variant="outline" size="sm" onClick={load}>
@@ -206,10 +208,10 @@ export function DeckPreviewProvider({
                     ) : (
                       <>
                         <p className="text-sm font-medium">
-                          Pratinjau tidak tersedia untuk deck ini.
+                          Pratinjau tidak tersedia untuk proposal ini.
                         </p>
                         <p className="text-[13px] text-muted-foreground">
-                          Buka deck di tab baru untuk membacanya
+                          Buka proposal di tab baru untuk membacanya
                           {page !== null ? ` di hal. ${page}` : ''}.
                         </p>
                         {newTabUrl ? (
@@ -220,7 +222,7 @@ export function DeckPreviewProvider({
                             className={buttonVariants({ size: 'sm' })}
                           >
                             <ExternalLinkIcon data-icon="inline-start" />
-                            Buka deck
+                            Buka proposal
                           </a>
                         ) : null}
                       </>
@@ -273,7 +275,7 @@ export function useDeckPreviewPanel() {
   return useContext(PanelContext)
 }
 
-/** "Pratinjau deck": opens the preview at the first page; nothing without a deck. */
+/** "Pratinjau proposal": opens the preview at the first page; nothing without a deck. */
 export function DeckPreviewButton(
   props: Omit<ComponentProps<typeof Button>, 'onClick' | 'children'>,
 ) {
@@ -282,7 +284,7 @@ export function DeckPreviewButton(
   return (
     <Button {...props} onClick={() => openAt()}>
       <PresentationIcon data-icon="inline-start" />
-      Pratinjau deck
+      Pratinjau proposal
     </Button>
   )
 }
@@ -306,7 +308,7 @@ export function DeckPageLink({
   return (
     <button
       type="button"
-      aria-label={`Buka pratinjau deck di halaman ${page}`}
+      aria-label={`Buka pratinjau proposal di halaman ${page}`}
       onClick={() => openAt(page)}
       className={cn(
         'cursor-pointer underline-offset-2 transition-colors outline-none hover:text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring/50',

@@ -6,7 +6,7 @@ Panduan ini untuk Anda yang menguji AISA sendiri di produksi
 (https://aisa-dashboard-lk5jbo3eza-et.a.run.app). Isinya: masuk dan keluar, sidebar kiri, header
 atas (judul, sapaan, pencarian ⌘K, lonceng, tema, menu akun), tampilan di ponsel, halaman
 **Dashboard**, dan halaman **Tren**. Hampir semua use case di sini hanya membaca. Yang mengubah
-sesuatu ditandai ⚠️. Detail unggah pitch deck dan isi halaman proposal ada di panduan Proposal di
+sesuatu ditandai ⚠️. Detail unggah proposal dan isi halaman proposal ada di panduan Proposal di
 folder yang sama. Nama proposal di contoh (mis. Kopi Teras Senja) diambil dari produksi saat
 panduan ditulis. Datanya bisa berubah, jadi pakai nama yang ada di layar Anda.
 
@@ -36,7 +36,7 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
 - [UC-DSB-20 · Menunggu keputusan per kategori dan hitungan tanggapan](#uc-dsb-20--menunggu-keputusan-per-kategori-dan-hitungan-tanggapan)
 - [UC-DSB-21 · Kartu Tren proposal di Dashboard](#uc-dsb-21--kartu-tren-proposal-di-dashboard)
 - [UC-DSB-22 · Aktivitas terakhir](#uc-dsb-22--aktivitas-terakhir)
-- [UC-DSB-23 · Tombol Unggah pitch deck di Dashboard](#uc-dsb-23--tombol-unggah-pitch-deck-di-dashboard)
+- [UC-DSB-23 · Tombol Unggah proposal di Dashboard](#uc-dsb-23--tombol-unggah-proposal-di-dashboard)
 - [UC-DSB-24 · Banner saat AI dijeda ⚠️](#uc-dsb-24--banner-saat-ai-dijeda-️)
 - [UC-DSB-25 · Tren: proposal masuk per hari dan tabelnya](#uc-dsb-25--tren-proposal-masuk-per-hari-dan-tabelnya)
 - [UC-DSB-26 · Tren: proposal per sektor dan rata-rata skor](#uc-dsb-26--tren-proposal-per-sektor-dan-rata-rata-skor)
@@ -564,24 +564,24 @@ lonceng (UC-DSB-13).
 **Kalau berbeda:** baris di sini tidak bisa diklik, itu memang begitu. Catat kalau urutannya
 beda dengan lonceng.
 
-### UC-DSB-23 · Tombol Unggah pitch deck di Dashboard
+### UC-DSB-23 · Tombol Unggah proposal di Dashboard
 
-**Situasi:** Anda menerima pitch deck lewat email, bukan lewat Form, dan ingin AISA menilainya.
+**Situasi:** Anda menerima proposal lewat email, bukan lewat Form, dan ingin AISA menilainya.
 
 **Sebelum mulai:** masuk sebagai admin.
 
 **Langkah:**
 
 1. Di **Dashboard**, kartu **Paling cocok untuk Anda**, lihat bagian paling bawah.
-2. Klik **Unggah pitch deck**.
+2. Klik **Unggah proposal**.
 3. Tutup jendelanya tanpa mengunggah (klik di luar jendela atau tekan **Esc**).
 
-**Yang seharusnya terlihat:** baris **Pitch deck tidak lewat Form? Unggah agar ikut dinilai.**
-dengan tombol **Unggah pitch deck**. Tombol membuka jendela **Unggah pitch deck** dengan
-keterangan **PDF dinilai lewat alur yang sama dengan Form. Hanya teksnya yang dikirim ke model,
-kecuali deck hasil pindai: PDF-nya dibaca AI sebagai gambar.**
+**Yang seharusnya terlihat:** baris **Proposal tidak lewat Form? Unggah agar ikut dinilai.**
+dengan tombol **Unggah proposal**. Tombol membuka jendela **Unggah proposal** dengan keterangan
+**PDF dinilai lewat alur yang sama dengan Form. Hanya teksnya yang dikirim ke model, kecuali
+proposal hasil pindai: PDF-nya dibaca AI sebagai gambar.**
 Untuk benar-benar mengunggah (⚠️ menambah proposal), ikuti panduan Proposal di folder ini dan
-pakai deck uji bernama "UJI …". Akun dengan peran **Pengguna** (baca saja) tidak melihat baris
+pakai PDF uji bernama "UJI …". Akun dengan peran **Pengguna** (baca saja) tidak melihat baris
 dan tombol ini sama sekali.
 
 **Kalau berbeda:** kalau akun **Pengguna** masih melihat tombol ini, catat sebagai bug hak akses.

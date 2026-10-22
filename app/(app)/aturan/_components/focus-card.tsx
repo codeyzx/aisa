@@ -173,8 +173,8 @@ export function FocusCard({
       <CardHeader>
         <CardTitle className="font-semibold">Fokus investasi</CardTitle>
         <CardDescription>
-          Dipakai untuk tiga cek fokus. Deck yang tidak menyebut sektor, tahap,
-          atau dananya dianggap tidak lolos cek itu.
+          Dipakai untuk tiga cek fokus. Proposal yang tidak menyebut sektor,
+          tahap, atau dananya dianggap tidak lolos cek itu.
         </CardDescription>
         {onEdit ? (
           <CardAction>

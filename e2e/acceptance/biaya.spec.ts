@@ -170,7 +170,7 @@ test('DSB-45 Biaya AI prices recorded usage and compares it with manual screenin
     has: page.getByRole('heading', { name: 'AISA vs cek manual' }),
   })
   await calc.getByLabel('Proposal per bulan').fill('100')
-  await calc.getByLabel('Menit analis per deck').fill('15')
+  await calc.getByLabel('Menit analis per proposal').fill('15')
   await calc.getByLabel('Menit membaca hasil AISA').fill('2')
   await expect(page).toHaveURL(/[?&]proposal=100(&|$)/u)
   const perMinute = 14_500_000 / 173 / 60

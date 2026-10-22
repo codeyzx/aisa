@@ -75,8 +75,8 @@ export function DeleteProposalButton({
         <AlertDialogHeader>
           <AlertDialogTitle>Hapus data {proposalName}?</AlertDialogTitle>
           <AlertDialogDescription>
-            Proposal, teks, pitch deck, dan log penilaiannya dihapus permanen.
-            Riwayat tetap ada tanpa nama proposal.
+            Proposal beserta teks, berkas PDF, dan log penilaiannya dihapus
+            permanen. Riwayat tetap ada tanpa nama proposal.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <label htmlFor="delete-reason" className="grid gap-1 text-sm">

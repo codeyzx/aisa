@@ -73,7 +73,7 @@ const HEAD: Record<
     tone: 'bg-success-soft text-success',
   },
   perlu_dicek_manual: {
-    title: 'Deck perlu dicek manual',
+    title: 'Proposal perlu dicek manual',
     icon: AlertTriangleIcon,
     tone: 'bg-warning-soft text-warning',
   },
@@ -106,7 +106,7 @@ function headline(
     case 'selesai':
       return 'Menampilkan hasilnya…'
     case 'perlu_dicek_manual':
-      return `${reason ? `Alasannya: ${reason}. ` : ''}AI tidak memberi skor atau kategori; buka deck dan tinjau sendiri.`
+      return `${reason ? `Alasannya: ${reason}. ` : ''}AI tidak memberi skor atau kategori; buka berkas proposal dan tinjau sendiri.`
     case 'dihentikan':
       return 'STOP aktif, jadi penilaian berhenti. Proposal ini dinilai ulang dari awal setelah LANJUT.'
     case 'gagal':

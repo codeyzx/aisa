@@ -239,7 +239,7 @@ describe('buildAssessmentLog', () => {
     expect(cek?.result).toBe('Teks terlalu sedikit')
     expect(gambar).toMatchObject({
       by: 'ai',
-      title: 'AI membaca deck sebagai gambar',
+      title: 'AI membaca proposal sebagai gambar',
       result: 'Teks terbaca',
       recorded: 'Baca teks dari gambar · gemini.generate_content',
       tokens: 5_800,

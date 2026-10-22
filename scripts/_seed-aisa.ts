@@ -176,7 +176,7 @@ const SEEDS: Seed[] = [
     source: 'form',
     correction: {
       category: 'cocok',
-      reason: 'Traksi di Muncar lebih kuat dari yang terbaca di deck',
+      reason: 'Traksi di Muncar lebih kuat dari yang terbaca di proposal',
     },
   },
   {
@@ -358,7 +358,7 @@ function fitOf(seed: Seed) {
 
 const REASONS: Record<Criterion, Record<number, string>> = {
   tim: {
-    1: 'Deck tidak menyebut susunan tim.',
+    1: 'Proposal tidak menyebut susunan tim.',
     2: 'Tim baru, belum ada rekam jejak di bidang ini.',
     3: 'Pendiri punya pengalaman sebagian di industri.',
     4: 'Tim inti berpengalaman dan lengkap.',

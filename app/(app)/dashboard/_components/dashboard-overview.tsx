@@ -434,7 +434,7 @@ export function DashboardOverview({
           </CardContent>
           {canUpload ? (
             <div className="flex flex-wrap items-center justify-between gap-3 border-t px-6 py-3 text-sm text-muted-foreground">
-              Pitch deck tidak lewat Form? Unggah agar ikut dinilai.
+              Proposal tidak lewat Form? Unggah agar ikut dinilai.
               <UploadDeckButton />
             </div>
           ) : null}

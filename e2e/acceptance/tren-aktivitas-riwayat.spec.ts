@@ -292,7 +292,7 @@ test('DSB-50 Riwayat lists every audit row, newest first, and leaves a deleted p
   ).toHaveAttribute('href', '/proposal/form-seedpanenkita')
 
   await expect(event('Kategori Pasar Ikan dikoreksi')).toContainText(
-    'Traksi di Muncar lebih kuat dari yang terbaca di deck',
+    'Traksi di Muncar lebih kuat dari yang terbaca di proposal',
   )
   const aturan = event('Aturan penilaian diperbarui ke versi 1')
   await expect(aturan).toContainText('via Dashboard')

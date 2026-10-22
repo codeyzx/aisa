@@ -87,7 +87,7 @@ test('DSB-20 a scored, fitting proposal shows both stages, quotes and tokens', a
   // Seed: 10 pages → 7000 + 10·310 in, 1100 + 8·23 out.
   await expect(
     page.getByTitle('10.100 token masuk / 1.284 token keluar'),
-  ).toHaveText('Dibuat dari pitch deck · 11,4 rb token')
+  ).toHaveText('Dibuat dari proposal · 11,4 rb token')
 
   await expect(
     card(page, 'Keputusan Anda').getByText('Belum ditanggapi', { exact: true }),
@@ -127,7 +127,7 @@ test('DSB-22 a perlu dicek manual proposal has no score, no category and no corr
   ).toBeVisible()
   await expect(
     card(page, 'Nilai per kriteria').getByText(
-      'Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori.',
+      'Tidak dinilai: proposal perlu dicek manual, tanpa skor dan kategori.',
     ),
   ).toBeVisible()
   await expect(
@@ -181,7 +181,7 @@ test('DSB-24 a corrected proposal keeps its code category and score beside the c
   await expect(top.getByText('dikoreksi', { exact: true })).toBeVisible()
   await expect(
     card(page, 'Kategori kurang pas?').getByText(
-      /^AI menilai Kurang cocok, lalu dikoreksi ke Cocok \(\d{1,2} \S+ \d{4}, \d{2}\.\d{2}, Dashboard\): “Traksi di Muncar lebih kuat dari yang terbaca di deck”\.$/u,
+      /^AI menilai Kurang cocok, lalu dikoreksi ke Cocok \(\d{1,2} \S+ \d{4}, \d{2}\.\d{2}, Dashboard\): “Traksi di Muncar lebih kuat dari yang terbaca di proposal”\.$/u,
     ),
   ).toBeVisible()
 
@@ -255,7 +255,7 @@ test('DSB-36 Log penilaian is a centred dialog with a timed timeline, start to f
   const steps = log.getByRole('list', { name: 'Langkah penilaian' })
   await expect(steps.getByRole('heading', { level: 3 })).toHaveText([
     'Membaca teks tiap halaman',
-    'Memeriksa deck bisa dibaca',
+    'Memeriksa proposal bisa dibaca',
     'AI menilai 5 kriteria',
     'Menghitung skor',
     'Mencocokkan dengan fokus investasi',
@@ -305,7 +305,7 @@ test('DSB-26 criteria and fit butir the deck does not mention read tidak disebut
   for (const key of ['traksi', 'bisnis']) {
     const item = criterion(page, key)
     await expect(item.getByText('1/5', { exact: true })).toBeVisible()
-    await expect(item.getByText('Tidak dibahas di pitch deck')).toBeVisible()
+    await expect(item.getByText('Tidak dibahas di proposal')).toBeVisible()
     await expect(item.getByText('(tidak disebut)')).toHaveCount(1)
   }
   const top = header(page)
@@ -346,7 +346,9 @@ test('DSB-27 a queued upload has no assessment and no log link yet', async ({
   await expect(
     page.getByRole('button', { name: 'Lihat log penilaian' }),
   ).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Buka deck' })).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: 'Buka proposal' }),
+  ).toBeVisible()
 
   // While STOP is on, a queued proposal says it waits for LANJUT.
   await withRuntime({ paused: true }, async () => {
@@ -412,9 +414,9 @@ async function interceptDeckHosts(page: Page): Promise<string[]> {
 }
 
 const previewPanel = (page: Page) =>
-  page.getByRole('dialog', { name: 'Pratinjau deck' })
+  page.getByRole('dialog', { name: 'Pratinjau proposal' })
 
-test('DSB-31 Pratinjau deck opens the uploaded deck in a centred dialog and keeps a fresh link on reopen', async ({
+test('DSB-31 Pratinjau proposal opens the uploaded deck in a centred dialog and keeps a fresh link on reopen', async ({
   page,
   aisaApi,
 }) => {
@@ -424,12 +426,12 @@ test('DSB-31 Pratinjau deck opens the uploaded deck in a centred dialog and keep
 
   // Nothing is asked of the API until the panel opens.
   await expect(
-    page.getByRole('button', { name: 'Pratinjau deck', exact: true }),
+    page.getByRole('button', { name: 'Pratinjau proposal', exact: true }),
   ).toBeVisible()
   expect(aisaApi.calls).toEqual([])
 
   await page
-    .getByRole('button', { name: 'Pratinjau deck', exact: true })
+    .getByRole('button', { name: 'Pratinjau proposal', exact: true })
     .click()
   const panel = previewPanel(page)
   await expect(panel).toBeVisible()
@@ -441,7 +443,7 @@ test('DSB-31 Pratinjau deck opens the uploaded deck in a centred dialog and keep
   await expect(frame).toHaveAttribute('src', link.previewUrl)
   await expect(frame).toHaveAttribute(
     'title',
-    'Pitch deck Klinik_Desa_pitchdeck.pdf',
+    'Proposal Klinik_Desa_pitchdeck.pdf',
   )
   await expect(
     panel.getByRole('link', { name: 'Buka di tab baru' }),
@@ -476,7 +478,7 @@ test('DSB-31 Pratinjau deck opens the uploaded deck in a centred dialog and keep
   await expect(panel).toHaveCount(0)
   // Reopened inside the link's lifetime: the same link, no second request.
   await page
-    .getByRole('button', { name: 'Pratinjau deck', exact: true })
+    .getByRole('button', { name: 'Pratinjau proposal', exact: true })
     .click()
   await expect(previewPanel(page).locator('iframe')).toHaveAttribute(
     'src',
@@ -494,7 +496,7 @@ test('DSB-32 a page citation opens the preview at that page, from the criteria a
 
   // Seed: criterion n quotes page 2 + n (produk is the third → hal. 4).
   await criterion(page, 'produk')
-    .getByRole('button', { name: 'Buka pratinjau deck di halaman 4' })
+    .getByRole('button', { name: 'Buka pratinjau proposal di halaman 4' })
     .click()
   const panel = previewPanel(page)
   await expect(panel.locator('iframe')).toHaveAttribute(
@@ -511,7 +513,7 @@ test('DSB-32 a page citation opens the preview at that page, from the criteria a
   await page.getByRole('button', { name: 'Lihat log penilaian' }).click()
   const log = page.getByRole('dialog', { name: 'Log penilaian' })
   await log
-    .getByRole('button', { name: 'Buka pratinjau deck di halaman 3' })
+    .getByRole('button', { name: 'Buka pratinjau proposal di halaman 3' })
     .click()
   await expect(panel.locator('iframe')).toHaveAttribute(
     'src',
@@ -531,9 +533,11 @@ test('DSB-33 a Form deck previews in Drive from page 1 and says which page the q
   await page.goto('/proposal/form-seedtanimaju')
 
   // A Form deck lives in Drive: preview, no "Buka deck" for an upload link.
-  await expect(page.getByRole('button', { name: 'Buka deck' })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Buka proposal' })).toHaveCount(
+    0,
+  )
   await criterion(page, 'tim')
-    .getByRole('button', { name: 'Buka pratinjau deck di halaman 2' })
+    .getByRole('button', { name: 'Buka pratinjau proposal di halaman 2' })
     .click()
   const panel = previewPanel(page)
   await expect(panel.locator('iframe')).toHaveAttribute('src', link.previewUrl)
@@ -546,7 +550,7 @@ test('DSB-33 a Form deck previews in Drive from page 1 and says which page the q
   await expect.poll(() => framed).toEqual([link.previewUrl])
 })
 
-test('DSB-34 with no preview link the panel offers Buka deck instead of a frame', async ({
+test('DSB-34 with no preview link the dialog offers Buka proposal instead of a frame', async ({
   page,
   aisaApi,
 }) => {
@@ -557,21 +561,20 @@ test('DSB-34 with no preview link the panel offers Buka deck instead of a frame'
   })
   await page.goto('/proposal/upload-seedklinikdesa')
   await page
-    .getByRole('button', { name: 'Pratinjau deck', exact: true })
+    .getByRole('button', { name: 'Pratinjau proposal', exact: true })
     .click()
 
   const panel = previewPanel(page)
   await expect(
-    panel.getByText('Pratinjau tidak tersedia untuk deck ini.'),
+    panel.getByText('Pratinjau tidak tersedia untuk proposal ini.'),
   ).toBeVisible()
   await expect(panel.locator('iframe')).toHaveCount(0)
-  await expect(panel.getByRole('link', { name: 'Buka deck' })).toHaveAttribute(
-    'href',
-    link.url,
-  )
+  await expect(
+    panel.getByRole('link', { name: 'Buka proposal' }),
+  ).toHaveAttribute('href', link.url)
 })
 
-test('DSB-35 a deck link the API refuses shows its message in the panel with Coba lagi', async ({
+test('DSB-35 a deck link the API refuses shows its message in the dialog with Coba lagi', async ({
   page,
   aisaApi,
 }) => {
@@ -579,11 +582,11 @@ test('DSB-35 a deck link the API refuses shows its message in the panel with Cob
   aisaApi.refuseNext({ status: 404, detail: 'deck tidak ditemukan' })
   await page.goto('/proposal/upload-seedklinikdesa')
   await page
-    .getByRole('button', { name: 'Pratinjau deck', exact: true })
+    .getByRole('button', { name: 'Pratinjau proposal', exact: true })
     .click()
 
   const panel = previewPanel(page)
-  await expect(panel.getByText('Deck tidak bisa dibuka.')).toBeVisible()
+  await expect(panel.getByText('Proposal tidak bisa dibuka.')).toBeVisible()
   await expect(panel.getByText('deck tidak ditemukan')).toBeVisible()
   await panel.getByRole('button', { name: 'Coba lagi' }).click()
   await expect(panel.locator('iframe')).toHaveAttribute(

@@ -21,7 +21,7 @@ export type PricedKind = (typeof PRICED_KINDS)[number]
 
 /** The `agent` name each kind's jobs carry, and what that agent does. */
 export const KIND_AGENT: Record<PricedKind, { agent: string; does: string }> = {
-  penilaian: { agent: 'Penilai', does: 'Membaca dan menilai deck proposal' },
+  penilaian: { agent: 'Penilai', does: 'Membaca dan menilai proposal' },
   ringkasan: {
     agent: 'Pembuat ringkasan',
     does: 'Ringkasan WhatsApp 09.00 dan 17.00, termasuk insight-nya',

@@ -4,7 +4,7 @@
 
 Panduan ini untuk Anda yang menguji halaman **Proposal** AISA sendiri di produksi
 (https://aisa-dashboard-lk5jbo3eza-et.a.run.app). Isinya: daftar proposal (tab, filter, cari,
-urutan, halaman, ekspor CSV, pilih banyak baris, tanggapan massal, unggah pitch deck) dan halaman
+urutan, halaman, ekspor CSV, pilih banyak baris, tanggapan massal, unggah proposal) dan halaman
 detail satu proposal (skor, log penilaian, Ringkasan AI, nilai per kriteria, cek fokus, riwayat,
 keputusan Anda, Tanya AISA, founder, koreksi kategori, hapus data). Ada juga proposal yang perlu
 dicek manual, proposal "Berkualitas, di luar fokus", dan akun yang hanya bisa membaca. Use case
@@ -26,7 +26,7 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
 - [UC-PRP-06 · Ekspor CSV tanpa data pribadi founder](#uc-prp-06--ekspor-csv-tanpa-data-pribadi-founder)
 - [UC-PRP-07 · Memilih beberapa baris dan bilah aksinya](#uc-prp-07--memilih-beberapa-baris-dan-bilah-aksinya) ⚠️
 - [UC-PRP-08 · Menanggapi semua proposal satu kategori sekaligus](#uc-prp-08--menanggapi-semua-proposal-satu-kategori-sekaligus) ⚠️
-- [UC-PRP-09 · Mengunggah pitch deck](#uc-prp-09--mengunggah-pitch-deck) ⚠️
+- [UC-PRP-09 · Mengunggah proposal](#uc-prp-09--mengunggah-proposal) ⚠️
 - [UC-PRP-10 · Mengunggah berkas yang bukan PDF](#uc-prp-10--mengunggah-berkas-yang-bukan-pdf)
 - [UC-PRP-11 · Mengunggah PDF lebih dari 20 MB](#uc-prp-11--mengunggah-pdf-lebih-dari-20-mb)
 - [UC-PRP-12 · Owner bertanya: kenapa skor proposal A segitu](#uc-prp-12--owner-bertanya-kenapa-skor-proposal-a-segitu)
@@ -38,7 +38,7 @@ Akun uji: `manager@aisa.local` dengan sandi admin dari tim.
 - [UC-PRP-18 · Memantau atau mengarsipkan proposal](#uc-prp-18--memantau-atau-mengarsipkan-proposal) ⚠️
 - [UC-PRP-19 · Menyiapkan pertemuan lewat kartu Tanya AISA](#uc-prp-19--menyiapkan-pertemuan-lewat-kartu-tanya-aisa)
 - [UC-PRP-20 · Menghubungi founder](#uc-prp-20--menghubungi-founder)
-- [UC-PRP-21 · Membuka pitch deck asli](#uc-prp-21--membuka-pitch-deck-asli)
+- [UC-PRP-21 · Membuka berkas proposal asli](#uc-prp-21--membuka-berkas-proposal-asli)
 - [UC-PRP-22 · Koreksi kategori tanpa alasan](#uc-prp-22--koreksi-kategori-tanpa-alasan)
 - [UC-PRP-23 · Mengoreksi kategori](#uc-prp-23--mengoreksi-kategori) ⚠️
 - [UC-PRP-24 · Hapus data tanpa alasan](#uc-prp-24--hapus-data-tanpa-alasan)
@@ -299,19 +299,19 @@ selesai hanya bila semua proposal di kategori itu adalah proposal UJI.
 
 **Kalau berbeda:** catat kategori, angka di kotak, dan angka di toast.
 
-### UC-PRP-09 · Mengunggah pitch deck
+### UC-PRP-09 · Mengunggah proposal
 
-**Situasi:** founder mengirim pitch deck lewat email, dan Anda ingin AISA menilainya.
+**Situasi:** founder mengirim proposal lewat email, dan Anda ingin AISA menilainya.
 
-⚠️ Membuat proposal baru. Pakai deck uji, hapus di akhir (UC-PRP-25).
+⚠️ Membuat proposal baru. Pakai PDF uji, hapus di akhir (UC-PRP-25).
 
 **Sebelum mulai:** di halaman **Proposal**. Siapkan PDF berteks (bukan hasil pindai) di bawah 20
-MB, mis. deck rekaan startup "UJI Tani Cabai". AISA sedang tidak dijeda.
+MB, mis. proposal rekaan startup "UJI Tani Cabai". AISA sedang tidak dijeda.
 
 **Langkah:**
 
-1. Klik **Unggah pitch deck** (kanan baris filter).
-2. Di dialog **Unggah pitch deck**, klik kolom **Berkas PDF** dan pilih berkasnya.
+1. Klik **Unggah proposal** (kanan baris filter).
+2. Di dialog **Unggah proposal**, klik kolom **Berkas PDF** dan pilih berkasnya.
 3. Isi **Nama startup (opsional)** dengan `UJI Tani Cabai`.
 4. Klik **Unggah**.
 5. Tetap di halaman detail yang terbuka dan tunggu sekitar setengah menit, tanpa memuat ulang.
@@ -319,14 +319,14 @@ MB, mis. deck rekaan startup "UJI Tani Cabai". AISA sedang tidak dijeda.
 **Yang seharusnya terlihat:**
 
 - Dialog bertuliskan "PDF dinilai lewat alur yang sama dengan Form. Hanya teksnya yang dikirim
-  ke model, kecuali deck hasil pindai: PDF-nya dibaca AI sebagai gambar."
+  ke model, kecuali proposal hasil pindai: PDF-nya dibaca AI sebagai gambar."
 - Saat mengirim, tombol berubah menjadi **Mengunggah…**.
-- Lalu toast "Pitch deck diterima dan sedang diproses.", dialog tertutup, dan Anda dibawa ke detail
+- Lalu toast "Proposal diterima dan sedang diproses.", dialog tertutup, dan Anda dibawa ke detail
   proposal baru itu dengan badge **Antre** atau **Sedang dinilai** dan skor "—".
 - Di bawah kartu nama muncul kartu **AISA sedang menilai proposal ini** (atau **Menunggu giliran
   dinilai** selama masih antre) dengan pengukur **Sudah berjalan** (menit:detik). Di dalamnya
-  daftar langkah: **Membaca teks tiap halaman**, **Memeriksa deck bisa dibaca**, **AI menilai 5
-  kriteria** (bertanda **AI**), **Menghitung skor**, **Mencocokkan dengan fokus investasi**,
+  daftar langkah: **Membaca teks tiap halaman**, **Memeriksa proposal bisa dibaca**, **AI menilai
+  5 kriteria** (bertanda **AI**), **Menghitung skor**, **Mencocokkan dengan fokus investasi**,
   **Menentukan kategori**, **Menyimpan hasil**, masing-masing dengan satu kalimat penjelasan.
   Langkah yang selesai bertanda centang hijau dan lamanya (mis. "1,6 dtk"); langkah yang sedang
   dikerjakan berputar dengan pengukur detiknya sendiri; sisanya abu-abu bertulisan "menunggu".
@@ -348,8 +348,8 @@ MB, mis. deck rekaan startup "UJI Tani Cabai". AISA sedang tidak dijeda.
 - Proposal baru juga muncul di daftar dan angka tab **Belum ditanggapi** bertambah 1.
 
 Mengunggah PDF yang persis sama untuk kedua kalinya tidak membuat proposal kedua: toast berbunyi
-"Pitch deck ini sudah pernah diunggah. Membuka proposalnya." dan Anda dibawa ke proposal yang sudah
-ada.
+"Proposal ini sudah pernah diunggah. Membuka yang sudah ada." dan Anda dibawa ke proposal yang
+sudah ada.
 
 **Kalau berbeda:** bila status tetap **Antre** lebih dari beberapa menit, cek apakah AISA dijeda
 (banner di atas halaman; kartunya lalu berjudul **Penilaian dijeda** dan bertulisan "AI sedang
@@ -359,7 +359,7 @@ dijeda (STOP). Proposal ini akan dinilai setelah LANJUT.") dan halaman **Aktivit
 
 **Situasi:** Anda tidak sengaja memilih berkas Word atau gambar.
 
-**Sebelum mulai:** dialog **Unggah pitch deck** terbuka. Siapkan berkas `.txt` atau `.docx`, dan
+**Sebelum mulai:** dialog **Unggah proposal** terbuka. Siapkan berkas `.txt` atau `.docx`, dan
 satu berkas teks yang namanya diganti menjadi `palsu.pdf`.
 
 **Langkah:**
@@ -381,9 +381,9 @@ satu berkas teks yang namanya diganti menjadi `palsu.pdf`.
 
 ### UC-PRP-11 · Mengunggah PDF lebih dari 20 MB
 
-**Situasi:** deck founder sangat besar karena penuh gambar.
+**Situasi:** berkas proposal dari founder sangat besar karena penuh gambar.
 
-**Sebelum mulai:** dialog **Unggah pitch deck** terbuka. Siapkan PDF di atas 20 MB.
+**Sebelum mulai:** dialog **Unggah proposal** terbuka. Siapkan PDF di atas 20 MB.
 
 **Langkah:**
 
@@ -403,7 +403,7 @@ satu berkas teks yang namanya diganti menjadi `palsu.pdf`.
 ### UC-PRP-12 · Owner bertanya: kenapa skor proposal A segitu
 
 **Situasi:** owner bertanya kenapa Klinik Desa Sehat dapat skor 78,1, dan Anda ingin menjawab
-dengan bukti dari deck.
+dengan bukti dari proposalnya.
 
 **Sebelum mulai:** di halaman **Proposal**.
 
@@ -422,14 +422,14 @@ dengan bukti dari deck.
   18.45", badge **Cocok** dan **Belum ditanggapi**.
 - **Skor kualitas** 78,1 /100 dengan bar berwarna dan teks "3 dari 3 syarat fokus terpenuhi".
   Angka ini sama dengan kolom **Skor** di daftar.
-- **Ringkasan AI** bertuliskan "Dibuat dari pitch deck · <n> rb token". **Kelebihan** memuat
+- **Ringkasan AI** bertuliskan "Dibuat dari proposal · <n> rb token". **Kelebihan** memuat
   kriteria bernilai 4–5. **Perlu dicek** memuat kriteria bernilai 1–2, yang tidak dibahas, atau
   yang kutipannya tidak terverifikasi; bila tidak ada, tertulis "Tidak ada kriteria bernilai 1–2
   atau tanpa bukti." Di bawahnya: "AI bisa salah. Cocokkan dengan kutipan di bawah, atau buka log
   penilaian untuk melihat alasannya."
 - **Nilai per kriteria**: lima baris (Tim, Pasar & masalah, Produk & keunggulan, Traksi, Model
   bisnis & keuangan). Tiap kutipan diberi label "Hal. <n>". Klik label itu untuk membuka
-  pratinjau deck di halaman tersebut (UC-PRP-21) dan cocokkan: kalimat itu ada di halaman yang
+  pratinjau proposal di halaman tersebut (UC-PRP-21) dan cocokkan: kalimat itu ada di halaman yang
   disebut.
 - Keterangan kartu menyebut versi aturan dan model, mis. "Aturan v1 · model gemini-3.8-flash."
   Bila aturan sudah diubah sejak dinilai, ada kalimat "Bobot yang tampil dari aturan v3 yang
@@ -438,7 +438,7 @@ dengan bukti dari deck.
   jendela itu menunjukkan tabel Nilai × Bobot = Poin dan **Skor akhir** yang sama dengan skor di
   atas.
 
-**Kalau berbeda:** catat kriteria, kutipan, dan nomor halaman yang tidak cocok dengan deck.
+**Kalau berbeda:** catat kriteria, kutipan, dan nomor halaman yang tidak cocok dengan proposalnya.
 
 ### UC-PRP-13 · Membuka log penilaian
 
@@ -466,17 +466,17 @@ yang oleh AI.
   per pelaku, mis. "1 langkah AI", "6 langkah Sistem", "2 langkah Manajer".
 - Kotak "AI hanya memberi nilai dan menulis alasannya. Skor, cek fokus, dan kategori dihitung
   sistem dengan aturan yang sama untuk semua proposal."
-- Linimasa berurutan: **Membaca teks tiap halaman**, **Memeriksa deck bisa dibaca**, **AI menilai 5
-  kriteria** (satu-satunya bertanda **AI**), **Menghitung skor**, **Mencocokkan dengan fokus
-  investasi**, **Menentukan kategori**, **Menyimpan hasil**. Proposal Form yang dinilai ulang
-  diawali **Mengambil pitch deck**. Tiap langkah menyebut jam mulai (jj.mm.dd), lamanya, pelakunya
-  (**AI** atau **Sistem**), satu kalimat penjelasan, **Hasil:** (mis. "Skor 81,9", "3 dari 3
+- Linimasa berurutan: **Membaca teks tiap halaman**, **Memeriksa proposal bisa dibaca**, **AI
+  menilai 5 kriteria** (satu-satunya bertanda **AI**), **Menghitung skor**, **Mencocokkan dengan
+  fokus investasi**, **Menentukan kategori**, **Menyimpan hasil**. Proposal Form yang dinilai
+  ulang diawali **Mengambil proposal**. Tiap langkah menyebut jam mulai (jj.mm.dd), lamanya,
+  pelakunya (**AI** atau **Sistem**), satu kalimat penjelasan, **Hasil:** (mis. "Skor 81,9", "3 dari 3
   syarat terpenuhi", "Sangat cocok"), dan nama aksi serta tool yang tercatat (mis. "Menilai 5
   kriteria · gemini.generate_content"). Garis tipis di bawah judul menunjukkan porsi langkah itu
   dari seluruh waktu; langkah AI hampir memenuhi garisnya.
 - Rincian **AI menilai 5 kriteria** terbuka sejak awal: nilai, bukti dengan label **hal. <n>**, dan
-  alasan AI tiap kriteria. **hal. <n>** membuka pratinjau deck di halaman itu, dan Esc kembali ke
-  log.
+  alasan AI tiap kriteria. **hal. <n>** membuka pratinjau proposal di halaman itu, dan Esc kembali
+  ke log.
 - Rincian **Menghitung skor** berupa tabel Nilai × Bobot = Poin dan **Skor akhir**; rincian
   **Menentukan kategori** menjelaskan aturannya (mis. "Lolos cek fokus, skor 81,9 mencapai 80,0,
   dan tidak ada kriteria bernilai 1.") beserta ambang tiap kategori, yang terpakai disorot.
@@ -489,10 +489,11 @@ penilaian; catat statusnya.
 
 ### UC-PRP-14 · Kriteria yang tidak dibahas atau kutipannya tidak terverifikasi
 
-**Situasi:** deck founder tidak membahas timnya, dan Anda ingin memastikan AISA tidak mengarang.
+**Situasi:** proposal founder tidak membahas timnya, dan Anda ingin memastikan AISA tidak
+mengarang.
 
 **Sebelum mulai:** saat panduan ditulis, belum ada proposal produksi dengan tanda ini. Untuk
-mengujinya, unggah deck UJI tanpa halaman tim (lihat UC-PRP-09). ⚠️ Itu membuat proposal baru.
+mengujinya, unggah proposal UJI tanpa halaman tim (lihat UC-PRP-09). ⚠️ Itu membuat proposal baru.
 
 **Langkah:**
 
@@ -502,7 +503,7 @@ mengujinya, unggah deck UJI tanpa halaman tim (lihat UC-PRP-09). ⚠️ Itu memb
 
 **Yang seharusnya terlihat:**
 
-- Kriteria **Tim** bernilai 1/5 dengan baris berwarna kuning "Tidak dibahas di pitch deck" dan
+- Kriteria **Tim** bernilai 1/5 dengan baris berwarna kuning "Tidak dibahas di proposal" dan
   tanpa kutipan.
 - Kriteria itu tercantum di **Perlu dicek**.
 - Badge **kutipan tidak terverifikasi** muncul hanya bila AI mengutip kalimat yang tidak
@@ -511,7 +512,7 @@ mengujinya, unggah deck UJI tanpa halaman tim (lihat UC-PRP-09). ⚠️ Itu memb
   menemukannya, nilai kriteria itu paling tinggi 2 dan alasannya menyebut berapa kutipan yang
   dibuang.
 
-**Kalau berbeda:** kriteria yang tidak ada di deck tetapi bernilai di atas 1, atau kutipan yang
+**Kalau berbeda:** kriteria yang tidak ada di proposal tetapi bernilai di atas 1, atau kutipan yang
 tidak ada di halaman yang disebut, adalah temuan penting: catat kriteria dan halamannya.
 
 ### UC-PRP-15 · Mengecek kesesuaian dengan fokus investasi
@@ -638,7 +639,7 @@ penilaian**.
 
 - Panel Tanya AISA terbuka di kanan dan langsung mengirim pertanyaan "Buatkan pertanyaan untuk
   founder Klinik Desa Sehat" tanpa Anda mengetik.
-- Jawaban menyebut hal dari deck Klinik Desa Sehat, bukan proposal lain.
+- Jawaban menyebut hal dari proposal Klinik Desa Sehat, bukan proposal lain.
 - Tombol kedua mengirim "Apa risiko Klinik Desa Sehat?". Bila jawaban pertama masih berjalan,
   pertanyaan kedua menunggu lalu terkirim.
 
@@ -659,17 +660,17 @@ AISA dibahas di panduan Asisten.
 
 **Yang seharusnya terlihat:**
 
-- Proposal Form: inisial, nama founder, dan alamat email, lalu tombol **Pratinjau deck** dan
+- Proposal Form: inisial, nama founder, dan alamat email, lalu tombol **Pratinjau proposal** dan
   tombol **Email**, keduanya selebar kartu. Baris sumber "Form · <nama berkas> · <n> halaman".
 - **Email** membuka aplikasi email Anda dengan alamat founder sudah terisi.
 - Proposal unggahan: "Data founder tidak disebut.", tanpa tombol **Email**, dengan tombol
-  **Pratinjau deck** dan **Buka deck**, dan baris sumber "Unggahan · …".
+  **Pratinjau proposal** dan **Buka proposal**, dan baris sumber "Unggahan · …".
 
 **Kalau berbeda:** catat proposal yang alamat emailnya kosong atau salah.
 
-### UC-PRP-21 · Membuka pitch deck asli
+### UC-PRP-21 · Membuka berkas proposal asli
 
-**Situasi:** Anda ingin membaca deck asli untuk mencocokkan kutipan AI.
+**Situasi:** Anda ingin membaca berkas proposal asli untuk mencocokkan kutipan AI.
 
 **Sebelum mulai:** di detail proposal **unggahan** (mis. Klinik Desa Sehat). Untuk langkah 5,
 detail proposal yang masuk lewat Form (mis. Saku Hukum), masuk dengan akun Google yang bisa
@@ -677,33 +678,36 @@ membuka berkas Drive-nya. Use case ini tidak mengubah data.
 
 **Langkah:**
 
-1. Di kartu **Founder**, klik **Pratinjau deck**.
+1. Di kartu **Founder**, klik **Pratinjau proposal**.
 2. Tekan Esc, lalu di **Nilai per kriteria** klik label "Hal. <n>" di samping sebuah kutipan.
-3. Tekan Esc, klik **Cara AI menilai**, lalu di panel **Log penilaian** klik "hal. <n>" di
+3. Tekan Esc, klik **Cara AI menilai**, lalu di jendela **Log penilaian** klik "hal. <n>" di
    samping "Bukti dari".
-4. Tutup semua panel, lalu di kartu **Founder** klik **Buka deck**.
+4. Tutup semua jendela, lalu di kartu **Founder** klik **Buka proposal**.
 5. Di detail proposal Form, klik label "Hal. <n>" mana pun.
 
 **Yang seharusnya terlihat:**
 
-- Langkah 1: panel **Pratinjau deck** terbuka di kanan (di ponsel: selayar penuh) dengan nama
-  berkas, "· <n> halaman", PDF deck di dalam panel, dan tombol **Buka di tab baru**. Selama PDF
-  dimuat tertulis "Membuka deck…". Di bawah: "Tautan pratinjau berlaku 15 menit; …".
-- Langkah 2: panel yang sama terbuka dengan label "hal. <n>" di samping judul, dan PDF langsung
+- Langkah 1: jendela **Pratinjau proposal** terbuka di tengah layar, hampir selebar dan setinggi
+  layar (di ponsel: selayar penuh), dengan nama berkas, "· <n> halaman", PDF proposal di
+  dalamnya, dan tombol **Buka di tab baru**. Selama PDF dimuat tertulis "Membuka proposal…". Di
+  bawah: "Tautan pratinjau berlaku 15 menit; buka ulang pratinjau ini untuk tautan baru. …". Esc
+  atau tombol silang menutupnya.
+- Langkah 2: jendela yang sama terbuka dengan label "hal. <n>" di samping judul, dan PDF langsung
   menampilkan halaman itu. Kalimat kutipan ada di halaman tersebut.
 - Langkah 3: pratinjau terbuka di halaman itu di atas Log penilaian; Esc menutup pratinjau dan
   Log penilaian tampil lagi.
-- Langkah 4: tab baru terbuka dan menampilkan PDF deck itu. Di bawah tombol muncul tautan
-  cadangan **Tautan deck (sementara)**. Pakai tautan itu bila browser memblokir tab baru.
-  Tautannya hanya berlaku sebentar; klik **Buka deck** lagi untuk tautan baru.
-- Langkah 5: pratinjau Google Drive tampil di panel, mulai dari halaman 1, dengan label
+- Langkah 4: tab baru terbuka dan menampilkan PDF proposal itu. Di bawah tombol muncul tautan
+  cadangan **Tautan proposal (sementara)**. Pakai tautan itu bila browser memblokir tab baru.
+  Tautannya hanya berlaku sebentar; klik **Buka proposal** lagi untuk tautan baru.
+- Langkah 5: pratinjau Google Drive tampil di jendela, mulai dari halaman 1, dengan label
   "hal. <n>" dan catatan "Pratinjau Drive selalu mulai dari halaman 1; gulir ke hal. <n>."
-  Proposal Form tidak punya tombol **Buka deck**; pakai **Buka di tab baru** di panel.
+  Proposal Form tidak punya tombol **Buka proposal**; pakai **Buka di tab baru** di jendela
+  pratinjau.
 
-**Kalau berbeda:** bila panel bertuliskan "Deck tidak bisa dibuka." atau muncul toast, catat
-pesannya. Bila panel kosong atau browser menampilkan halaman terblokir, catat browsernya dan
-pakai **Buka di tab baru**. Tab kosong yang langsung tertutup setelah **Buka deck** juga berarti
-tautan gagal dibuat.
+**Kalau berbeda:** bila jendela pratinjau bertuliskan "Proposal tidak bisa dibuka." atau muncul
+toast, catat pesannya. Bila pratinjau kosong atau browser menampilkan halaman terblokir, catat
+browsernya dan pakai **Buka di tab baru**. Tab kosong yang langsung tertutup setelah **Buka
+proposal** juga berarti tautan gagal dibuat.
 
 ### UC-PRP-22 · Koreksi kategori tanpa alasan
 
@@ -768,8 +772,8 @@ tidak mengubah data.
 
 **Yang seharusnya terlihat:**
 
-- Dialog "Hapus data <nama>?" dengan teks "Proposal, teks, pitch deck, dan log penilaiannya
-  dihapus permanen. Riwayat tetap ada tanpa nama proposal." Kolom alasan berisi contoh "mis.
+- Dialog "Hapus data <nama>?" dengan teks "Proposal beserta teks, berkas PDF, dan log
+  penilaiannya dihapus permanen. Riwayat tetap ada tanpa nama proposal." Kolom alasan berisi contoh "mis.
   permintaan founder".
 - Setelah **Hapus permanen**: kotak merah "Alasan penghapusan wajib diisi." Dialog tetap terbuka.
 - **Batal** menutup dialog; proposal tetap ada.
@@ -810,7 +814,7 @@ dihapus, catat di mana tepatnya.
 
 ### UC-PRP-26 · Proposal yang perlu dicek manual
 
-**Situasi:** AISA tidak bisa membaca deck Lumbung Ikan Pesisir dan Anda ingin tahu kenapa.
+**Situasi:** AISA tidak bisa membaca proposal Lumbung Ikan Pesisir dan Anda ingin tahu kenapa.
 
 **Sebelum mulai:** di halaman **Proposal**.
 
@@ -818,7 +822,7 @@ dihapus, catat di mana tepatnya.
 
 1. Pilih **Perlu dicek manual** di kotak status.
 2. Klik **Lumbung Ikan Pesisir**.
-3. Klik **Buka deck** untuk melihat deck aslinya.
+3. Klik **Buka proposal** untuk melihat berkas aslinya.
 
 **Yang seharusnya terlihat:**
 
@@ -826,15 +830,16 @@ dihapus, catat di mana tepatnya.
   ada di bawah saat diurutkan menurut skor.
 - Di detail: sektor, tahap, dana tertulis "… tidak disebut". Badge **Perlu dicek manual** dengan
   alasan di bawahnya, mis. "teks terlalu sedikit (0 karakter di 10 halaman)". Lumbung Ikan
-  Pesisir adalah deck hasil pindai yang dinilai sebelum AISA bisa membaca deck sebagai gambar;
-  deck hasil pindai yang masuk sekarang biasanya tetap dinilai (lihat UC-FRM-05).
-- **Skor kualitas** "—" dan "Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori."
+  Pesisir adalah proposal hasil pindai yang dinilai sebelum AISA bisa membaca proposal sebagai
+  gambar; proposal hasil pindai yang masuk sekarang biasanya tetap dinilai (lihat UC-FRM-05).
+- **Skor kualitas** "—" dan "Tidak dinilai: proposal perlu dicek manual, tanpa skor dan
+  kategori."
   Kalimat yang sama ada di **Nilai per kriteria**. Kartu **Ringkasan AI** tidak ada.
   **Sesuai fokus investasi?** bertuliskan "Belum ada cek kecocokan."
 - Kartu **Kategori kurang pas?** tidak ada, karena proposal tanpa kategori tidak bisa dikoreksi.
-- **Keputusan Anda** tetap bisa dipakai: Anda boleh menanggapi setelah membaca deck sendiri.
+- **Keputusan Anda** tetap bisa dipakai: Anda boleh menanggapi setelah membaca proposalnya sendiri.
 
-**Kalau berbeda:** bila deck berteks jelas berakhir di sini, catat alasannya dan nama berkasnya.
+**Kalau berbeda:** bila proposal berteks jelas berakhir di sini, catat alasannya dan nama berkasnya.
 
 ### UC-PRP-27 · Proposal berkualitas di luar fokus
 
@@ -844,7 +849,7 @@ dihapus, catat di mana tepatnya.
 tetapi skornya mencapai ambang "Berkualitas, di luar fokus" di **Aturan penilaian** (saat panduan
 ditulis 65), selama kategorinya masih **Tidak cocok**. Saat panduan ditulis, filternya kosong:
 Kopi Teras Senja awalnya bertanda ini (lihat Riwayatnya) tetapi sudah dikoreksi ke Sangat cocok,
-jadi tandanya tidak tampil lagi. Untuk mengujinya, unggah deck UJI yang kuat di sektor di luar
+jadi tandanya tidak tampil lagi. Untuk mengujinya, unggah proposal UJI yang kuat di sektor di luar
 fokus (mis. f&b). ⚠️ Itu membuat proposal baru.
 
 **Langkah:**
@@ -885,7 +890,7 @@ lingkungan lokal (emulator) akun ini sudah tersedia: `viewer@aisa.test`.
 
 **Yang seharusnya terlihat:**
 
-- Di daftar: tidak ada tombol **Unggah pitch deck**. **Ekspor CSV**, cari, filter, dan urut tetap
+- Di daftar: tidak ada tombol **Unggah proposal**. **Ekspor CSV**, cari, filter, dan urut tetap
   bisa dipakai. Memilih satu kategori tidak memunculkan kotak "Tanggapi semua …".
 - Bilah pilihan hanya berisi "1 dipilih" dan ikon silang, tanpa **Undang**/**Pantau**/
   **Arsipkan**.
@@ -894,8 +899,8 @@ lingkungan lokal (emulator) akun ini sudah tersedia: `viewer@aisa.test`.
   manajer investasi." tanpa tombol tanggapan.
 - Kartu **Kategori kurang pas?** tidak ada, kecuali proposal itu pernah dikoreksi: maka hanya
   keterangan koreksinya yang tampil, tanpa formulir.
-- **Lihat log penilaian**, **Tanya AISA**, **Email**, **Pratinjau deck** (juga dari label
-  "Hal. <n>"), dan **Buka deck** tetap bisa dipakai.
+- **Lihat log penilaian**, **Tanya AISA**, **Email**, **Pratinjau proposal** (juga dari
+  label "Hal. <n>"), dan **Buka proposal** tetap bisa dipakai.
 
 **Kalau berbeda:** tombol tulis apa pun yang tampil di akun baca-saja adalah temuan: catat tombol
 dan halamannya.

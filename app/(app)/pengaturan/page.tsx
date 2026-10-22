@@ -84,7 +84,7 @@ async function integrations(rules: Rules | null): Promise<Integration[]> {
     {
       id: 'aisa-api',
       name: 'aisa-api',
-      role: 'Menerima deck, membaca teksnya, menjalankan penilaian, ringkasan, dan perintah WhatsApp.',
+      role: 'Menerima proposal, membaca teksnya, menjalankan penilaian, ringkasan, dan perintah WhatsApp.',
       status: check.ok ? 'terhubung' : 'terputus',
       fact: check.ok
         ? `Merespons dalam ${check.latencyMs} ms saat halaman dimuat`
@@ -141,7 +141,7 @@ async function integrations(rules: Rules | null): Promise<Integration[]> {
     {
       id: 'form',
       name: 'Formulir founder',
-      role: 'Google Form mengirim proposal dan pitch deck dari Google Drive ke aisa-api.',
+      role: 'Google Form mengirim proposal beserta berkas PDF-nya dari Google Drive ke aisa-api.',
       status: null,
       fact: lastForm
         ? `Proposal terakhir masuk ${when(lastForm.createdAt)}`

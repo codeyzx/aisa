@@ -90,7 +90,7 @@ Halaman ini ada di sidebar kiri, grup **Ruang kerja**, menu **Aktivitas AI**. Ju
   "… masuk · … keluar", mis. `548 rb masuk · 104,3 rb keluar`. Saat kursor di atas angka, muncul
   angka lengkap dengan titik ribuan.
 - **Rata-rata per proposal** punya catatan "N proposal dinilai model". Proposal yang masuk
-  **Perlu dicek manual** tidak ikut dihitung, karena deck-nya tidak sampai ke model.
+  **Perlu dicek manual** tidak ikut dihitung, karena proposalnya tidak sampai ke model.
 - **Rata-rata per ringkasan** punya catatan "N ringkasan terkirim".
 - **Panggilan model** punya catatan "Tidak ada yang gagal di N pekerjaan terbaru" atau
   "N gagal di N pekerjaan terbaru".
@@ -222,9 +222,9 @@ Senja.
 
 1. Di sidebar kiri, grup **Ruang kerja**, klik **Proposal**.
 2. Klik nama proposal, mis. **Kopi Teras Senja**.
-3. Di kartu Ringkasan AI, catat teks kecil "Dibuat dari pitch deck · … token" (mis. `4,4 rb token`).
+3. Di kartu Ringkasan AI, catat teks kecil "Dibuat dari proposal · … token" (mis. `4,4 rb token`).
 4. Di kartu skor di atas, klik **Lihat log penilaian**.
-5. Di panel kanan **Log penilaian**, lihat angka **Token AI**, lalu gulir ke bawah dan klik **Semua
+5. Di jendela **Log penilaian**, lihat angka **Token AI**, lalu gulir ke bawah dan klik **Semua
    aktivitas AI**.
 
 **Yang seharusnya terlihat:**
@@ -497,7 +497,7 @@ dihitung sistem.
   diperbarui <tanggal>, <jam> · <alasan>". Ada tombol **Riwayat perubahan** dan **Ubah aturan**.
   Di bawahnya ada catatan "Perubahan hanya berlaku untuk proposal yang masuk setelah disimpan. Skor
   dan kategori proposal lama tidak dihitung ulang.".
-- Tiga kartu: **Langkah 1** (badge **AI**) "AI membaca pitch deck", hasil "5 nilai, skala 1–5".
+- Tiga kartu: **Langkah 1** (badge **AI**) "AI membaca proposal", hasil "5 nilai, skala 1–5".
   **Langkah 2** (badge **Sistem**) "Sistem menghitung skor", hasil "Skor 0–100", dengan contoh
   "nilai Tim 4 × bobot 27,5% = 20,6 poin". **Langkah 3** (badge **Sistem**) "Sistem menentukan
   kategori", hasil "1 dari 4 kategori".

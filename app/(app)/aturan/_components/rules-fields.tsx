@@ -573,7 +573,7 @@ export function AdvancedFields({
         </div>
       </FieldSet>
       <FieldSet>
-        <FieldLegend variant="label">Pembacaan deck</FieldLegend>
+        <FieldLegend variant="label">Pembacaan proposal</FieldLegend>
         <div className="flex max-w-xs flex-col gap-2">
           <FieldLabel htmlFor="min-chars">
             Minimum karakter per halaman
@@ -591,7 +591,7 @@ export function AdvancedFields({
             }}
           />
           <FieldDescription>
-            Di bawah rata-rata ini, deck masuk “Perlu dicek manual”.
+            Di bawah rata-rata ini, proposal masuk “Perlu dicek manual”.
           </FieldDescription>
         </div>
       </FieldSet>

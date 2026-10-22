@@ -75,7 +75,6 @@ def test_kam_w03_unset_secret_rejects_every_webhook(client, handled, env):
 
 @pytest.mark.parametrize("ev,raw,reason", [
     (None, b"bukan json{", "bukan JSON"),
-    (event(sender=OTHER), None, "pengirim atau isi tidak dilayani"),
     (event(chat="120363000000000000@g.us"), None, "grup"),
     (event(**{"from": "123456789012345@lid", "chat_id": "123456789012345@lid"}), None,
      "pengirim atau isi tidak dilayani"),
@@ -83,13 +82,28 @@ def test_kam_w03_unset_secret_rejects_every_webhook(client, handled, env):
     (event(msg_id=None), None, "pengirim atau isi tidak dilayani"),
     (event(body="   "), None, "pengirim atau isi tidak dilayani"),
     ({"event": "receipt", "payload": event()["payload"]}, None, "bukan pesan masuk"),
-], ids=["bukan-json", "bukan-manajer", "grup", "lid-saja", "is-from-me", "tanpa-id", "isi-kosong",
+], ids=["bukan-json", "grup", "lid-saja", "is-from-me", "tanpa-id", "isi-kosong",
         "bukan-event-message"])
 def test_pwa_w04_ignored_events_send_nothing(client, handled, sent, fs, ev, raw, reason):
     r = post_hook(client, ev, raw=raw)
     assert r.status_code == 200 and r.json() == {"ignored": reason}
     assert handled == [] and sent == []
     assert fs.all("webhookEvents") == {}  # an ignored event does not burn its id
+
+
+def test_pwa_w04b_any_phone_sender_is_served_not_only_manager_phones(client, handled, sent, fs):
+    """MANAGER_PHONES only chooses the digest recipients; the bot answers every 1:1 phone."""
+    r = post_hook(client, event(msg_id="o1", sender=OTHER))
+    assert r.status_code == 200 and r.json() == {"accepted": True}
+    assert handled == [(OTHER, "halo")]
+    assert sent == [(OTHER, "balasan")]
+    assert fs.get("webhookEvents/o1") is not None
+
+
+def test_pwa_w04c_device_suffix_in_phone_jid_is_stripped(client, handled, sent):
+    jid = f"{OTHER}:12@s.whatsapp.net"
+    assert post_hook(client, event(**{"from": jid, "chat_id": jid})).json() == {"accepted": True}
+    assert handled == [(OTHER, "halo")] and sent == [(OTHER, "balasan")]
 
 
 def test_pwa_w05_duplicate_message_id_is_processed_once(client, handled, sent):
@@ -128,6 +142,21 @@ def test_pwa_w09_command_end_to_end_through_the_webhook(client, sent, fs):
     p = fs.get("proposals/p1")
     assert p["responded"] is True and p["response"]["kind"] == "setuju" and p["response"]["via"] == "wa"
 
+
+def test_pwa_w10_non_manager_bulk_confirmation_is_kept_per_phone(client, sent, fs):
+    """A bulk command waits for YA from the phone that sent it: a YA from another phone
+    finds nothing pending and changes nothing."""
+    seed_proposal(fs, "p3", "Kopi Rakyat", category="tidak_layak")
+    assert post_hook(client, event(msg_id="b1", sender=OTHER,
+                                   body="tolak semua tidak layak")).json() == {"accepted": True}
+    assert fs.get(f"pendingConfirmations/{OTHER}")["proposalIds"] == ["p3"]
+    assert post_hook(client, event(msg_id="b2", sender=MANAGER, body="ya")).json() == {"accepted": True}
+    assert sent[-1] == (MANAGER, "Tidak ada perintah yang menunggu konfirmasi.")
+    assert fs.get("proposals/p3")["responded"] is False
+    assert post_hook(client, event(msg_id="b3", sender=OTHER, body="ya")).json() == {"accepted": True}
+    assert sent[-1] == (OTHER, "Selesai: 1 proposal ditolak.")
+    p = fs.get("proposals/p3")
+    assert p["response"]["kind"] == "tolak" and p["response"]["via"] == "wa"
 
 # ---------- /intake/form ----------
 
@@ -547,3 +576,4 @@ def test_old_decision_words_are_422(client, fs, path, body):
     r = api(client, "POST", path, body)
     assert r.status_code == 422
     assert fs.all("proposals") == before and fs.all("history") == {}
+

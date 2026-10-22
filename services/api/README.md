@@ -1,7 +1,7 @@
 # aisa-api
 
 One FastAPI service for AISA: proposal intake and scoring, the WhatsApp digests (09.00
-daily, 17.00 weekly summary), the GOWA webhook (manager commands + Asisten), and the dashboard's write API.
+daily, 17.00 weekly summary), the GOWA webhook (commands + Asisten for any 1:1 WhatsApp sender), and the dashboard's write API.
 Every AISA Firestore write goes through here; shapes are owned by `aisa/models.py`
 (see `docs/reference/contracts/aisa-firestore.md`).
 
@@ -99,7 +99,7 @@ CLI helpers:
 | `POST /intake/upload`                                 | `X-AISA-Key`                                                            | multipart `file` (PDF ≤ 20 MB) + optional `name`; stored at `gs://$DECKS_BUCKET/decks/<proposalId>.pdf`; 202                                                                                                                                                                                                                                                                                                                        |
 | `POST /digest/run?slot=09.00\|17.00[&dryRun=true]`    | scheduler OIDC or `X-AISA-Key`                                          | Cloud Scheduler target. `09.00` is the daily digest; `17.00` is always the weekly summary, on any weekday (mid-week it covers the week so far). One digest per slot per WIB day (a retry returns `skipped`). `dryRun` returns the template text (plus `period`, and for 17.00 `week` and `weekly`) and writes/sends nothing                                                                                                         |
 | `POST /retention/run`                                 | scheduler OIDC or `X-AISA-Key`                                          | Deletes proposals whose `response.kind` is `tolak` and `response.at` is more than `rules.retentionDays` (default 90) days ago, reason "retensi otomatis N hari", `via: sistem`; logged as a `perintah` job. Returns `{retentionDays, deleted, proposalIds}`                                                                                                                                                                         |
-| `POST /webhook/gowa`                                  | `X-Hub-Signature-256: sha256=<hex HMAC(raw body, GOWA_WEBHOOK_SECRET)>` | GOWA events. Only `event: message`, not from me, not a group, sender in `MANAGER_PHONES`; deduped by `webhookEvents/{payload.id}`; processed in the background, reply sent via GOWA                                                                                                                                                                                                                                                 |
+| `POST /webhook/gowa`                                  | `X-Hub-Signature-256: sha256=<hex HMAC(raw body, GOWA_WEBHOOK_SECRET)>` | GOWA events. Only `event: message`, not from me, not a group, any sender with a phone JID (`…@s.whatsapp.net`; LID-only senders ignored); deduped by `webhookEvents/{payload.id}`; processed in the background, reply sent via GOWA                                                                                                                                                                                                 |
 | `POST /api/proposals/{id}/response`                   | `X-AISA-Key`                                                            | `{kind: setuju\|tolak, note?}`; any other kind (the old undang/pantau/arsipkan included) → 422                                                                                                                                                                                                                                                                                                                                      |
 | `POST /api/proposals/{id}/correction`                 | `X-AISA-Key`                                                            | `{category, reason}`; reason required; only `dinilai` proposals                                                                                                                                                                                                                                                                                                                                                                     |
 | `POST /api/proposals/bulk-response`                   | `X-AISA-Key`                                                            | `{category, kind: setuju\|tolak}` → `{count}`; every unresponded `dinilai` proposal in that effective grade                                                                                                                                                                                                                                                                                                                         |
@@ -141,7 +141,7 @@ cleared. The response carries `assistantScrub: {sessions, memories}`, counting t
 Agent Runtime accepted (they finish as long-running operations; nothing waits for them). An
 Agent Runtime failure is logged and returned as `assistantScrub.error`; the Firestore
 deletion stands and is not retried, and what was not deleted stays until a later deletion
-clears sessions again. The manager's WhatsApp chat itself is not ours to edit: answers
+clears sessions again. A sender's WhatsApp chat itself is not ours to edit: answers
 already sent there keep the name.
 
 ### WhatsApp commands (recognised by code, case-insensitive)
@@ -171,7 +171,7 @@ Asisten). Any other message goes to the Asisten.
 | `GOWA_BASIC_AUTH`        | secret, `user:pass`                                                                       |
 | `GOWA_DEVICE_ID`         | sent as `X-Device-Id`                                                                     |
 | `GOWA_WEBHOOK_SECRET`    | secret; unset → every webhook is rejected                                                 |
-| `MANAGER_PHONES`         | comma-separated digits, e.g. `62812…`; the only senders served and the digest recipients  |
+| `MANAGER_PHONES`         | comma-separated digits, e.g. `62812…`; the digest recipients (the bot answers any phone)  |
 | `MANAGER_SALUTATION`     | default `Pak`                                                                             |
 | `MANAGER_NAME`           | optional; digest greeting becomes "Selamat pagi, Pak Budi." Empty → salutation only       |
 | `ASSISTANT_MODEL`        | model the Asisten runs (default `gemini-3.8-flash`); also the `asisten` job's model label |

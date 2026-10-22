@@ -1,7 +1,7 @@
 """Calls the Asisten and logs an `asisten` job with its token usage.
 
 With ASSISTANT_ENGINE_ID set (full resource name `projects/…/locations/…/reasoningEngines/…`)
-the deployed Agent Runtime engine is called, with one session per manager phone per WIB day
+the deployed Agent Runtime engine is called, with one session per sender phone per WIB day
 cached in `assistantSessions/{phone}`. Without it, `aisa.assistant.agent:root_agent` runs
 in-process with an in-memory session (lost on restart). `forget` removes that state when a
 proposal is deleted."""
@@ -262,7 +262,7 @@ def forget(mentions: Callable[[str], bool]) -> dict:
     `{"sessions": n, "memories": m}`, plus `error` when Agent Runtime could not be reached
     or refused; that never raises, since the proposal is already deleted from Firestore.
     The counts are deletes Agent Runtime accepted (it completes them as operations). The
-    manager's WhatsApp chat is not AISA's to edit and is left as it is."""
+    sender's WhatsApp chat is not AISA's to edit and is left as it is."""
     out: dict[str, Any] = {"sessions": 0, "memories": 0}
     try:
         if settings().assistant_engine_id:
@@ -404,7 +404,7 @@ class Unavailable(Exception):
 
 def ask(phone: str, text: str, notify: bool = False) -> str | None:
     """The Asisten's reply, or None when STOP cancelled it (nothing must be sent). Raises
-    Unavailable when the agent fails. `notify` shows the typing indicator and the wait message in the manager's chat."""
+    Unavailable when the agent fails. `notify` shows the typing indicator and the wait message in the sender's chat."""
     remote = bool(settings().assistant_engine_id)
     # The label names the model the agent was deployed with (ASSISTANT_MODEL, the same
     # variable agent.py reads), not rules.models.asisten, which changes nothing at runtime.

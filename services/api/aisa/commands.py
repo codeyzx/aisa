@@ -1,4 +1,4 @@
-"""Pure command recognition for manager WhatsApp messages. Commands never depend on a model."""
+"""Pure command recognition for WhatsApp messages. Commands never depend on a model."""
 
 from __future__ import annotations
 

@@ -183,7 +183,7 @@ updated with `Increment`.
   awaiting `YA`.
 - `assistantSessions/{key}` — `{date, sessionId}`: the Agent Runtime session the Asisten
   reuses for that key during one WIB `date`; a new day creates a new session. The key is a
-  manager phone for WhatsApp, or `dashboard-<uid>-<conversationId>` for the dashboard's
+  sender's phone digits for WhatsApp, or `dashboard-<uid>-<conversationId>` for the dashboard's
   Tanya AISA (`POST /api/assistant/ask`), so a dashboard conversation never shares a
   session with a phone or with another user. Every `assistantSessions` doc is deleted when a proposal is
   deleted (see below), so the next question opens a new session.

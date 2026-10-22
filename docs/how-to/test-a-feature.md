@@ -123,7 +123,7 @@ dicatat di berkas QA fiturnya dengan gejala dan dugaan sebabnya, bukan diabaikan
 ### 11. Efek keluar dibuktikan: terjadi tepat sekali, atau tidak terjadi
 
 Untuk pesan WhatsApp: terkirim sekali, ke nomor yang benar, dengan isi yang benar — dan tidak
-terkirim ketika tidak seharusnya (pengirim bukan manajer, pesan grup, webhook duplikat, jawaban
+terkirim ketika tidak seharusnya (pengirim LID tanpa nomor, pesan grup, webhook duplikat, jawaban
 Asisten yang dibatalkan STOP). Sama untuk panggilan model: selama dijeda, Asisten tidak dipanggil
 dan tidak ada langkah model baru di `jobs`.
 

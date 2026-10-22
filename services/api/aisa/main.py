@@ -107,11 +107,14 @@ def retention_run() -> dict:
 
 
 def _sender(payload: dict) -> str | None:
-    """Manager digits, or None. A LID-only sender has no phone number to allowlist."""
+    """The sender's phone digits, or None. Any 1:1 sender with a phone JID is served, not only
+    MANAGER_PHONES (that list only picks who receives the digests). A LID-only sender
+    (`…@lid`) is ignored: `gowa.send` and `gowa.presence` address a reply to
+    `<digits>@s.whatsapp.net`, so a LID's digits would be sent to the wrong JID."""
     for jid in (payload.get("from"), payload.get("chat_id")):
         if isinstance(jid, str) and jid.endswith("@s.whatsapp.net"):
             digits = jid.split("@")[0].split(":")[0]
-            return digits if digits in settings().manager_phones else None
+            return digits if digits.isdigit() else None
     return None
 
 
@@ -243,7 +246,7 @@ def api_deck_url(pid: str) -> dict:
 
 
 class AskIn(BaseModel):
-    # The `dashboard-` prefix keeps a dashboard conversation out of every manager phone's
+    # The `dashboard-` prefix keeps a dashboard conversation out of every WhatsApp sender's
     # session: phone sessions are keyed by digits only.
     session: str = Field(pattern=r"^dashboard-[A-Za-z0-9_-]{1,200}$")
     text: str = Field(min_length=1, max_length=4000)

@@ -8,8 +8,9 @@ perintah, STOP/LANJUT, ringkasan harian 09.00 dan mingguan Jumat 17.00), dan **G
 masuk lalu dinilai, termasuk proposal hasil scan). Dashboard produksi:
 <https://aisa-dashboard-lk5jbo3eza-et.a.run.app>, masuk sebagai `manager@aisa.local` dengan
 sandi admin dari tim. Bot WhatsApp AISA bernomor **+62 877-8116-8546** (`6287781168546`); bot
-hanya membalas nomor manajer yang terdaftar di AISA. Pesan dari nomor lain tidak dibalas sama
-sekali. Nama proposal di contoh (mis. Kopi Teras Senja, Kelas Kode Rakyat, Lumbung Ikan Pesisir)
+membalas siapa pun yang mengirim chat pribadi dari nomor telepon, dengan semua fitur. Pesan grup
+dan pengirim yang menyembunyikan nomornya (LID) tidak dibalas. Ringkasan 09.00 dan 17.00 hanya
+dikirim ke nomor di `MANAGER_PHONES`. Nama proposal di contoh (mis. Kopi Teras Senja, Kelas Kode Rakyat, Lumbung Ikan Pesisir)
 adalah data produksi saat panduan ditulis; data bisa berubah, jadi ganti dengan nama yang ada di
 layar Anda.
 
@@ -819,17 +820,20 @@ pekerjaan **Perintah** (mis. "Perintah: setuju UJI Satu"; kata lama seperti `ars
 **Asisten**.
 **Kalau berbeda:** perintah yang dibalas "Tercatat" tetapi tidak ada di Riwayat dicatat.
 
-### UC-WA-23 · Nomor yang tidak terdaftar
+### UC-WA-23 · Nomor yang tidak terdaftar ⚠️
 
-**Situasi:** orang lain mengirim pesan ke bot AISA.
-**Sebelum mulai:** ponsel dengan nomor yang **bukan** nomor manajer terdaftar.
+**Situasi:** orang yang nomornya tidak ada di `MANAGER_PHONES` mengirim pesan ke bot AISA.
+**Sebelum mulai:** ponsel dengan nomor yang **bukan** nomor manajer terdaftar, dan nomornya
+tidak disembunyikan (bukan LID).
 **Langkah:**
 
-1. Dari nomor itu, kirim `STOP` lalu `Berapa proposal yang ada?` ke +62 877-8116-8546.
+1. Dari nomor itu, kirim `Berapa proposal yang ada?` ke +62 877-8116-8546.
+2. Kirim `STOP`, lalu `LANJUT`.
 
-**Yang seharusnya terlihat:** tidak ada balasan sama sekali, dan AISA tidak dijeda (cek
-**Pengaturan** → **Integrasi** tetap **Berjalan**). Pesan di grup WhatsApp juga diabaikan.
-**Kalau berbeda:** bila nomor asing dibalas atau bisa men-STOP, itu bug keamanan.
+**Yang seharusnya terlihat:** pertanyaan dijawab seperti untuk manajer. `STOP` menjeda AISA
+(**Pengaturan** → **Integrasi** menjadi **Dijeda**) dan `LANJUT` melanjutkannya. Nomor itu tidak
+menerima ringkasan 09.00 atau 17.00. Pesan di grup WhatsApp tetap diabaikan.
+**Kalau berbeda:** nomor itu tidak dibalas, atau ikut menerima ringkasan.
 
 ---
 

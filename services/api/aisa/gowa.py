@@ -62,7 +62,7 @@ def send(phone: str, text: str) -> list[str]:
 
 
 def presence(phone: str, typing: bool) -> None:
-    """Show (`typing=True`) or clear the "mengetik…" indicator in the manager's chat.
+    """Show (`typing=True`) or clear the "mengetik…" indicator in the recipient's chat.
     WhatsApp hides it again after a while or once a message arrives, so a caller that keeps
     working refreshes it. Raises on failure; callers treat it as best-effort."""
     with _client(timeout=10) as c:

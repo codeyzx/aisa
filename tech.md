@@ -88,7 +88,7 @@
 | Framework agent          | Google Agent Development Kit (ADK), Python    | `google-adk>=2.12.0`                                                                                                 |
 | Model                    | Gemini lewat Gemini Enterprise Agent Platform | Lokasi `global`; lihat Bagian 6                                                                                      |
 | Hosting agent percakapan | Agent Runtime (dulu Agent Engine)             | Deploy dengan `deploy_assistant.py` lewat `vertexai` Client `agent_engines` (create/update); dipanggil dari aisa-api |
-| Konteks percakapan       | Sessions                                      | Satu session per hari per nomor manajer, dan per percakapan Tanya AISA di dashboard                                  |
+| Konteks percakapan       | Sessions                                      | Satu session per hari per nomor pengirim WhatsApp, dan per percakapan Tanya AISA di dashboard                        |
 | Ingatan preferensi       | Memory Bank                                   | Hanya preferensi manajer, bukan data proposal                                                                        |
 | Layanan HTTP             | Cloud Run + FastAPI                           | Satu layanan `aisa-api`                                                                                              |
 | Jadwal                   | Cloud Scheduler                               | Ringkasan 09.00 dan 17.00, retensi `aisa-retensi` 02.00; zona `Asia/Jakarta`; token OIDC                             |
@@ -165,7 +165,7 @@ Region: Cloud Run dan Firestore `asia-southeast2` (Jakarta); Agent Runtime `us-c
 
 ### C. Pesan dari manajer
 
-1. GOWA meneruskan pesan ke aisa-api (webhook terverifikasi; hanya nomor manajer yang dilayani; pesan ganda diabaikan).
+1. GOWA meneruskan pesan ke aisa-api (webhook terverifikasi; setiap chat pribadi dari nomor telepon dilayani, bukan hanya `MANAGER_PHONES`; grup dan pengirim LID tanpa nomor diabaikan; pesan ganda diabaikan).
 2. Kode mengenali perintah:
    - `undang / pantau / arsipkan <nama>` atau `... semua <kategori>` → ubah status tanggapan
    - `pindahkan <nama> ke <kategori> karena ...` → koreksi kategori (skor AI tetap disimpan)
@@ -222,7 +222,7 @@ Semua agent menulis log dengan format seragam:
 ## 10. Keamanan dan pelindungan data
 
 - Secret hanya di Secret Manager; tidak ada nilai rahasia di repo.
-- aisa-api hanya melayani nomor manajer; webhook GOWA dan panggilan dari Apps Script wajib terverifikasi (HMAC).
+- Bot WhatsApp melayani siapa pun yang mengirim chat pribadi dari nomor telepon, dengan semua fitur (pertanyaan, setuju/tolak, koreksi, STOP/LANJUT) dan tanpa batas laju; `MANAGER_PHONES` hanya menentukan penerima ringkasan. Webhook GOWA dan panggilan dari Apps Script wajib terverifikasi (HMAC).
 - Endpoint terjadwal (ringkasan, retensi) menerima token OIDC dari service account runtime, diverifikasi email dan audience-nya; tidak ada kunci yang disimpan di Cloud Scheduler. `X-AISA-Key` tetap diterima untuk panggilan manual dan dashboard.
 - Hanya **teks** pitch deck yang dikirim ke model; gambar dan file PDF tidak.
 - Data founder (kontak) tidak dikirim ke WhatsApp dan tidak masuk prompt.

@@ -59,10 +59,9 @@ import {
   scoreTone,
 } from '../../_components/badges'
 import { UploadDeckButton } from '../../_components/upload-deck-button'
-import { dayLabel } from '../../_components/daily-window'
 import { ProposalTrendChart } from './proposal-trend-chart'
 import { Timeline } from './timeline'
-import { TREND_WEEKS, weeklyTrend } from './weekly-trend'
+import { trendDescription, weeklyTrend } from './weekly-trend'
 
 /** The grades "Disarankan untuk Anda" and "Paling layak" draw from. */
 const RECOMMENDED: ReadonlySet<Category> = new Set([
@@ -230,12 +229,6 @@ export function DashboardOverview({
   ]
 
   const trend = weeklyTrend(stats)
-  const trendDescription =
-    trend.previous && trend.weeks === TREND_WEEKS
-      ? `${TREND_WEEKS} minggu terakhir, dibanding ${TREND_WEEKS} minggu sebelumnya`
-      : trend.recordedSince
-        ? `${trend.weeks} minggu terakhir · pencatatan harian sejak ${dayLabel(trend.recordedSince)}`
-        : `${trend.weeks} minggu terakhir`
 
   return (
     <div className="flex w-full flex-col gap-5">
@@ -547,7 +540,7 @@ export function DashboardOverview({
       <div className="grid gap-5 lg:grid-cols-3">
         <ProposalTrendChart
           trend={trend}
-          description={trendDescription}
+          description={trendDescription(trend)}
           className="lg:col-span-2"
         />
         <Card>

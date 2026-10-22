@@ -121,6 +121,26 @@ describe('costData', () => {
     })
     expect(data.pace).toEqual({ perMonth: 90, days: 2 })
   })
+
+  it('starts the daily chart at the first day with a cost', () => {
+    const data = costData({
+      stats: [
+        day('2026-10-19', {}, { proposalsIn: 1 }),
+        day('2026-10-20', { penilaian: { in: 1_000_000, out: 0 } }),
+        day('2026-10-21', {}),
+        day('2026-10-22', { penilaian: { in: 1_000_000, out: 0 } }),
+      ],
+      limit: 400,
+      models,
+      jobs: [],
+      now: new Date('2026-10-22T12:00:00+07:00'),
+    })
+    expect(data.daily.map((d) => [d.date, d.usd])).toEqual([
+      ['2026-10-20', 0.75],
+      ['2026-10-21', 0],
+      ['2026-10-22', 0.75],
+    ])
+  })
 })
 
 describe('unitCosts', () => {

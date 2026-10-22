@@ -85,6 +85,10 @@ export function CostTrendChart({ days }: { days: CostDay[] }) {
               cursor={{ fill: 'var(--muted)' }}
               contentStyle={TOOLTIP_STYLE}
               labelFormatter={fullLabel}
+              // Legend order, not the default alphabetical-by-name.
+              itemSorter={({ dataKey }) =>
+                PRICED_KINDS.findIndex((kind) => kind === dataKey)
+              }
               formatter={(value) => rupiah(Number(value))}
             />
             {PRICED_KINDS.map((kind, index) => (

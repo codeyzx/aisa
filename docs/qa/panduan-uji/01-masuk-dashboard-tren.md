@@ -630,7 +630,7 @@ angka persisnya.
 
 1. Di sidebar, grup **Ruang kerja**, klik **Tren**.
 2. Baca tiga sampai empat poin di bawah judul **Tren 14 hari terakhir**.
-3. Di kartu **Proposal masuk per hari**, arahkan mouse ke salah satu batang.
+3. Di kartu **Proposal masuk per hari**, arahkan mouse ke salah satu hari di grafik.
 4. Klik **Lihat sebagai tabel** di bawah grafik.
 
 **Yang seharusnya terlihat:**
@@ -640,11 +640,14 @@ angka persisnya.
 - Poin kedua: **… proposal Sangat layak dari … proposal masuk · …% dari 14 hari terakhir.**
 - Poin ketiga: **… proposal perlu dicek manual. …**
 - Poin **Yang menarik: …** muncul kalau ringkasan WhatsApp terakhir membawa insight.
-- Grafik batang bertumpuk per hari selama 14 hari, warna per grade (**Sangat layak**,
-  **Layak bersyarat**, **Perlu penyesuaian**, **Risiko tinggi**, **Tidak layak**, **Perlu dicek
-  manual**). Arahkan mouse untuk melihat tanggal lengkap dan jumlah per grade.
-- Tabel berkolom **Tanggal**, **Total**, lima grade, **Perlu dicek manual**, **Rata-rata
-  skor** (tanda **–** kalau hari itu tidak ada yang dinilai). Di bawahnya: **Grade dari kode
+- Grafik area bertumpuk per hari, warna per grade (**Sangat layak**, **Layak bersyarat**, **Perlu
+  penyesuaian**, **Risiko tinggi**, **Tidak layak**, **Perlu dicek manual**). Grafik mulai dari hari
+  pertama dalam 14 hari yang ada proposalnya; kalau itu bukan hari pertama jendela, keterangannya
+  diakhiri **· grafik mulai 21 Okt** (tanggalnya mengikuti data). Hari kosong sesudahnya tetap
+  tampil sebagai 0. Arahkan mouse untuk melihat tanggal lengkap dan jumlah per grade.
+- Tabel, satu baris per hari yang tampil di grafik, berkolom **Tanggal**, **Total**, lima grade,
+  **Perlu dicek manual**, **Rata-rata skor** (tanda **–** kalau hari itu tidak ada yang dinilai).
+  Di bawahnya: **Grade dari kode
   saat dinilai, sebelum koreksi manajer. Total juga menghitung proposal yang masih antre.**
 - Cara mengecek: jumlah kolom **Total** = angka "dari … proposal masuk" di poin kedua.
 
@@ -684,11 +687,12 @@ minggu sebelumnya juga ada nilainya. Hari tanpa proposal yang dinilai tidak dibe
 **Langkah:**
 
 1. Turun ke kartu **Pemakaian token AI**.
-2. Arahkan mouse ke batang hari yang paling tinggi.
+2. Arahkan mouse ke hari yang paling tinggi di grafik.
 
 **Yang seharusnya terlihat:** keterangan seperti **652.238 token dalam 14 hari · masuk 548 rb
-· keluar 104,3 rb**. Batang bertumpuk per hari dengan legenda **Token masuk** dan **Token
-keluar**. Arahkan mouse untuk melihat tanggal dan jumlah token persis, mis. **… token**.
+· keluar 104,3 rb**, diakhiri **· grafik mulai …** kalau grafik mulai setelah hari pertama
+jendela. Area bertumpuk per hari, mulai dari hari pertama yang ada tokennya, dengan legenda
+**Token masuk** dan **Token keluar**. Arahkan mouse untuk melihat tanggal dan jumlah token persis, mis. **… token**.
 Rincian per pekerjaan AI ada di halaman **Aktivitas AI**, dan biaya rupiahnya di halaman **Biaya
 AI**.
 

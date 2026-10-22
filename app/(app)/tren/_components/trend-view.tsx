@@ -267,7 +267,7 @@ export function TrendCharts({
   return (
     <div className="a-charts">
       <div className="a-chart a-wide">
-        <h3>Tren proposal di semua kategori</h3>
+        <h3>Proposal masuk per hari</h3>
         <div className="a-sub">
           {dailySub}
           {sinceNote(days, data.days)}

@@ -34,7 +34,7 @@ export function Kalibrasi({ calibration }: { calibration: Calibration }) {
       <CardHeader>
         <CardTitle className="font-semibold">Kalibrasi</CardTitle>
         <CardDescription>
-          Seberapa sering manajer membiarkan kategori dari AI, sebagai bahan
+          Seberapa sering manajer membiarkan grade dari AI, sebagai bahan
           menyesuaikan aturan di halaman ini.
         </CardDescription>
       </CardHeader>
@@ -45,16 +45,15 @@ export function Kalibrasi({ calibration }: { calibration: Calibration }) {
           </h3>
           <p className="text-muted-foreground">
             Proposal dihitung <strong>ditinjau manajer</strong> bila sudah
-            diberi tanggapan atau kategorinya dikoreksi.{' '}
+            diberi tanggapan atau gradenya dikoreksi.{' '}
             <strong>AI sepakat</strong> bila proposal yang ditinjau tidak
-            dikoreksi ke kategori lain. Koreksi tidak mengubah kategori dan skor
-            dari AI; angka ini bahan untuk menyesuaikan bobot dan patokan di
-            atas.
+            dikoreksi ke grade lain. Koreksi tidak mengubah grade dan skor dari
+            AI; angka ini bahan untuk menyesuaikan bobot dan patokan di atas.
           </p>
           {agreementPercent === null ? (
             <p className="text-muted-foreground">
               Belum ada proposal yang ditinjau manajer. Angka kesepakatan muncul
-              setelah manajer memberi tanggapan atau mengoreksi kategori.
+              setelah manajer memberi tanggapan atau mengoreksi grade.
             </p>
           ) : (
             <>
@@ -78,7 +77,7 @@ export function Kalibrasi({ calibration }: { calibration: Calibration }) {
                     Arah koreksi
                   </dt>
                   <dd>
-                    Naik kategori {formatNumber(naik)} · Turun kategori{' '}
+                    Naik grade {formatNumber(naik)} · Turun grade{' '}
                     {formatNumber(turun)}
                   </dd>
                 </div>
@@ -91,11 +90,11 @@ export function Kalibrasi({ calibration }: { calibration: Calibration }) {
               {corrections.length === 0 ? (
                 <p className="text-muted-foreground">Belum ada koreksi.</p>
               ) : (
-                <Table aria-label="Koreksi kategori oleh manajer">
+                <Table aria-label="Koreksi grade oleh manajer">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Proposal</TableHead>
-                      <TableHead>Kategori AI</TableHead>
+                      <TableHead>Grade AI</TableHead>
                       <TableHead>Koreksi manajer</TableHead>
                       <TableHead>Alasan</TableHead>
                       <TableHead>Tanggal</TableHead>

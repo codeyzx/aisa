@@ -8,6 +8,7 @@ import {
   getRuntime,
   listUnrespondedProposals,
 } from '@/features/aisa/aisa.repo'
+import { compareByGrade } from '@/features/aisa/aisa.ranking'
 import { runAction, type ActionResult } from '@/lib/data/action-result'
 
 import type { AssistantContext } from './assistant-types'
@@ -30,14 +31,12 @@ export async function getAssistantContextAction(): Promise<
       total,
       unresponded: unresponded.length,
       topUnresponded: unresponded.filter(
-        (p) => p.effectiveCategory === 'sangat_cocok',
+        (p) => p.effectiveCategory === 'sangat_layak',
       ).length,
       paused: runtime?.paused ?? false,
       topNames: unresponded
         .filter((p) => p.assessment)
-        .toSorted(
-          (a, b) => (b.assessment?.score ?? 0) - (a.assessment?.score ?? 0),
-        )
+        .toSorted(compareByGrade)
         .slice(0, 2)
         .map((p) => p.name),
     }

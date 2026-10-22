@@ -173,7 +173,7 @@ export function TrendCharts({
             </table>
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            Kategori dari kode saat dinilai, sebelum koreksi manajer. Total juga
+            Grade dari kode saat dinilai, sebelum koreksi manajer. Total juga
             menghitung proposal yang masih antre.
           </p>
         </details>

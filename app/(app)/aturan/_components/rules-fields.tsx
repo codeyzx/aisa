@@ -27,24 +27,28 @@ import {
 import { Slider } from '@/components/ui/slider'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  CATEGORY_LABEL,
+  CATEGORY_ACTION,
   CRITERION_LABEL,
-  QUALITY_OUTSIDE_FOCUS_LABEL,
+  CRITERION_MEANING,
 } from '@/features/aisa/aisa.labels'
 import {
   CRITERIA,
-  type Category,
+  THRESHOLD_KEYS,
   type Rules,
 } from '@/features/aisa/aisa.schema'
 import { formatRupiah } from '@/lib/format/currency'
 import { cn } from '@/lib/utils'
 
-import { CATEGORY_DOT, CRITERION_COLOR } from '../../_components/badges'
+import { GradeBadge } from '../../_components/badges'
 
-import { CRITERION_EVIDENCE, categoryRule, num } from './helpers'
+import { CriterionName } from './criterion-name'
+import { categoryRule, num } from './helpers'
 import {
   livePercent,
+  parseThresholds,
   percentTotal,
+  thresholdGrade,
+  thresholdProblems,
   type ModelKey,
   type RulesDraft,
   type ThresholdKey,
@@ -119,20 +123,17 @@ export function WeightsFields({
             className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-x-4 gap-y-2 border-b py-3 last:border-b-0"
           >
             <div className="min-w-0">
-              <FieldLabel htmlFor={`weight-${c}`} className="gap-2">
-                <span
-                  aria-hidden
-                  className={cn('size-2.5 rounded-[3px]', CRITERION_COLOR[c])}
-                />
-                {CRITERION_LABEL[c]}
+              <FieldLabel htmlFor={`weight-${c}`}>
+                <CriterionName criterion={c} />
               </FieldLabel>
               <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-                {CRITERION_EVIDENCE[c]}
+                {CRITERION_MEANING[c]}
               </p>
             </div>
             <InputGroup>
               <InputGroupInput
                 id={`weight-${c}`}
+                aria-label={CRITERION_LABEL[c]}
                 type="number"
                 inputMode="decimal"
                 min={0}
@@ -174,122 +175,92 @@ export function WeightsFields({
   )
 }
 
-const THRESHOLD_ROWS: {
-  key: Exclude<ThresholdKey, 'qualityOutsideFocus'>
-  category: Category
-}[] = [
-  { key: 'sangatCocok', category: 'sangat_cocok' },
-  { key: 'cocok', category: 'cocok' },
-  { key: 'kurangCocok', category: 'kurang_cocok' },
-]
-
 export function ThresholdsFields({
   draft,
   setDraft,
-  errors,
   fallback,
 }: FieldsProps & { fallback: Rules['thresholds'] }) {
-  const n = (k: ThresholdKey) => Number(draft.thresholds[k])
-  const live: Rules['thresholds'] = {
-    sangatCocok: n('sangatCocok'),
-    cocok: n('cocok'),
-    kurangCocok: n('kurangCocok'),
-    qualityOutsideFocus: n('qualityOutsideFocus'),
-  }
-  const valid =
-    Object.values(live).every(
-      (v) => Number.isFinite(v) && v >= 0 && v <= 100,
-    ) &&
-    live.sangatCocok > live.cocok &&
-    live.cocok > live.kurangCocok
+  const live = parseThresholds(draft)
+  const problems = thresholdProblems(live)
+  const valid = Object.keys(problems).length === 0
+  // The preview only draws thresholds that could save; while one is wrong it
+  // keeps the last saved scale and the row says what to fix.
   const shown = valid ? live : fallback
+  // Each problem shows on its own row (the same messages `checkDraft` blocks a
+  // save with), so the tab's `errors` are not repeated above the rows.
   const set = (k: ThresholdKey, value: string) =>
     setDraft((d) => ({ ...d, thresholds: { ...d.thresholds, [k]: value } }))
-
-  const input = (k: ThresholdKey) => (
-    <Input
-      id={`threshold-${k}`}
-      type="number"
-      inputMode="decimal"
-      min={0}
-      max={100}
-      className="text-right font-mono tabular-nums"
-      value={draft.thresholds[k]}
-      onChange={(event) => set(k, event.target.value)}
-    />
-  )
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-2 rounded-xl border bg-muted/40 p-4">
         <p className="text-sm font-medium">Pratinjau skala skor</p>
         <Scale thresholds={shown} />
-        <FieldError errors={errors} />
+        {valid ? null : (
+          <p className="text-xs text-muted-foreground">
+            Pratinjau memakai batas tersimpan sampai semua batas benar.
+          </p>
+        )}
       </div>
 
       <div className="flex flex-col">
-        {THRESHOLD_ROWS.map((row) => (
-          <div
-            key={row.key}
-            className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-x-4 gap-y-1 border-b py-3"
-          >
-            <div className="min-w-0">
-              <FieldLabel htmlFor={`threshold-${row.key}`} className="gap-2">
-                <span
-                  aria-hidden
-                  className={cn(
-                    'size-2.5 rounded-full',
-                    CATEGORY_DOT[row.category],
-                  )}
+        {THRESHOLD_KEYS.map((key) => {
+          const category = thresholdGrade(key)
+          const problem = problems[key]
+          return (
+            <div
+              key={key}
+              className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-x-4 gap-y-1 border-b py-3"
+            >
+              <div className="min-w-0">
+                <FieldLabel htmlFor={`threshold-${key}`}>
+                  <GradeBadge category={category} />
+                </FieldLabel>
+                <p className="mt-1 text-xs leading-snug text-muted-foreground">
+                  {CATEGORY_ACTION[category]} ·{' '}
+                  {categoryRule(category, shown).rule}
+                </p>
+              </div>
+              <div>
+                <span className="mb-1 block text-[11px] text-muted-foreground">
+                  Skor minimal
+                </span>
+                <Input
+                  id={`threshold-${key}`}
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={100}
+                  aria-invalid={problem ? true : undefined}
+                  aria-describedby={
+                    problem ? `threshold-${key}-error` : undefined
+                  }
+                  className="text-right font-mono tabular-nums"
+                  value={draft.thresholds[key]}
+                  onChange={(event) => set(key, event.target.value)}
                 />
-                {CATEGORY_LABEL[row.category]}
-              </FieldLabel>
-              <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-                {categoryRule(row.category, shown).rule}
-              </p>
+              </div>
+              {problem ? (
+                <p
+                  id={`threshold-${key}-error`}
+                  role="alert"
+                  className="col-span-2 text-xs text-destructive"
+                >
+                  {problem}
+                </p>
+              ) : null}
             </div>
-            <div>
-              <span className="mb-1 block text-[11px] text-muted-foreground">
-                Skor minimal
-              </span>
-              {input(row.key)}
-            </div>
-          </div>
-        ))}
-        <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-x-4 border-b py-3">
+          )
+        })}
+        <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-x-4 py-3">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-sm font-medium">
-              <span
-                aria-hidden
-                className={cn(
-                  'size-2.5 rounded-full',
-                  CATEGORY_DOT.tidak_cocok,
-                )}
-              />
-              {CATEGORY_LABEL.tidak_cocok}
-            </p>
-            <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-              {categoryRule('tidak_cocok', shown).rule}
+            <GradeBadge category="tidak_layak" />
+            <p className="mt-1 text-xs leading-snug text-muted-foreground">
+              {CATEGORY_ACTION.tidak_layak} ·{' '}
+              {categoryRule('tidak_layak', shown).rule}
             </p>
           </div>
           <p className="text-right text-xs text-muted-foreground">Otomatis</p>
-        </div>
-        <div className="grid grid-cols-[minmax(0,1fr)_6.5rem] items-center gap-x-4 gap-y-1 py-3">
-          <div className="min-w-0">
-            <FieldLabel htmlFor="threshold-qualityOutsideFocus">
-              {QUALITY_OUTSIDE_FOCUS_LABEL}
-            </FieldLabel>
-            <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-              Tanda untuk proposal yang gagal cek fokus tetapi skornya minimal{' '}
-              {num(shown.qualityOutsideFocus)}.
-            </p>
-          </div>
-          <div>
-            <span className="mb-1 block text-[11px] text-muted-foreground">
-              Skor minimal
-            </span>
-            {input('qualityOutsideFocus')}
-          </div>
         </div>
       </div>
     </div>
@@ -485,12 +456,8 @@ export function AnchorsFields({ draft, setDraft, errors }: FieldsProps) {
       <FieldError errors={errors} />
       {CRITERIA.map((c) => (
         <FieldSet key={c} className="border-b pb-4 last:border-b-0">
-          <FieldLegend variant="label" className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className={cn('size-2.5 rounded-[3px]', CRITERION_COLOR[c])}
-            />
-            {CRITERION_LABEL[c]}
+          <FieldLegend variant="label">
+            <CriterionName criterion={c} />
           </FieldLegend>
           <div className="grid gap-3 sm:grid-cols-3">
             {(['1', '3', '5'] as const).map((level) => (

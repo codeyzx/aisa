@@ -1,7 +1,8 @@
 /**
  * The proposal detail page, one variant per seeded shape. Expected values come
  * from the overview's rules applied to the seed (`scripts/_seed-aisa.ts`):
- * `skor = Σ bobot × (nilai − 1) / 4` with the baseline weights, the fit rules
+ * `skor = Σ bobot × (nilai − 1) / 4` with the guide's weights (A–E:
+ * 25/20/20/25/10), grade bands 85/75/65/50 from the score alone, the fit rules
  * (agritech/fintech/edtech/healthtech/climate · pre-seed/seed/seri-a ·
  * Rp1–20 M), and "a butir that is not mentioned fails the fit check".
  */
@@ -13,7 +14,7 @@ import {
   PROPOSALS_COLLECTION,
 } from '../../features/aisa/aisa.path.ts'
 import { emulatorDb, expect, signInAs, test, withRuntime } from './fixtures.ts'
-import { card } from './locators.ts'
+import { card, exactly } from './locators.ts'
 import { deckLinkFor } from './mock-aisa-api.ts'
 
 function criterion(page: Page, key: string): Locator {
@@ -22,6 +23,9 @@ function criterion(page: Page, key: string): Locator {
 
 /** The page's first card: name, profile facts, badges and the score box. */
 const header = (page: Page) => page.locator('[data-slot="card"]').first()
+
+/** The "Grade" card (not "Grade kurang pas?"). */
+const gradeCard = (page: Page) => card(page, exactly('Grade'))
 
 test.beforeEach(async ({ page }) => {
   await signInAs(page)
@@ -42,21 +46,43 @@ test('DSB-20 a scored, fitting proposal shows both stages, quotes and tokens', a
   await expect(top.getByText('Agritech', { exact: true })).toBeVisible()
   await expect(top.getByText('seed', { exact: true })).toBeVisible()
   await expect(top.getByText(/^Cari Rp\s5\.000\.000\.000$/u)).toBeVisible()
-  await expect(top.getByText('Sangat cocok', { exact: true })).toBeVisible()
+  await expect(top.getByText('Sangat layak', { exact: true })).toBeVisible()
 
-  // Tahap 1: 0,275·1 + 0,3·1 + 0,2·0,75 + 0,125·1 + 0,1·0,75 = 92,5
+  // Tahap 1: 0,25·1 + 0,2·1 + 0,2·0,75 + 0,25·1 + 0,1·0,75 = 92,5
   await expect(top.getByText('92,5', { exact: true })).toBeVisible()
+
+  // The Grade card: the grade, its band, the recommended step and why, and
+  // where the score sits on the five bands.
+  const grade = gradeCard(page)
+  await expect(grade.locator('[data-grade]').first()).toHaveText('Sangat layak')
+  await expect(grade.getByText('Rentang skor 85–100')).toBeVisible()
+  const action = grade.getByTestId('grade-action')
+  await expect(action).toContainText('Lanjutkan investasi')
+  await expect(action).toContainText(
+    'Bukti kuat di hampir semua kriteria; layak diprioritaskan.',
+  )
+  await expect(grade.getByTestId('grade-scale')).toContainText(
+    'Skor 92,5 dari 100 berada di rentang 85–100: Sangat layak.',
+  )
+  await expect(grade.getByTestId('outside-focus-callout')).toHaveCount(0)
+  // "Cara membaca grade" opens the five-row Skor | Grade | Aksi table.
+  await grade.getByText('Cara membaca grade', { exact: true }).click()
+  const guide = grade.getByRole('table', { name: 'Cara membaca grade' })
+  await expect(guide.getByRole('row')).toHaveCount(6)
+  await expect(
+    guide.getByRole('row').filter({ hasText: '< 50' }),
+  ).toContainText('Tolak')
   await expect(
     card(page, 'Nilai per kriteria').getByText(
       'Aturan v1 · model gemini-3.8-flash.',
     ),
   ).toBeVisible()
   for (const [key, value] of [
-    ['tim', '5/5'],
-    ['pasar', '5/5'],
-    ['produk', '4/5'],
-    ['traksi', '5/5'],
-    ['bisnis', '4/5'],
+    ['manajemen', '5/5'],
+    ['kinerja', '5/5'],
+    ['risiko', '4/5'],
+    ['rencana', '5/5'],
+    ['dampak', '4/5'],
   ] as const) {
     await expect(
       criterion(page, key).getByText(value, { exact: true }),
@@ -65,10 +91,16 @@ test('DSB-20 a scored, fitting proposal shows both stages, quotes and tokens', a
     await expect(criterion(page, key).getByText(/^Hal\. \d+$/u)).toHaveCount(1)
   }
   await expect(
-    criterion(page, 'tim').getByText(
+    criterion(page, 'manajemen').getByText(
       '“Tani Maju: pendiri pernah membangun dan keluar dari startup serupa.”',
     ),
   ).toBeVisible()
+  // Criteria read A–E, each with its letter, name and weight.
+  await expect(page.locator('li[data-criterion]')).toHaveCount(5)
+  await expect(criterion(page, 'manajemen')).toContainText('A. Tim manajemen')
+  await expect(criterion(page, 'manajemen')).toContainText('Bobot 25%')
+  await expect(criterion(page, 'dampak')).toContainText('E. Potensi dampak')
+  await expect(criterion(page, 'dampak')).toContainText('Bobot 10%')
 
   // Tahap 2: every butir passes.
   await expect(
@@ -94,23 +126,32 @@ test('DSB-20 a scored, fitting proposal shows both stages, quotes and tokens', a
   ).toBeVisible()
 })
 
-test('DSB-21 a good proposal outside the fund focus is Tidak cocok and marked Berkualitas, di luar fokus', async ({
+test('DSB-21 a strong proposal outside the fund focus keeps its grade and is marked Di luar fokus', async ({
   page,
 }) => {
   await page.goto('/proposal/form-seedkopirakyat')
 
   const top = header(page)
-  await expect(top.getByText('82,5', { exact: true })).toBeVisible()
+  await expect(top.getByText('85,0', { exact: true })).toBeVisible()
   await expect(
     top.getByText('2 dari 3 syarat fokus terpenuhi', { exact: true }),
   ).toBeVisible()
   const fit = card(page, 'Sesuai fokus investasi?')
   await expect(fit.getByText('F&B di luar sektor fokus')).toBeVisible()
 
-  await expect(top.getByText('Tidak cocok', { exact: true })).toBeVisible()
+  // Out of focus never changes the grade: 85,0 is Sangat layak.
+  await expect(top.getByText('Sangat layak', { exact: true })).toBeVisible()
   await expect(
-    top.getByText('Berkualitas, di luar fokus', { exact: true }),
+    top.getByRole('button', { name: 'Di luar fokus', exact: true }),
   ).toBeVisible()
+
+  const callout = gradeCard(page).getByTestId('outside-focus-callout')
+  await expect(callout).toContainText('Di luar fokus — prioritas rendah')
+  await expect(callout).toContainText(
+    'Prioritas rendah: tidak sesuai fokus investasi (sektor/tahap/dana), jadi risikonya lebih tinggi untuk portofolio.',
+  )
+  await expect(callout).toContainText('Sektor: F&B di luar sektor fokus')
+  await expect(callout).not.toContainText('Tahap:')
 })
 
 test('DSB-22 a perlu dicek manual proposal has no score, no category and no correction form', async ({
@@ -127,7 +168,7 @@ test('DSB-22 a perlu dicek manual proposal has no score, no category and no corr
   ).toBeVisible()
   await expect(
     card(page, 'Nilai per kriteria').getByText(
-      'Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori.',
+      'Tidak dinilai: deck perlu dicek manual, tanpa skor dan grade.',
     ),
   ).toBeVisible()
   await expect(
@@ -137,15 +178,17 @@ test('DSB-22 a perlu dicek manual proposal has no score, no category and no corr
   await expect(top.getByText('—', { exact: true })).toBeVisible()
   await expect(page.getByText('Ringkasan AI')).toHaveCount(0)
 
-  for (const category of [
-    'Sangat cocok',
-    'Cocok',
-    'Kurang cocok',
-    'Tidak cocok',
+  for (const grade of [
+    'Sangat layak',
+    'Layak bersyarat',
+    'Perlu penyesuaian',
+    'Risiko tinggi',
+    'Tidak layak',
   ]) {
-    await expect(top.getByText(category, { exact: true })).toHaveCount(0)
+    await expect(top.getByText(grade, { exact: true })).toHaveCount(0)
   }
-  await expect(card(page, 'Kategori kurang pas?')).toHaveCount(0)
+  await expect(gradeCard(page)).toHaveCount(0)
+  await expect(card(page, 'Grade kurang pas?')).toHaveCount(0)
   await expect(
     page.getByRole('button', { name: 'Simpan koreksi' }),
   ).toHaveCount(0)
@@ -156,7 +199,7 @@ test('DSB-23 a criterion whose quotes could not be found is capped at 2 and flag
 }) => {
   await page.goto('/proposal/form-seedfashionista')
 
-  const produk = criterion(page, 'produk')
+  const produk = criterion(page, 'risiko')
   await expect(produk.getByText('2/5', { exact: true })).toBeVisible()
   const badge = produk.getByText('kutipan tidak terverifikasi', { exact: true })
   await expect(badge).toBeVisible()
@@ -169,28 +212,43 @@ test('DSB-23 a criterion whose quotes could not be found is capped at 2 and flag
   await expect(page.getByText('kutipan tidak terverifikasi')).toHaveCount(1)
 })
 
-test('DSB-24 a corrected proposal keeps its code category and score beside the correction', async ({
+test('DSB-24 a corrected proposal keeps its AI grade and score beside the correction', async ({
   page,
 }) => {
   await page.goto('/proposal/form-seedpasarikan')
 
-  // All five criteria at 3 → 50,0, a Kurang cocok score.
+  // All five criteria at 3 → 50,0, a Risiko tinggi score.
   const top = header(page)
   await expect(top.getByText('50,0', { exact: true })).toBeVisible()
-  await expect(top.getByText('Cocok', { exact: true })).toBeVisible()
+  await expect(
+    top.getByText('Perlu penyesuaian', { exact: true }),
+  ).toBeVisible()
   await expect(top.getByText('dikoreksi', { exact: true })).toBeVisible()
   await expect(
-    card(page, 'Kategori kurang pas?').getByText(
-      /^AI menilai Kurang cocok, lalu dikoreksi ke Cocok \(\d{1,2} \S+ \d{4}, \d{2}\.\d{2}, Dashboard\): “Traksi di Muncar lebih kuat dari yang terbaca di deck”\.$/u,
+    card(page, 'Grade kurang pas?').getByText(
+      /^AI menilai Risiko tinggi, lalu dikoreksi ke Perlu penyesuaian \(\d{1,2} \S+ \d{4}, \d{2}\.\d{2}, Dashboard\): “Penjualan di Muncar lebih kuat dari yang terbaca di deck”\.$/u,
     ),
   ).toBeVisible()
+
+  // The Grade card leads with the corrected grade and its step, and says the
+  // AI's grade; the scale still marks the score's own band.
+  const grade = gradeCard(page)
+  await expect(grade.getByTestId('grade-action')).toContainText(
+    'Sesuaikan dulu sebelum lanjut',
+  )
+  await expect(grade).toContainText(
+    'AI memberi grade Risiko tinggi dari skornya, lalu dikoreksi ke Perlu penyesuaian',
+  )
+  await expect(grade.getByTestId('grade-scale')).toContainText(
+    'berada di rentang 50–64: Risiko tinggi.',
+  )
 
   const riwayat = card(page, 'Riwayat')
   await expect(
     riwayat
       .getByRole('listitem')
-      .filter({ hasText: 'Kategori Pasar Ikan dikoreksi' }),
-  ).toContainText('Koreksi kategori')
+      .filter({ hasText: 'Grade Pasar Ikan dipindahkan ke Perlu penyesuaian' }),
+  ).toContainText('Koreksi grade')
 })
 
 test('DSB-25 Lihat log penilaian opens that proposal’s own job log', async ({
@@ -259,7 +317,7 @@ test('DSB-36 Log penilaian is a centred dialog with a timed timeline, start to f
     'AI menilai 5 kriteria',
     'Menghitung skor',
     'Mencocokkan dengan fokus investasi',
-    'Menentukan kategori',
+    'Menentukan grade',
     'Menyimpan hasil',
   ])
   const ai = steps.getByRole('listitem').filter({
@@ -278,12 +336,15 @@ test('DSB-36 Log penilaian is a centred dialog with a timed timeline, start to f
   await expect(skor.getByText(/^Hasil: Skor \d+,\d$/u)).toBeVisible()
   await skor.getByRole('button', { name: 'Lihat rincian' }).click()
   await expect(skor.getByText('Skor akhir')).toBeVisible()
-  const kategori = steps.getByRole('listitem').filter({
-    has: page.getByRole('heading', { name: 'Menentukan kategori' }),
+  const grade = steps.getByRole('listitem').filter({
+    has: page.getByRole('heading', { name: 'Menentukan grade' }),
   })
-  await kategori.getByRole('button', { name: 'Lihat rincian' }).click()
+  await grade.getByRole('button', { name: 'Lihat rincian' }).click()
+  // Panen Kita scored 81,3: the AI's grade, before the manager's correction.
   await expect(
-    kategori.getByText(/^(Lolos|Tidak lolos) cek fokus/u),
+    grade.getByText(
+      'Skor 81,3 berada di rentang 75–84, jadi grade-nya Layak bersyarat.',
+    ),
   ).toBeVisible()
 
   // The manager's correction and response come after, behind a divider.
@@ -294,7 +355,7 @@ test('DSB-36 Log penilaian is a centred dialog with a timed timeline, start to f
     log
       .getByRole('list', { name: 'Keputusan manajer' })
       .getByRole('heading', { level: 3 }),
-  ).toHaveText(['Koreksi kategori', 'Tanggapan'])
+  ).toHaveText(['Koreksi grade', 'Tanggapan'])
 })
 
 test('DSB-26 criteria and fit butir the deck does not mention read tidak disebut and fail', async ({
@@ -302,7 +363,7 @@ test('DSB-26 criteria and fit butir the deck does not mention read tidak disebut
 }) => {
   await page.goto('/proposal/form-seedternakpintar')
 
-  for (const key of ['traksi', 'bisnis']) {
+  for (const key of ['rencana', 'dampak']) {
     const item = criterion(page, key)
     await expect(item.getByText('1/5', { exact: true })).toBeVisible()
     await expect(item.getByText('Tidak dibahas di pitch deck')).toBeVisible()
@@ -328,7 +389,7 @@ test('DSB-26 criteria and fit butir the deck does not mention read tidak disebut
   await expect(
     fit.getByRole('listitem').filter({ hasText: 'besar dana tidak disebut' }),
   ).toContainText('Dana')
-  await expect(top.getByText('Tidak cocok', { exact: true })).toBeVisible()
+  await expect(top.getByText('Tidak layak', { exact: true })).toBeVisible()
 })
 
 test('DSB-27 a queued upload has no assessment and no log link yet', async ({
@@ -492,8 +553,8 @@ test('DSB-32 a page citation opens the preview at that page, from the criteria a
   const link = deckLinkFor('upload-seedklinikdesa')
   await page.goto('/proposal/upload-seedklinikdesa')
 
-  // Seed: criterion n quotes page 2 + n (produk is the third → hal. 4).
-  await criterion(page, 'produk')
+  // Seed: criterion n quotes page 2 + n (risiko is the third → hal. 4).
+  await criterion(page, 'risiko')
     .getByRole('button', { name: 'Buka pratinjau deck di halaman 4' })
     .click()
   const panel = previewPanel(page)
@@ -532,7 +593,7 @@ test('DSB-33 a Form deck previews in Drive from page 1 and says which page the q
 
   // A Form deck lives in Drive: preview, no "Buka deck" for an upload link.
   await expect(page.getByRole('button', { name: 'Buka deck' })).toHaveCount(0)
-  await criterion(page, 'tim')
+  await criterion(page, 'manajemen')
     .getByRole('button', { name: 'Buka pratinjau deck di halaman 2' })
     .click()
   const panel = previewPanel(page)

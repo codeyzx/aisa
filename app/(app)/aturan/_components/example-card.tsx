@@ -19,12 +19,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { CRITERION_LABEL } from '@/features/aisa/aisa.labels'
+import {
+  CRITERION_LETTER,
+  CRITERION_SHORT,
+  OUTSIDE_FOCUS_LABEL,
+} from '@/features/aisa/aisa.labels'
 import { CRITERIA } from '@/features/aisa/aisa.schema'
 import { formatScore } from '@/lib/format/number'
 import { cn } from '@/lib/utils'
 
-import { CategoryBadge } from '../../_components/badges'
+import { GradeBadge } from '../../_components/badges'
 
 import { num, toPercent } from './helpers'
 import {
@@ -109,7 +113,12 @@ export function ExampleCard({
             <tbody className="divide-y divide-border font-mono tabular-nums">
               {CRITERIA.map((c) => (
                 <tr key={c}>
-                  <td className="px-3 py-2 font-sans">{CRITERION_LABEL[c]}</td>
+                  <td className="px-3 py-2 font-sans">
+                    <span className="mr-1.5 font-mono font-semibold text-muted-foreground">
+                      {CRITERION_LETTER[c]}
+                    </span>
+                    {CRITERION_SHORT[c]}
+                  </td>
                   <td className="px-2 py-2 text-right">
                     {proposal.values[c]}/5
                   </td>
@@ -164,10 +173,16 @@ export function ExampleCard({
               </span>
             ))}
           </div>
+          {result.fit.passed ? null : (
+            <p className="text-xs text-muted-foreground">
+              Gagal cek fokus: grade tetap, tetapi proposal ditandai “
+              {OUTSIDE_FOCUS_LABEL}” sebagai prioritas rendah.
+            </p>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2 text-[13px]">
+            <div className="flex flex-wrap items-center gap-2 text-[13px]">
               <span className="text-muted-foreground">Hasil</span>
-              <CategoryBadge category={result.category} />
+              <GradeBadge category={result.category} showAction />
             </div>
             <Link
               href={`/proposal/${encodeURIComponent(proposal.id)}`}

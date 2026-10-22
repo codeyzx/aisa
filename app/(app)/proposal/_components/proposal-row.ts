@@ -1,6 +1,6 @@
 import { isCorrected } from '@/features/aisa/aisa.calibration'
 import {
-  showsQualityOutsideFocus,
+  isOutsideFocus,
   type Category,
   type Proposal,
   type ProposalStatus,
@@ -23,7 +23,10 @@ export interface ProposalRow {
   score: number | null
   category: Category | null
   corrected: boolean
+  /** Failed a fit check: lower priority, same grade. */
   outsideFocus: boolean
+  /** The fit checks, so the "Di luar fokus" badge can say which failed. */
+  fit: Proposal['fit']
   status: ProposalStatus
   responded: boolean
   response: ResponseKind | null
@@ -42,7 +45,8 @@ export function toProposalRow(p: Proposal): ProposalRow {
     score: p.assessment?.score ?? null,
     category: p.effectiveCategory ?? null,
     corrected: isCorrected(p),
-    outsideFocus: showsQualityOutsideFocus(p),
+    outsideFocus: isOutsideFocus(p),
+    fit: p.fit ?? null,
     status: p.status,
     responded: p.responded,
     response: p.response?.kind ?? null,

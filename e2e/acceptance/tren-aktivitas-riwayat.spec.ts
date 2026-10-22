@@ -96,7 +96,7 @@ test('DSB-30 Tren shows the latest insight and the 14 days of dailyStats', async
       .filter({ hasText: 'proposal agritech naik dibanding minggu lalu.' }),
   ).toContainText(/\(ringkasan 09\.00 · \d{2} \S+ \d{4}\)/u)
 
-  // Every day's counts, per kategori and perlu dicek manual, read through the
+  // Every day's counts, per grade and perlu dicek manual, read through the
   // chart's table.
   const perDay = panel(page, 'Proposal masuk per hari')
   await perDay.getByText('Lihat sebagai tabel').click()
@@ -110,17 +110,18 @@ test('DSB-30 Tren shows the latest insight and the 14 days of dailyStats', async
       return expect(cells).toHaveText([
         label,
         String(row.proposalsIn),
-        String(row.byCategory.sangat_cocok ?? 0),
-        String(row.byCategory.cocok ?? 0),
-        String(row.byCategory.kurang_cocok ?? 0),
-        String(row.byCategory.tidak_cocok ?? 0),
+        String(row.byCategory.sangat_layak ?? 0),
+        String(row.byCategory.layak_bersyarat ?? 0),
+        String(row.byCategory.perlu_penyesuaian ?? 0),
+        String(row.byCategory.risiko_tinggi ?? 0),
+        String(row.byCategory.tidak_layak ?? 0),
         String(row.perluDicekManual),
         /^(–|\d+,\d)$/u,
       ])
     }),
   )
   await expect(
-    perDay.getByText(/^Kategori dari kode saat dinilai, sebelum koreksi/u),
+    perDay.getByText(/^Grade dari kode saat dinilai, sebelum koreksi/u),
   ).toBeVisible()
   await expect(
     page.getByRole('listitem').filter({
@@ -291,9 +292,28 @@ test('DSB-50 Riwayat lists every audit row, newest first, and leaves a deleted p
     panen.getByRole('link', { name: 'Panen Kita', exact: true }),
   ).toHaveAttribute('href', '/proposal/form-seedpanenkita')
 
-  await expect(event('Kategori Pasar Ikan dikoreksi')).toContainText(
-    'Traksi di Muncar lebih kuat dari yang terbaca di deck',
+  const pasar = event('Grade Pasar Ikan dikoreksi')
+  await expect(pasar).toContainText(
+    'Penjualan di Muncar lebih kuat dari yang terbaca di deck',
   )
+  await expect(pasar).toContainText('Risiko tinggi')
+  await expect(pasar).toContainText('Perlu penyesuaian')
+
+  // Rows from before the grade scale changed keep their old kategori, shown
+  // as the old scale rather than passed off as one of today's grades.
+  const lama = event('Grade Klinik Desa dikoreksi')
+  await expect(lama).toContainText('Cocok (skala lama)')
+  await expect(lama).toContainText('Sangat cocok (skala lama)')
+  await tab('Dinilai ulang').click()
+  await expect(events).toHaveCount(1)
+  const ulang = event('Tani Maju dinilai ulang dengan skala baru')
+  await expect(ulang).toContainText('Sangat cocok (skala lama)')
+  await expect(ulang).toContainText('Sangat layak')
+  await expect(ulang).toContainText(
+    'Tani Maju dinilai ulang dengan skala baru: skor 92,5, Sangat layak',
+  )
+  await expect(ulang).toContainText('Sistem')
+  await tab('Semua').click()
   const aturan = event('Aturan penilaian diperbarui ke versi 1')
   await expect(aturan).toContainText('via Dashboard')
   await expect(
@@ -307,7 +327,12 @@ test('DSB-50 Riwayat lists every audit row, newest first, and leaves a deleted p
     'Ke WhatsApp · 11 proposal menunggu keputusan',
   )
   await page.getByRole('button', { name: 'Lihat isi' }).click()
-  await expect(event('Ringkasan pagi terkirim')).toContainText('Dana UMKM (90)')
+  await expect(event('Ringkasan pagi terkirim')).toContainText(
+    'Klinik Desa (77,5)',
+  )
+  await expect(event('Ringkasan pagi terkirim')).toContainText(
+    'Kopi Rakyat (F&B, Rp3 M) · 85 (di luar fokus)',
+  )
 
   await tab('STOP/LANJUT').click()
   await expect(events).toHaveCount(2)

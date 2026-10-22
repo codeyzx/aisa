@@ -1,17 +1,22 @@
 import {
   ArchiveIcon,
+  BadgeCheckIcon,
+  CircleCheckIcon,
+  CircleXIcon,
   FileSearchIcon,
-  GemIcon,
   Clock3Icon,
   EyeIcon,
   MailIcon,
+  SlidersHorizontalIcon,
+  TriangleAlertIcon,
   type LucideIcon,
 } from 'lucide-react'
 
 import { Badge } from '@/components/ui/badge'
 import {
+  CATEGORY_ACTION,
   CATEGORY_LABEL,
-  QUALITY_OUTSIDE_FOCUS_LABEL,
+  gradeOf,
   STATUS_LABEL,
 } from '@/features/aisa/aisa.labels'
 import {
@@ -19,7 +24,7 @@ import {
   type Criterion,
   type ProposalStatus,
   type ResponseKind,
-  type Rules,
+  type Thresholds,
 } from '@/features/aisa/aisa.schema'
 import { cn } from '@/lib/utils'
 
@@ -40,61 +45,110 @@ export const agentColor = (agent: string) =>
   AGENT_COLOR[agent] ?? 'var(--muted-foreground)'
 
 /**
- * Criterion swatches from the `--criterion-*` tokens: one hue per criterion,
- * none of them a kategori hue, so a criterion never reads as a verdict. Every
+ * Criterion swatches from the `--criterion-*` tokens: one hue per criterion A–E,
+ * none of them a grade hue, so a criterion never reads as a verdict. Every
  * swatch sits beside its criterion's name — colour is never the only cue.
  */
 export const CRITERION_COLOR: Record<Criterion, string> = {
-  tim: 'bg-criterion-tim',
-  pasar: 'bg-criterion-pasar',
-  produk: 'bg-criterion-produk',
-  traksi: 'bg-criterion-traksi',
-  bisnis: 'bg-criterion-bisnis',
+  manajemen: 'bg-criterion-manajemen',
+  kinerja: 'bg-criterion-kinerja',
+  risiko: 'bg-criterion-risiko',
+  rencana: 'bg-criterion-rencana',
+  dampak: 'bg-criterion-dampak',
 }
 
-// Category colours: text reads `--category-N` (≥ 4.5:1 on its soft background
-// and on the card); dots, bars and chart fills read `--category-N-fill` (≥ 3:1
-// on the card). The text label always travels with the colour, so colour is
-// never the only cue.
-const CATEGORY_STYLE: Record<Category, string> = {
-  sangat_cocok: 'border-category-1/30 bg-category-1-soft text-category-1',
-  cocok: 'border-category-2/30 bg-category-2-soft text-category-2',
-  kurang_cocok: 'border-category-3/35 bg-category-3-soft text-category-3',
-  tidak_cocok: 'border-category-4/30 bg-category-4-soft text-category-4',
+// Grade colours, best to worst: green, teal-blue, amber, orange, red. A badge is
+// the solid `--category-N-fill` with `--category-N-on` text (≥ 4.5:1); coloured text
+// on the card reads `--category-N`; dots, bars and chart fills read
+// `--category-N-fill` (≥ 3:1 on the card). Risiko tinggi (orange, dark text) and
+// Tidak layak (red, white text) differ in hue, lightness and text colour, and
+// every badge carries its own icon and word, so colour is never the only cue.
+const GRADE_TONE: Record<Category, number> = {
+  sangat_layak: 1,
+  layak_bersyarat: 2,
+  perlu_penyesuaian: 3,
+  risiko_tinggi: 4,
+  tidak_layak: 5,
+}
+
+const GRADE_STYLE: Record<Category, string> = {
+  sangat_layak: 'bg-category-1-fill text-category-1-on',
+  layak_bersyarat: 'bg-category-2-fill text-category-2-on',
+  perlu_penyesuaian: 'bg-category-3-fill text-category-3-on',
+  risiko_tinggi: 'bg-category-4-fill text-category-4-on',
+  tidak_layak: 'bg-category-5-fill text-category-5-on',
+}
+
+export const GRADE_ICON: Record<Category, LucideIcon> = {
+  sangat_layak: BadgeCheckIcon,
+  layak_bersyarat: CircleCheckIcon,
+  perlu_penyesuaian: SlidersHorizontalIcon,
+  risiko_tinggi: TriangleAlertIcon,
+  tidak_layak: CircleXIcon,
+}
+
+/** Coloured text for a grade on the card or its soft background. */
+export const CATEGORY_TEXT: Record<Category, string> = {
+  sangat_layak: 'text-category-1',
+  layak_bersyarat: 'text-category-2',
+  perlu_penyesuaian: 'text-category-3',
+  risiko_tinggi: 'text-category-4',
+  tidak_layak: 'text-category-5',
+}
+
+/** A soft tinted surface for a grade: callouts, the active step of a scale. */
+export const CATEGORY_SOFT: Record<Category, string> = {
+  sangat_layak: 'bg-category-1-soft',
+  layak_bersyarat: 'bg-category-2-soft',
+  perlu_penyesuaian: 'bg-category-3-soft',
+  risiko_tinggi: 'bg-category-4-soft',
+  tidak_layak: 'bg-category-5-soft',
 }
 
 export const CATEGORY_DOT: Record<Category, string> = {
-  sangat_cocok: 'bg-category-1-fill',
-  cocok: 'bg-category-2-fill',
-  kurang_cocok: 'bg-category-3-fill',
-  tidak_cocok: 'bg-category-4-fill',
+  sangat_layak: 'bg-category-1-fill',
+  layak_bersyarat: 'bg-category-2-fill',
+  perlu_penyesuaian: 'bg-category-3-fill',
+  risiko_tinggi: 'bg-category-4-fill',
+  tidak_layak: 'bg-category-5-fill',
 }
 
 /** The same fills as CSS values, for chart libraries that take a colour string. */
-export const CATEGORY_FILL: Record<Category, string> = {
-  sangat_cocok: 'var(--category-1-fill)',
-  cocok: 'var(--category-2-fill)',
-  kurang_cocok: 'var(--category-3-fill)',
-  tidak_cocok: 'var(--category-4-fill)',
-}
+export const CATEGORY_FILL: Record<Category, string> = Object.fromEntries(
+  Object.entries(GRADE_TONE).map(([c, n]) => [c, `var(--category-${n}-fill)`]),
+) as Record<Category, string>
 
-export function CategoryBadge({
+/**
+ * A grade as a solid badge: its icon and word, and with `showAction` the
+ * recommended next step after it ("Tolak").
+ */
+export function GradeBadge({
   category,
+  showAction = false,
   className,
 }: {
   category: Category
+  showAction?: boolean
   className?: string
 }) {
+  const Icon = GRADE_ICON[category]
   return (
     <Badge
       variant="outline"
-      className={cn('gap-1.5 font-medium', CATEGORY_STYLE[category], className)}
+      data-grade={category}
+      className={cn(
+        'gap-1 border-transparent font-semibold',
+        GRADE_STYLE[category],
+        className,
+      )}
     >
-      <span
-        aria-hidden
-        className={cn('size-1.5 rounded-full', CATEGORY_DOT[category])}
-      />
+      <Icon aria-hidden />
       {CATEGORY_LABEL[category]}
+      {showAction ? (
+        <span className="font-normal opacity-90">
+          · {CATEGORY_ACTION[category]}
+        </span>
+      ) : null}
     </Badge>
   )
 }
@@ -102,8 +156,8 @@ export function CategoryBadge({
 /** A response, or `null` for a proposal nobody has answered yet. */
 export type Decision = ResponseKind | null
 
-// Decision badges carry no hue at all: green, blue and amber already mean a
-// kategori in the column beside them, so a decision tells itself apart by its
+// Decision badges carry no hue at all: every hue already means a grade in the
+// column beside them, so a decision tells itself apart by its
 // icon and its word. "Belum ditanggapi" — the one that needs the manager — is
 // the only one drawn with a dashed outline and bold text.
 const DECIDED =
@@ -148,25 +202,15 @@ export function DecisionBadge({
   )
 }
 
-type Thresholds = Pick<
-  Rules['thresholds'],
-  'sangatCocok' | 'cocok' | 'kurangCocok'
->
-
 /**
- * Score colour by the ACTIVE rules' category cut-offs, so the bar and the
- * category badge beside it can never disagree. Without rules there are no
- * cut-offs to colour by, so the bar stays the neutral primary.
+ * Score colour by the ACTIVE rules' grade bands, so the bar and the grade badge
+ * beside it can never disagree. Without rules there are no bands to colour by,
+ * so the bar stays the neutral primary.
  */
 export function scoreTone(score: number, thresholds: Thresholds | null) {
   if (!thresholds) return { bar: 'bg-primary', text: 'text-foreground' }
-  if (score >= thresholds.sangatCocok)
-    return { bar: 'bg-category-1-fill', text: 'text-category-1' }
-  if (score >= thresholds.cocok)
-    return { bar: 'bg-category-2-fill', text: 'text-category-2' }
-  if (score >= thresholds.kurangCocok)
-    return { bar: 'bg-category-3-fill', text: 'text-category-3' }
-  return { bar: 'bg-category-4-fill', text: 'text-category-4' }
+  const grade = gradeOf(score, thresholds)
+  return { bar: CATEGORY_DOT[grade], text: CATEGORY_TEXT[grade] }
 }
 
 export function ScoreBar({
@@ -206,8 +250,8 @@ export function ScoreBar({
 
 /**
  * A proposal status that is not a verdict. "Perlu dicek manual" asks for the
- * manager's eyes, so it gets an icon and bold text, never a kategori hue: amber
- * there read as Kurang cocok.
+ * manager's eyes, so it gets an icon and bold text, never a grade hue: amber
+ * there would read as Perlu penyesuaian.
  */
 export function StatusBadge({
   status,
@@ -228,12 +272,4 @@ export function StatusBadge({
   )
 }
 
-/** "Berkualitas, di luar fokus": a note about the proposal, not a kategori. */
-export function OutsideFocusBadge({ className }: { className?: string }) {
-  return (
-    <Badge variant="outline" className={cn('text-foreground', className)}>
-      <GemIcon />
-      {QUALITY_OUTSIDE_FOCUS_LABEL}
-    </Badge>
-  )
-}
+export { OutsideFocusBadge } from './outside-focus-badge'

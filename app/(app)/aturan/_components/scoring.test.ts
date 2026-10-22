@@ -12,7 +12,13 @@ import {
 } from './scoring'
 
 const RULES: ScoringRules = {
-  weights: { tim: 0.275, pasar: 0.3, produk: 0.2, traksi: 0.125, bisnis: 0.1 },
+  weights: {
+    manajemen: 0.25,
+    kinerja: 0.2,
+    risiko: 0.2,
+    rencana: 0.25,
+    dampak: 0.1,
+  },
   fit: {
     sectors: ['agritech', 'fintech'],
     stages: ['pre-seed', 'seed'],
@@ -20,10 +26,10 @@ const RULES: ScoringRules = {
     fundingMaxIdr: 20_000_000_000,
   },
   thresholds: {
-    sangatCocok: 80,
-    cocok: 65,
-    kurangCocok: 45,
-    qualityOutsideFocus: 65,
+    sangatLayak: 85,
+    layakBersyarat: 75,
+    perluPenyesuaian: 65,
+    risikoTinggi: 50,
   },
 }
 
@@ -31,23 +37,23 @@ const proposal = (over: Partial<ScoredProposal>): ScoredProposal => ({
   id: 'p',
   name: 'P',
   score: 0,
-  values: { tim: 5, pasar: 5, produk: 4, traksi: 5, bisnis: 4 },
+  values: { manajemen: 5, kinerja: 5, risiko: 4, rencana: 5, dampak: 4 },
   sector: 'agritech',
   stage: 'seed',
   fundingAskIdr: 5_000_000_000,
-  category: 'sangat_cocok',
+  category: 'sangat_layak',
   corrected: false,
-  qualityOutsideFocus: false,
+  outsideFocus: false,
   rulesVersion: 1,
   ...over,
 })
 
 const all = (n: number) => ({
-  tim: n,
-  pasar: n,
-  produk: n,
-  traksi: n,
-  bisnis: n,
+  manajemen: n,
+  kinerja: n,
+  risiko: n,
+  rencana: n,
+  dampak: n,
 })
 
 describe('computeScore mirrors scoring.py', () => {
@@ -57,14 +63,14 @@ describe('computeScore mirrors scoring.py', () => {
   })
 
   it('weights (nilai − 1) / 4 and keeps one decimal', () => {
-    // 0.275 + 0.3 + 0.2×0.75 + 0.125 + 0.1×0.75 = 0.925
+    // 0.25 + 0.2 + 0.2×0.75 + 0.25 + 0.1×0.75 = 0.925
     expect(
       computeScore(RULES.weights, {
-        tim: 5,
-        pasar: 5,
-        produk: 4,
-        traksi: 5,
-        bisnis: 4,
+        manajemen: 5,
+        kinerja: 5,
+        risiko: 4,
+        rencana: 5,
+        dampak: 4,
       }),
     ).toBe(92.5)
   })
@@ -87,29 +93,36 @@ describe('fitCheck and categorize', () => {
     ).toMatchObject({ sector: false, passed: false })
   })
 
-  it('sends a failed fit to Tidak cocok and flags quality outside focus', () => {
-    const v = { tim: 5, pasar: 5, produk: 5, traksi: 5, bisnis: 5 }
-    expect(categorize(70, v, false, RULES.thresholds)).toEqual([
-      'tidak_cocok',
-      true,
-    ])
-    expect(categorize(60, v, false, RULES.thresholds)).toEqual([
-      'tidak_cocok',
-      false,
-    ])
-  })
-
-  it('keeps a criterion at 1 out of Sangat cocok', () => {
-    const v = { tim: 1, pasar: 5, produk: 5, traksi: 5, bisnis: 5 }
-    expect(categorize(85, v, true, RULES.thresholds)).toEqual(['cocok', false])
+  it('grades by score bands alone, each threshold inclusive', () => {
+    const t = RULES.thresholds
+    expect(categorize(100, t)).toBe('sangat_layak')
+    expect(categorize(85, t)).toBe('sangat_layak')
+    expect(categorize(84.9, t)).toBe('layak_bersyarat')
+    expect(categorize(75, t)).toBe('layak_bersyarat')
+    expect(categorize(74.9, t)).toBe('perlu_penyesuaian')
+    expect(categorize(65, t)).toBe('perlu_penyesuaian')
+    expect(categorize(64.9, t)).toBe('risiko_tinggi')
+    expect(categorize(50, t)).toBe('risiko_tinggi')
+    expect(categorize(49.9, t)).toBe('tidak_layak')
+    expect(categorize(0, t)).toBe('tidak_layak')
   })
 })
 
 describe('simulate', () => {
+  it('keeps the grade of a proposal outside focus: fit never moves it', () => {
+    const outside = proposal({ sector: 'f&b' })
+    const sim = simulate([outside], RULES, {
+      ...RULES,
+      fit: { ...RULES.fit, sectors: ['f&b'] },
+    })
+    expect(sim.before.sangat_layak).toBe(1)
+    expect(sim.moves).toHaveLength(0)
+  })
+
   it('counts moves when a threshold rises', () => {
     const sim = simulate([proposal({})], RULES, {
       ...RULES,
-      thresholds: { ...RULES.thresholds, sangatCocok: 95 },
+      thresholds: { ...RULES.thresholds, sangatLayak: 95 },
     })
     expect(sim.moves).toHaveLength(1)
     expect(sim).toMatchObject({ total: 1, up: 0, down: 1 })
@@ -119,19 +132,19 @@ describe('simulate', () => {
     expect(simulate([proposal({ values: null })], RULES, RULES).total).toBe(0)
   })
 
-  it('compares AI kategori on both sides, never the kategori a koreksi set', () => {
-    // The AI puts it in Sangat cocok; a manager corrected it to Tidak cocok.
-    const corrected = proposal({ category: 'tidak_cocok', corrected: true })
+  it('compares AI grades on both sides, never the grade a koreksi set', () => {
+    // The AI puts it in Sangat layak; a manager corrected it to Tidak layak.
+    const corrected = proposal({ category: 'tidak_layak', corrected: true })
     const unchanged = simulate([corrected], RULES, RULES)
-    expect(unchanged.before.sangat_cocok).toBe(1)
-    expect(unchanged.before.tidak_cocok).toBe(0)
+    expect(unchanged.before.sangat_layak).toBe(1)
+    expect(unchanged.before.tidak_layak).toBe(0)
     expect(unchanged).toMatchObject({ moves: [], held: 0 })
   })
 
   it('counts a move a koreksi holds as held', () => {
     const draft = {
       ...RULES,
-      thresholds: { ...RULES.thresholds, sangatCocok: 95 },
+      thresholds: { ...RULES.thresholds, sangatLayak: 95 },
     }
     const sim = simulate(
       [proposal({ id: 'a' }), proposal({ id: 'b', corrected: true })],
@@ -156,37 +169,44 @@ describe('toScored', () => {
       id: 'p',
       name: 'P',
       status: 'dinilai',
-      category: 'sangat_cocok',
-      effectiveCategory: 'sangat_cocok',
+      category: 'sangat_layak',
+      effectiveCategory: 'sangat_layak',
       correction: null,
-      qualityOutsideFocus: false,
+      fit: { passed: true },
       profile: { sector: 'agritech', stage: 'seed', fundingAskIdr: 5e9 },
       assessment: {
         score: 92.5,
         rulesVersion: 1,
         criteria: {
-          tim: criterion(5),
-          pasar: criterion(5),
-          produk: criterion(4),
-          traksi: criterion(5),
-          bisnis: criterion(4),
+          manajemen: criterion(5),
+          kinerja: criterion(5),
+          risiko: criterion(4),
+          rencana: criterion(5),
+          dampak: criterion(4),
         },
       },
       ...over,
     }) as unknown as Parameters<typeof toScored>[0]
 
-  it('marks a proposal a koreksi holds and shows its effective kategori', () => {
+  it('marks a proposal a koreksi holds and shows its effective grade', () => {
     expect(
       toScored(
         stored({
-          effectiveCategory: 'cocok',
-          correction: { category: 'cocok', reason: 'x' },
+          effectiveCategory: 'layak_bersyarat',
+          correction: { category: 'layak_bersyarat', reason: 'x' },
         }),
       ),
-    ).toMatchObject({ category: 'cocok', corrected: true })
+    ).toMatchObject({ category: 'layak_bersyarat', corrected: true })
     expect(toScored(stored({}))).toMatchObject({
-      category: 'sangat_cocok',
+      category: 'sangat_layak',
       corrected: false,
+      outsideFocus: false,
+    })
+  })
+
+  it('reads "di luar fokus" from a failed fit', () => {
+    expect(toScored(stored({ fit: { passed: false } }))).toMatchObject({
+      outsideFocus: true,
     })
   })
 })

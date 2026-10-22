@@ -38,12 +38,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { CATEGORY_LABEL, JOB_STATUS_LABEL } from '@/features/aisa/aisa.labels'
-import type { Rules } from '@/features/aisa/aisa.schema'
+import {
+  CATEGORY_LABEL,
+  gradeBands,
+  JOB_STATUS_LABEL,
+  OUTSIDE_FOCUS_MEANING,
+} from '@/features/aisa/aisa.labels'
 import { formatDecimal, formatScore } from '@/lib/format/number'
 import { cn } from '@/lib/utils'
 
-import { scoreTone } from '../../_components/badges'
 import type {
   AssessmentLogData,
   LogDetail,
@@ -56,11 +59,6 @@ import {
   durationText,
   longDate,
 } from './proposal-format'
-
-type Thresholds = Pick<
-  Rules['thresholds'],
-  'sangatCocok' | 'cocok' | 'kurangCocok'
-> | null
 
 export const BY: Record<
   LogStep['by'],
@@ -90,10 +88,8 @@ const fieldLabel = 'mb-0.5 text-xs font-medium text-muted-foreground'
 
 function CriteriaDetail({
   detail,
-  thresholds,
 }: {
   detail: Extract<LogDetail, { type: 'criteria' }>
-  thresholds: Thresholds
 }) {
   return (
     <ol className="space-y-2.5">
@@ -101,12 +97,8 @@ function CriteriaDetail({
         <li key={item.label} className="rounded-lg border bg-background p-3">
           <div className="flex items-center justify-between gap-2">
             <p className="text-sm font-medium">{item.label}</p>
-            <p
-              className={cn(
-                'text-sm font-semibold tabular-nums',
-                scoreTone(item.value * 20, thresholds).text,
-              )}
-            >
+            {/* A 1–5 value is not a score, so it takes no grade colour. */}
+            <p className="text-sm font-semibold tabular-nums">
               {item.value}
               <span className="text-xs font-normal text-muted-foreground">
                 /5
@@ -232,10 +224,9 @@ function FitDetail({
 }
 
 /**
- * Why the kategori came out as it did, as the rule in
- * `services/api/aisa/scoring.py` `categorize` reads: a failed fit check is
- * Tidak cocok whatever the score; otherwise the score's threshold decides, and
- * a criterion scored 1 keeps a proposal out of Sangat cocok.
+ * Why the grade came out as it did, as `categorize` in
+ * `services/api/aisa/scoring.py` reads: the score's band alone decides it. The
+ * fit check never changes the grade; out of focus only lowers the priority.
  */
 function CategoryDetail({
   detail,
@@ -245,51 +236,37 @@ function CategoryDetail({
   const { thresholds: t, score, category } = detail
   const s = formatScore(score)
   const label = CATEGORY_LABEL[category]
-  let why: string
-  if (!detail.fitPassed) {
-    why = `Tidak lolos cek fokus, jadi kategorinya ${label} berapa pun skornya.`
-    if (detail.qualityOutsideFocus)
-      why += t
-        ? ` Skor ${s} mencapai ${formatScore(t.qualityOutsideFocus)}, jadi ditandai berkualitas, di luar fokus.`
-        : ' Skornya cukup tinggi, jadi ditandai berkualitas, di luar fokus.'
-  } else if (!t) {
-    why = `Lolos cek fokus; skor ${s} menempatkannya di ${label} menurut ambang aturan v${detail.rulesVersion} yang berlaku saat itu.`
-  } else if (category === 'sangat_cocok') {
-    why = `Lolos cek fokus, skor ${s} mencapai ${formatScore(t.sangatCocok)}, dan tidak ada kriteria bernilai 1.`
-  } else if (category === 'cocok') {
-    why =
-      score >= t.sangatCocok && detail.hasOne
-        ? `Lolos cek fokus dan skor ${s} mencapai ${formatScore(t.sangatCocok)}, tetapi ada kriteria bernilai 1, jadi tidak bisa Sangat cocok.`
-        : `Lolos cek fokus dan skor ${s} mencapai ${formatScore(t.cocok)}, tetapi di bawah ${formatScore(t.sangatCocok)} untuk Sangat cocok.`
-  } else if (category === 'kurang_cocok') {
-    why = `Lolos cek fokus, tetapi skor ${s} di bawah ${formatScore(t.cocok)} untuk Cocok, dan masih mencapai ${formatScore(t.kurangCocok)}.`
-  } else {
-    why = `Lolos cek fokus, tetapi skor ${s} di bawah ${formatScore(t.kurangCocok)}.`
-  }
+  const band = t
+    ? gradeBands(t).find((entry) => entry.category === category)
+    : undefined
+  const why = band
+    ? `Skor ${s} berada di rentang ${band.text}, jadi grade-nya ${label}.`
+    : `Skor ${s} menempatkannya di ${label} menurut batas aturan v${detail.rulesVersion} yang berlaku saat itu.`
+  const focus = detail.outsideFocus
+    ? ` Proposal ini di luar fokus. ${OUTSIDE_FOCUS_MEANING} Grade-nya tetap.`
+    : ''
   return (
     <div className="space-y-2 text-[13px]">
-      <p className="leading-relaxed">{why}</p>
+      <p className="leading-relaxed">
+        {why}
+        {focus}
+      </p>
       {t ? (
-        <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
-          {(
-            [
-              ['sangat_cocok', `≥ ${formatScore(t.sangatCocok)}`],
-              ['cocok', `≥ ${formatScore(t.cocok)}`],
-              ['kurang_cocok', `≥ ${formatScore(t.kurangCocok)}`],
-              ['tidak_cocok', `< ${formatScore(t.kurangCocok)}`],
-            ] as const
-          ).map(([key, range]) => (
+        <ul className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+          {gradeBands(t).map((entry) => (
             <li
-              key={key}
+              key={entry.category}
               className={cn(
                 'rounded-md border px-2 py-1.5',
-                key === category
+                entry.category === category
                   ? 'border-primary/40 bg-primary/10 font-medium text-foreground'
                   : 'text-muted-foreground',
               )}
             >
-              <span className="block text-xs">{CATEGORY_LABEL[key]}</span>
-              <span className="tabular-nums">{range}</span>
+              <span className="block text-xs">
+                {CATEGORY_LABEL[entry.category]}
+              </span>
+              <span className="tabular-nums">{entry.text}</span>
             </li>
           ))}
         </ul>
@@ -298,16 +275,10 @@ function CategoryDetail({
   )
 }
 
-function Detail({
-  detail,
-  thresholds,
-}: {
-  detail: LogDetail
-  thresholds: Thresholds
-}) {
+function Detail({ detail }: { detail: LogDetail }) {
   switch (detail.type) {
     case 'criteria':
-      return <CriteriaDetail detail={detail} thresholds={thresholds} />
+      return <CriteriaDetail detail={detail} />
     case 'score':
       return <ScoreDetail detail={detail} />
     case 'fit':
@@ -321,12 +292,10 @@ function TimelineNode({
   step,
   last,
   totalMs,
-  thresholds,
 }: {
   step: LogStep
   last: boolean
   totalMs: number | null
-  thresholds: Thresholds
 }) {
   const [open, setOpen] = useState(step.detail?.type === 'criteria')
   const by = BY[step.by]
@@ -430,7 +399,7 @@ function TimelineNode({
               />
             </CollapsibleTrigger>
             <CollapsibleContent className="mt-2">
-              <Detail detail={step.detail} thresholds={thresholds} />
+              <Detail detail={step.detail} />
             </CollapsibleContent>
           </Collapsible>
         ) : null}
@@ -458,11 +427,9 @@ function Stat({
 
 function LogDialogBody({
   log,
-  thresholds,
   bodyRef,
 }: {
   log: AssessmentLogData
-  thresholds: Thresholds
   bodyRef: RefObject<HTMLDivElement | null>
 }) {
   const end = log.endedAt
@@ -521,8 +488,8 @@ function LogDialogBody({
               AI hanya memberi nilai dan menulis alasannya.
             </span>{' '}
             <span className="text-muted-foreground">
-              Skor, cek fokus, dan kategori dihitung sistem dengan aturan yang
-              sama untuk semua proposal. Garis di bawah tiap langkah menunjukkan
+              Skor, cek fokus, dan grade dihitung sistem dengan aturan yang sama
+              untuk semua proposal. Garis di bawah tiap langkah menunjukkan
               porsinya dari seluruh waktu penilaian.
             </span>
           </p>
@@ -534,7 +501,6 @@ function LogDialogBody({
               step={step}
               last={index === log.steps.length - 1}
               totalMs={log.durationMs}
-              thresholds={thresholds}
             />
           ))}
         </ol>
@@ -558,7 +524,6 @@ function LogDialogBody({
                   step={step}
                   last={index === log.after.length - 1}
                   totalMs={null}
-                  thresholds={thresholds}
                 />
               ))}
             </ol>
@@ -591,11 +556,9 @@ const LogContext = createContext<(() => void) | null>(null)
  */
 export function AssessmentLogProvider({
   log,
-  thresholds,
   children,
 }: {
   log: AssessmentLogData | null
-  thresholds: Thresholds
   children: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
@@ -623,11 +586,7 @@ export function AssessmentLogProvider({
             initialFocus={bodyRef}
             className="max-h-[92svh] max-sm:h-svh max-sm:max-h-svh max-sm:max-w-full max-sm:rounded-none sm:max-w-3xl"
           >
-            <LogDialogBody
-              log={log}
-              thresholds={thresholds}
-              bodyRef={bodyRef}
-            />
+            <LogDialogBody log={log} bodyRef={bodyRef} />
           </DialogContent>
         </Dialog>
       ) : null}

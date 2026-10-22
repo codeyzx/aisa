@@ -9,11 +9,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { CRITERION_LABEL } from '@/features/aisa/aisa.labels'
 import { CRITERIA, type Rules } from '@/features/aisa/aisa.schema'
-import { cn } from '@/lib/utils'
 
-import { CRITERION_COLOR } from '../../_components/badges'
+import { CriterionName } from './criterion-name'
 
 const LEVELS = ['1', '3', '5'] as const
 
@@ -61,16 +59,10 @@ export function AnchorsCard({
               {CRITERIA.map((c) => (
                 <tr key={c} className="align-top">
                   <td className="px-3 py-2.5 font-medium">
-                    <span className="flex items-center gap-2">
-                      <span
-                        aria-hidden
-                        className={cn(
-                          'size-2.5 shrink-0 rounded-[3px]',
-                          CRITERION_COLOR[c],
-                        )}
-                      />
-                      {CRITERION_LABEL[c]}
-                    </span>
+                    <CriterionName
+                      criterion={c}
+                      className="[&>span:last-child]:whitespace-normal"
+                    />
                   </td>
                   {LEVELS.map((level) => (
                     <td

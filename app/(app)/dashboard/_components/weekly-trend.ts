@@ -13,28 +13,28 @@ export const TREND_DAYS = TREND_WEEKS * 7 * 2
 export interface WeekPoint {
   minggu: string
   total: number
-  sangatCocok: number
+  sangatLayak: number
 }
 
 export interface WeeklyTrend {
   /** Weeks shown — fewer than `TREND_WEEKS` while the record is younger. */
   weeks: number
   points: WeekPoint[]
-  current: { total: number; sangatCocok: number }
+  current: { total: number; sangatLayak: number }
   /** The same span just before, or `null` when the record does not reach it. */
-  previous: { total: number; sangatCocok: number } | null
+  previous: { total: number; sangatLayak: number } | null
   /** First recorded date when the record is younger than the window. */
   recordedSince: string | null
 }
 
 const sumWeeks = (list: WeekPoint[]) => ({
   total: list.reduce((s, p) => s + p.total, 0),
-  sangatCocok: list.reduce((s, p) => s + p.sangatCocok, 0),
+  sangatLayak: list.reduce((s, p) => s + p.sangatLayak, 0),
 })
 
 /**
  * Weekly totals from `dailyStats`, newest week ending today (WIB). "Sangat
- * cocok" is the AI category at scoring time that `dailyStats` stores, not a
+ * layak" is the AI grade at scoring time that `dailyStats` stores, not a
  * later correction. Weeks before recording began are left out rather than drawn
  * as zero, so a young record never reads as a quiet quarter.
  */
@@ -50,8 +50,8 @@ export function weeklyTrend(
     return {
       minggu: dayLabel(slice[0]?.date ?? ''),
       total: slice.reduce((sum, d) => sum + (d.stats?.proposalsIn ?? 0), 0),
-      sangatCocok: slice.reduce(
-        (sum, d) => sum + (d.stats?.byCategory.sangat_cocok ?? 0),
+      sangatLayak: slice.reduce(
+        (sum, d) => sum + (d.stats?.byCategory.sangat_layak ?? 0),
         0,
       ),
     }

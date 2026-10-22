@@ -8,35 +8,49 @@ import {
 import { Fragment } from 'react'
 
 import { Card } from '@/components/ui/card'
-import type { Rules } from '@/features/aisa/aisa.schema'
+import {
+  CATEGORY_LABEL,
+  CRITERION_LETTER,
+  CRITERION_SHORT,
+  gradeBands,
+} from '@/features/aisa/aisa.labels'
+import { CRITERIA, type Rules } from '@/features/aisa/aisa.schema'
 import { cn } from '@/lib/utils'
 
 import { num, toPercent } from './helpers'
 import { criterionPoints } from './scoring'
 
-export function HowItWorks({ rules }: { rules: Pick<Rules, 'weights'> }) {
-  const tim = toPercent(rules.weights.tim)
+export function HowItWorks({
+  rules,
+}: {
+  rules: Pick<Rules, 'weights' | 'thresholds'>
+}) {
+  const manajemen = toPercent(rules.weights.manajemen)
+  const criteria = CRITERIA.map(
+    (c) => `${CRITERION_LETTER[c]} ${CRITERION_SHORT[c].toLowerCase()}`,
+  ).join(', ')
+  const top = gradeBands(rules.thresholds)[0]!
   const steps = [
     {
       icon: FileSearchIcon,
       by: 'AI',
       title: 'AI membaca pitch deck',
-      text: 'AI memberi nilai 1–5 untuk tim, pasar, produk, traksi, dan model bisnis. Setiap nilai disertai kutipan dan nomor halaman sebagai bukti.',
+      text: `AI memberi nilai 1–5 untuk lima kriteria: ${criteria}. Setiap nilai disertai kutipan dan nomor halaman sebagai bukti.`,
       result: '5 nilai, skala 1–5',
     },
     {
       icon: CalculatorIcon,
       by: 'Sistem',
       title: 'Sistem menghitung skor',
-      text: `Nilai 1 dihitung 0 poin dan nilai 5 penuh, dikalikan bobot kriterianya, lalu dijumlahkan. Contoh: nilai Tim 4 × bobot ${num(tim)}% = ${num(criterionPoints(rules.weights.tim, 4))} poin.`,
+      text: `Nilai 1 dihitung 0 poin dan nilai 5 penuh, dikalikan bobot kriterianya, lalu dijumlahkan. Contoh: nilai Tim manajemen 4 × bobot ${num(manajemen)}% = ${num(criterionPoints(rules.weights.manajemen, 4))} poin.`,
       result: 'Skor 0–100',
     },
     {
       icon: TagsIcon,
       by: 'Sistem',
-      title: 'Sistem menentukan kategori',
-      text: 'Skor dibandingkan dengan batas kategori, lalu dicek kecocokannya dengan fokus investasi Anda: sektor, tahap, dan dana.',
-      result: '1 dari 4 kategori',
+      title: 'Sistem menentukan grade',
+      text: `Grade ditentukan oleh skor saja, misalnya skor ${top.text} berarti ${CATEGORY_LABEL[top.category]}. Fokus investasi (sektor, tahap, dana) dicek terpisah: proposal di luar fokus tetap mendapat grade-nya, tetapi ditandai “Di luar fokus” sebagai prioritas rendah.`,
+      result: '1 dari 5 grade, plus tanda fokus',
     },
   ]
 
@@ -104,11 +118,12 @@ export function HowItWorks({ rules }: { rules: Pick<Rules, 'weights'> }) {
         <ShieldCheckIcon className="mt-0.5 size-4 shrink-0 text-success" />
         <p className="text-sm leading-relaxed">
           <span className="font-medium">
-            AI tidak menentukan kategori dan tidak mengambil keputusan.
+            AI tidak menentukan grade dan tidak mengambil keputusan.
           </span>{' '}
           <span className="text-muted-foreground">
-            Kategori dihitung sistem dari aturan di halaman ini. Keputusan
-            undang, pantau, atau arsipkan tetap di tangan Anda.
+            Grade dihitung sistem dari aturan di halaman ini. Aksi di samping
+            grade hanya saran; keputusan undang, pantau, atau arsipkan tetap di
+            tangan Anda.
           </span>
         </p>
       </div>

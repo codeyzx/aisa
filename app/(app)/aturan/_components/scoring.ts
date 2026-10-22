@@ -1,5 +1,5 @@
 // A TypeScript mirror of `services/api/aisa/scoring.py` — the formula the AI
-// worker uses to turn five 1–5 values into a score and a kategori. The Python
+// worker uses to turn five 1–5 values (criteria A–E) into a score and a grade. The Python
 // module is the source of truth; this copy exists only so Aturan penilaian can
 // show an example calculation and SIMULATE a draft rule set against the
 // proposals already scored. Nothing here is ever written back: a saved rule
@@ -13,8 +13,8 @@ import {
   type Category,
   type Criterion,
   type Proposal,
+  isOutsideFocus,
   type Rules,
-  showsQualityOutsideFocus,
 } from '@/features/aisa/aisa.schema'
 
 export type Values = Record<Criterion, number>
@@ -31,14 +31,15 @@ export interface ScoredProposal {
   sector: string | null
   stage: string | null
   fundingAskIdr: number | null
-  /** The kategori the manager sees (a koreksi wins over the AI's). */
+  /** The grade the manager sees (a koreksi wins over the AI's). */
   category: Category
   /**
    * Whether a manager koreksi holds `category`. A rule change only moves the
-   * AI's kategori, so a corrected proposal keeps the kategori the manager sees.
+   * AI's grade, so a corrected proposal keeps the grade the manager sees.
    */
   corrected: boolean
-  qualityOutsideFocus: boolean
+  /** Failed a fit check when assessed ("Di luar fokus"); it never changes the grade. */
+  outsideFocus: boolean
   rulesVersion: number
 }
 
@@ -97,26 +98,19 @@ export function fitCheck(
   return { sector, stage, funding, passed: sector && stage && funding }
 }
 
-/** `[kategori, qualityOutsideFocus]`, exactly as `categorize` decides. */
-export function categorize(
-  score: number,
-  values: Values,
-  fitPassed: boolean,
-  t: Rules['thresholds'],
-): [Category, boolean] {
-  if (!fitPassed) return ['tidak_cocok', score >= t.qualityOutsideFocus]
-  if (score >= t.sangatCocok && Math.min(...CRITERIA.map((c) => values[c])) > 1)
-    return ['sangat_cocok', false]
-  if (score >= t.cocok) return ['cocok', false]
-  if (score >= t.kurangCocok) return ['kurang_cocok', false]
-  return ['tidak_cocok', false]
+/** The grade from the score alone, exactly as `categorize` decides: fit does not change it. */
+export function categorize(score: number, t: Rules['thresholds']): Category {
+  if (score >= t.sangatLayak) return 'sangat_layak'
+  if (score >= t.layakBersyarat) return 'layak_bersyarat'
+  if (score >= t.perluPenyesuaian) return 'perlu_penyesuaian'
+  if (score >= t.risikoTinggi) return 'risiko_tinggi'
+  return 'tidak_layak'
 }
 
 export interface Evaluation {
   score: number
   fit: FitResult
   category: Category
-  qualityOutsideFocus: boolean
 }
 
 export function evaluate(
@@ -124,14 +118,11 @@ export function evaluate(
   rules: ScoringRules,
 ): Evaluation {
   const score = computeScore(rules.weights, p.values)
-  const fit = fitCheck(p, rules.fit)
-  const [category, qualityOutsideFocus] = categorize(
+  return {
     score,
-    p.values,
-    fit.passed,
-    rules.thresholds,
-  )
-  return { score, fit, category, qualityOutsideFocus }
+    fit: fitCheck(p, rules.fit),
+    category: categorize(score, rules.thresholds),
+  }
 }
 
 export const rescorable = (
@@ -151,22 +142,22 @@ export interface CategoryMove {
 export interface Simulation {
   /** How many proposals could be re-scored (all five values present). */
   total: number
-  /** The AI kategori under the current rules — not the kategori a koreksi set. */
+  /** The AI grade under the current rules — not the grade a koreksi set. */
   before: CategoryCounts
-  /** The AI kategori under the draft rules. */
+  /** The AI grade under the draft rules. */
   after: CategoryCounts
   moves: CategoryMove[]
   up: number
   down: number
-  /** Moves whose proposal a koreksi holds: the manager still sees the corrected kategori. */
+  /** Moves whose proposal a koreksi holds: the manager still sees the corrected grade. */
   held: number
 }
 
 /**
  * Re-score every proposal under the current and the draft rules and compare
- * the AI's kategori. Both sides are recomputed, so a proposal scored under an
+ * the AI's grade. Both sides are recomputed, so a proposal scored under an
  * older version is compared like for like rather than against its stored
- * kategori, and a koreksi is left out of both sides: rules never rewrite it.
+ * grade, and a koreksi is left out of both sides: rules never rewrite it.
  */
 const rank = (c: Category) => CATEGORIES.indexOf(c)
 
@@ -219,7 +210,7 @@ export function toScored(p: Proposal): ScoredProposal | null {
     fundingAskIdr: p.profile?.fundingAskIdr ?? null,
     category,
     corrected: p.correction != null,
-    qualityOutsideFocus: showsQualityOutsideFocus(p),
+    outsideFocus: isOutsideFocus(p),
     rulesVersion: a.rulesVersion,
   }
 }

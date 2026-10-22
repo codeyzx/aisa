@@ -77,7 +77,7 @@ export async function respondToProposalAction(
   })
 }
 
-/** Koreksi kategori — the reason is required, and the AI score stays stored. */
+/** Koreksi grade — the reason is required, and the AI score stays stored. */
 export async function correctCategoryAction(
   proposalId: string,
   category: Category,
@@ -175,11 +175,11 @@ export async function getAssessmentProgressAction(
 }
 
 const criterionNumbers = z.object({
-  tim: z.number().finite(),
-  pasar: z.number().finite(),
-  produk: z.number().finite(),
-  traksi: z.number().finite(),
-  bisnis: z.number().finite(),
+  manajemen: z.number().finite(),
+  kinerja: z.number().finite(),
+  risiko: z.number().finite(),
+  rencana: z.number().finite(),
+  dampak: z.number().finite(),
 })
 const anchor = z.object({
   '1': z.string().trim().min(1),
@@ -198,11 +198,11 @@ const RulesInputSchema = z
       'Total bobot harus 100%',
     ),
     anchors: z.object({
-      tim: anchor,
-      pasar: anchor,
-      produk: anchor,
-      traksi: anchor,
-      bisnis: anchor,
+      manajemen: anchor,
+      kinerja: anchor,
+      risiko: anchor,
+      rencana: anchor,
+      dampak: anchor,
     }),
     fit: z
       .object({
@@ -217,14 +217,17 @@ const RulesInputSchema = z
       ),
     thresholds: z
       .object({
-        sangatCocok: z.number().min(0).max(100),
-        cocok: z.number().min(0).max(100),
-        kurangCocok: z.number().min(0).max(100),
-        qualityOutsideFocus: z.number().min(0).max(100),
+        sangatLayak: z.number().gt(0).max(100),
+        layakBersyarat: z.number().gt(0).max(100),
+        perluPenyesuaian: z.number().gt(0).max(100),
+        risikoTinggi: z.number().gt(0).max(100),
       })
       .refine(
-        (t) => t.sangatCocok > t.cocok && t.cocok > t.kurangCocok,
-        'Batas kategori harus menurun: sangat cocok > cocok > kurang cocok',
+        (t) =>
+          t.sangatLayak > t.layakBersyarat &&
+          t.layakBersyarat > t.perluPenyesuaian &&
+          t.perluPenyesuaian > t.risikoTinggi,
+        'Batas grade harus menurun: Sangat layak > Layak bersyarat > Perlu penyesuaian > Risiko tinggi',
       ),
     models: z
       .object({

@@ -18,7 +18,6 @@ function proposal(
     consent: true,
     status: category ? 'dinilai' : 'perlu_dicek_manual',
     pageCount: 1,
-    qualityOutsideFocus: false,
     category,
     effectiveCategory: extra.correction?.category ?? category,
     responded: extra.response != null,
@@ -43,16 +42,18 @@ const response = {
 
 describe('correctionDirection', () => {
   it('reads the CATEGORIES scale best first', () => {
-    expect(correctionDirection('kurang_cocok', 'cocok')).toBe('naik')
-    expect(correctionDirection('sangat_cocok', 'tidak_cocok')).toBe('turun')
-    expect(correctionDirection('cocok', 'cocok')).toBeNull()
-    expect(correctionDirection(null, 'cocok')).toBeNull()
+    expect(correctionDirection('perlu_penyesuaian', 'layak_bersyarat')).toBe(
+      'naik',
+    )
+    expect(correctionDirection('sangat_layak', 'tidak_layak')).toBe('turun')
+    expect(correctionDirection('layak_bersyarat', 'layak_bersyarat')).toBeNull()
+    expect(correctionDirection(null, 'layak_bersyarat')).toBeNull()
   })
 })
 
 describe('calibrate', () => {
   it('reports nothing reviewed as no rate, not 0%', () => {
-    const result = calibrate([proposal('a', 'cocok')])
+    const result = calibrate([proposal('a', 'layak_bersyarat')])
     expect(result).toMatchObject({
       reviewed: 0,
       agreed: 0,
@@ -63,18 +64,18 @@ describe('calibrate', () => {
 
   it('counts a tanggapan or a koreksi as reviewed, and only a changed kategori as disagreement', () => {
     const result = calibrate([
-      proposal('unreviewed', 'cocok'),
-      proposal('agreed', 'sangat_cocok', { response }),
-      proposal('up', 'kurang_cocok', {
-        correction: correction('cocok', '2026-10-03T00:00:00Z'),
+      proposal('unreviewed', 'layak_bersyarat'),
+      proposal('agreed', 'sangat_layak', { response }),
+      proposal('up', 'perlu_penyesuaian', {
+        correction: correction('layak_bersyarat', '2026-10-03T00:00:00Z'),
       }),
-      proposal('down', 'sangat_cocok', {
+      proposal('down', 'sangat_layak', {
         response,
-        correction: correction('cocok', '2026-10-04T00:00:00Z'),
+        correction: correction('layak_bersyarat', '2026-10-04T00:00:00Z'),
       }),
       // A koreksi back to the AI's own kategori is agreement.
-      proposal('same', 'cocok', {
-        correction: correction('cocok', '2026-10-05T00:00:00Z'),
+      proposal('same', 'layak_bersyarat', {
+        correction: correction('layak_bersyarat', '2026-10-05T00:00:00Z'),
       }),
     ])
     expect(result.reviewed).toBe(4)
@@ -86,11 +87,13 @@ describe('calibrate', () => {
   })
 
   it('isCorrected ignores a koreksi equal to the AI kategori', () => {
-    expect(isCorrected({ category: 'cocok', correction: null })).toBe(false)
+    expect(isCorrected({ category: 'layak_bersyarat', correction: null })).toBe(
+      false,
+    )
     expect(
       isCorrected({
-        category: 'cocok',
-        correction: correction('cocok', '2026-10-05T00:00:00Z'),
+        category: 'layak_bersyarat',
+        correction: correction('layak_bersyarat', '2026-10-05T00:00:00Z'),
       }),
     ).toBe(false)
   })

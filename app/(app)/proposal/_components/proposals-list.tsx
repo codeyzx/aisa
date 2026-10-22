@@ -10,7 +10,6 @@ import {
   InboxIcon,
   SearchIcon,
   XIcon,
-  GemIcon,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useQueryStates } from 'nuqs'
@@ -27,8 +26,9 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import {
+  CATEGORY_ACTION,
   CATEGORY_LABEL,
-  QUALITY_OUTSIDE_FOCUS_LABEL,
+  OUTSIDE_FOCUS_LABEL,
   sectorLabel,
   STATUS_LABEL,
 } from '@/features/aisa/aisa.labels'
@@ -36,16 +36,18 @@ import {
   CATEGORIES,
   PROPOSAL_STATUSES,
   type Category,
-  type Rules,
+  type Thresholds,
 } from '@/features/aisa/aisa.schema'
+import { compareByGrade } from '@/features/aisa/aisa.ranking'
 import { formatNumber, formatScore } from '@/lib/format/number'
 import { formatRupiah } from '@/lib/format/currency'
 import { cn } from '@/lib/utils'
 
 import {
-  CategoryBadge,
   DECISION_LABEL,
   DecisionBadge,
+  GradeBadge,
+  OutsideFocusBadge,
   ScoreBar,
   scoreTone,
   StatusBadge,
@@ -76,11 +78,16 @@ const TABS: { value: Tanggapan; label: string }[] = [
   { value: 'arsipkan', label: DECISION_LABEL.arsipkan },
 ]
 
+const TOP_GRADES_LABEL = 'Sangat layak + Layak bersyarat'
 const CATEGORY_OPTIONS: Record<string, string> = {
-  semua: 'Semua kategori',
+  semua: 'Semua grade',
   ...CATEGORY_LABEL,
-  atas: 'Sangat cocok + cocok',
-  luar_fokus: QUALITY_OUTSIDE_FOCUS_LABEL,
+  atas: TOP_GRADES_LABEL,
+}
+const FOCUS_OPTIONS: Record<string, string> = {
+  semua: 'Semua fokus',
+  '0': 'Sesuai fokus',
+  '1': OUTSIDE_FOCUS_LABEL,
 }
 const STATUS_OPTIONS: Record<string, string> = {
   semua: 'Semua status',
@@ -100,9 +107,12 @@ function matchesFilters(row: ProposalRow, f: ProposalListParams) {
   return (
     (!f.kategori ||
       (f.kategori === 'atas'
-        ? row.category === 'sangat_cocok' || row.category === 'cocok'
+        ? row.category === 'sangat_layak' || row.category === 'layak_bersyarat'
         : row.category === f.kategori)) &&
-    (!f.luarFokus || row.outsideFocus) &&
+    // "Sesuai fokus" is a fit check that passed: a proposal with no fit yet
+    // (queued, or flagged for a manual check) is in neither focus filter.
+    (!f.luarFokus ||
+      (f.luarFokus === '1' ? row.outsideFocus : row.fit?.passed === true)) &&
     (!f.status || row.status === f.status) &&
     (!f.sektor ||
       (row.sector !== null &&
@@ -114,9 +124,21 @@ function matchesFilters(row: ProposalRow, f: ProposalListParams) {
   )
 }
 
-// Rows without the sorted value (no score yet, no funding ask) stay at the
-// bottom in either direction: "unknown" is not the lowest score.
+// The list's rows in the shape the shared ranking reads; it reads only the
+// grade, the fit and the score, so a row carries all it needs.
+const ranked = (row: ProposalRow) =>
+  ({
+    effectiveCategory: row.category,
+    fit: row.fit,
+    assessment: row.score === null ? null : { score: row.score },
+  }) as Parameters<typeof compareByGrade>[0]
+
+// Rows without the sorted value (no grade or score yet, no funding ask) stay at
+// the bottom in either direction: "unknown" is not the lowest score.
 function compareRows(a: ProposalRow, b: ProposalRow, key: SortKey) {
+  // Ascending is "worse first": the lower grade, then out of focus, then the
+  // lower score — so the natural (descending) order puts the best first.
+  if (key === 'grade') return compareByGrade(ranked(b), ranked(a))
   if (key === 'nama') return a.name.localeCompare(b.name, 'id')
   if (key === 'masuk') return a.createdAt.getTime() - b.createdAt.getTime()
   const field = key === 'skor' ? 'score' : 'fundingAskIdr'
@@ -125,7 +147,13 @@ function compareRows(a: ProposalRow, b: ProposalRow, key: SortKey) {
 
 function sortRows(rows: ProposalRow[], key: SortKey, desc: boolean) {
   const field =
-    key === 'skor' ? 'score' : key === 'dana' ? 'fundingAskIdr' : null
+    key === 'skor'
+      ? 'score'
+      : key === 'dana'
+        ? 'fundingAskIdr'
+        : key === 'grade'
+          ? 'category'
+          : null
   return rows.toSorted((a, b) => {
     if (field) {
       if (a[field] === null && b[field] !== null) return 1
@@ -199,10 +227,7 @@ export function ProposalsList({
   windowLimit,
 }: {
   rows: ProposalRow[]
-  thresholds: Pick<
-    Rules['thresholds'],
-    'sangatCocok' | 'cocok' | 'kurangCocok'
-  > | null
+  thresholds: Thresholds | null
   canRespond: boolean
   /** Set when the list hit the repo's window, so older proposals are not loaded. */
   windowLimit: number | null
@@ -211,7 +236,7 @@ export function ProposalsList({
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const selectAllId = useId()
 
-  const sortKey = filters.urut ?? 'skor'
+  const sortKey = filters.urut ?? 'grade'
   const desc = filters.arah
     ? filters.arah === 'turun'
     : naturalDescending(sortKey)
@@ -266,10 +291,9 @@ export function ProposalsList({
     filters.q?.trim(),
   )
 
-  // The API answers a whole category, so the box is offered only when the
-  // category is the one narrowing filter: with a sector, status, search or the
-  // luar-fokus mark on top, its count and its action would reach proposals the
-  // table hides.
+  // The API answers a whole grade, so the box is offered only when the grade is
+  // the one narrowing filter: with a sector, status, search or the focus filter
+  // on top, its count and its action would reach proposals the table hides.
   const bulkCategory: Category | null =
     filters.kategori &&
     filters.kategori !== 'atas' &&
@@ -284,18 +308,20 @@ export function ProposalsList({
         .length
     : 0
 
-  const categoryValue = filters.luarFokus
-    ? 'luar_fokus'
-    : (filters.kategori ?? 'semua')
-
   function setCategory(value: string | null) {
     if (value === null) return
     void setFilters({
       kategori:
-        value === 'semua' || value === 'luar_fokus'
-          ? null
-          : (value as ProposalListParams['kategori']),
-      luarFokus: value === 'luar_fokus' ? '1' : null,
+        value === 'semua' ? null : (value as ProposalListParams['kategori']),
+      hal: null,
+    })
+  }
+
+  function setFocus(value: string | null) {
+    if (value === null) return
+    void setFilters({
+      luarFokus:
+        value === 'semua' ? null : (value as ProposalListParams['luarFokus']),
       hal: null,
     })
   }
@@ -303,7 +329,7 @@ export function ProposalsList({
   function onSort(key: SortKey) {
     const nextDesc = key === sortKey ? !desc : naturalDescending(key)
     void setFilters({
-      urut: key === 'skor' ? null : key,
+      urut: key === 'grade' ? null : key,
       arah:
         nextDesc === naturalDescending(key)
           ? null
@@ -343,7 +369,9 @@ export function ProposalsList({
         'Sektor',
         'Tahap',
         'Skor',
-        'Kategori',
+        'Grade',
+        'Aksi',
+        'Di luar fokus',
         'Status',
         'Tanggapan',
         'Dana dicari',
@@ -355,6 +383,8 @@ export function ProposalsList({
         row.stage ?? '',
         row.score ?? '',
         row.category ? CATEGORY_LABEL[row.category] : '',
+        row.category ? CATEGORY_ACTION[row.category] : '',
+        row.fit ? (row.outsideFocus ? 'Ya' : 'Tidak') : '',
         STATUS_LABEL[row.status],
         DECISION_LABEL[row.response ?? 'baru'],
         row.fundingAskIdr ?? '',
@@ -465,27 +495,43 @@ export function ProposalsList({
         </label>
         <Select
           items={CATEGORY_OPTIONS}
-          value={categoryValue}
+          value={filters.kategori ?? 'semua'}
           onValueChange={setCategory}
         >
           <SelectTrigger
-            className="h-9 w-full bg-card sm:w-48"
-            aria-label="Kategori"
+            className="h-9 w-full bg-card sm:w-56"
+            aria-label="Grade"
           >
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="semua">Semua kategori</SelectItem>
+            <SelectItem value="semua">Semua grade</SelectItem>
             {CATEGORIES.map((value) => (
               <SelectItem key={value} value={value}>
                 {CATEGORY_LABEL[value]}
               </SelectItem>
             ))}
             <SelectSeparator />
-            <SelectItem value="atas">Sangat cocok + cocok</SelectItem>
-            <SelectItem value="luar_fokus">
-              {QUALITY_OUTSIDE_FOCUS_LABEL}
-            </SelectItem>
+            <SelectItem value="atas">{TOP_GRADES_LABEL}</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          items={FOCUS_OPTIONS}
+          value={filters.luarFokus ?? 'semua'}
+          onValueChange={setFocus}
+        >
+          <SelectTrigger
+            className="h-9 w-full bg-card sm:w-40"
+            aria-label="Fokus investasi"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(FOCUS_OPTIONS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select
@@ -574,8 +620,9 @@ export function ProposalsList({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[920px] border-collapse text-[13.5px]">
             <caption className="sr-only">
-              Daftar proposal — startup, sektor, kategori, status, dana dicari,
-              tanggal masuk, skor
+              Daftar proposal — startup, sektor, grade, status, dana dicari,
+              tanggal masuk, skor. Urutan bawaan: grade terbaik dulu, lalu yang
+              sesuai fokus, lalu skor tertinggi.
             </caption>
             <thead>
               <tr className="border-b bg-muted/50 text-left text-xs font-medium text-muted-foreground">
@@ -603,7 +650,15 @@ export function ProposalsList({
                   />
                 </th>
                 <th className="px-3 py-2.5 font-medium">Sektor</th>
-                <th className="px-3 py-2.5 font-medium">Kategori</th>
+                <th className="px-3 py-2.5 font-medium">
+                  <SortHeader
+                    label="Grade"
+                    column="grade"
+                    active={sortKey === 'grade'}
+                    desc={desc}
+                    onSort={onSort}
+                  />
+                </th>
                 <th className="px-3 py-2.5 font-medium">Status</th>
                 <th className="px-3 py-2.5 text-right font-medium">
                   <SortHeader
@@ -717,20 +772,25 @@ export function ProposalsList({
                     <td className="px-3 py-3">
                       <div className="flex flex-col items-start gap-1">
                         {row.category ? (
-                          <CategoryBadge category={row.category} />
+                          <>
+                            <GradeBadge category={row.category} />
+                            <span className="text-[11px] whitespace-nowrap text-muted-foreground">
+                              {CATEGORY_ACTION[row.category]}
+                            </span>
+                            {row.corrected ? (
+                              <span className="text-[11px] font-medium whitespace-nowrap text-muted-foreground">
+                                dikoreksi
+                              </span>
+                            ) : null}
+                          </>
                         ) : (
                           <StatusBadge status={row.status} />
                         )}
-                        {row.corrected ? (
-                          <span className="text-[11px] font-medium whitespace-nowrap text-muted-foreground">
-                            dikoreksi
-                          </span>
-                        ) : null}
                         {row.outsideFocus ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-medium whitespace-nowrap text-foreground">
-                            <GemIcon aria-hidden className="size-3" />
-                            {QUALITY_OUTSIDE_FOCUS_LABEL}
-                          </span>
+                          <OutsideFocusBadge
+                            fit={row.fit}
+                            className="relative z-10"
+                          />
                         ) : null}
                       </div>
                     </td>

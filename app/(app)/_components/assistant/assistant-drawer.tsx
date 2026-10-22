@@ -48,13 +48,13 @@ function suggestionsFor([first, second]: string[]): Suggestion[] {
   return [
     {
       icon: SparklesIcon,
-      title: 'Fintech sangat cocok',
-      question: 'Fintech yang sangat cocok',
+      title: 'Fintech sangat layak',
+      question: 'Fintech yang sangat layak',
     },
     {
       icon: ArchiveIcon,
-      title: 'Berkualitas, di luar fokus',
-      question: 'Yang berkualitas tapi di luar fokus',
+      title: 'Di luar fokus',
+      question: 'Proposal bagus yang di luar fokus',
     },
     ...(first
       ? [
@@ -260,7 +260,7 @@ export function AssistantDrawer({
                   {context.unresponded}
                 </dd>
                 <dt className="text-muted-foreground">
-                  Sangat cocok, menunggu
+                  Sangat layak, menunggu
                 </dt>
                 <dd className="font-semibold tabular-nums">
                   {context.topUnresponded}

@@ -1,4 +1,4 @@
-import { ArrowRightIcon, GemIcon, PencilIcon } from 'lucide-react'
+import { ArrowRightIcon, CompassIcon, PencilIcon } from 'lucide-react'
 import Link from 'next/link'
 
 import { Button, buttonVariants } from '@/components/ui/button'
@@ -11,15 +11,15 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import {
-  CATEGORY_LABEL,
-  QUALITY_OUTSIDE_FOCUS_LABEL,
+  CATEGORY_ACTION,
+  OUTSIDE_FOCUS_LABEL,
 } from '@/features/aisa/aisa.labels'
 import { CATEGORIES, type Rules } from '@/features/aisa/aisa.schema'
 import { cn } from '@/lib/utils'
 
-import { CATEGORY_DOT } from '../../_components/badges'
+import { GradeBadge } from '../../_components/badges'
 
-import { categoryRule, num } from './helpers'
+import { categoryRule } from './helpers'
 import { Scale } from './scale'
 import { emptyCounts, type ScoredProposal } from './scoring'
 
@@ -35,15 +35,15 @@ export function ThresholdsCard({
   const counts = emptyCounts()
   for (const p of proposals) counts[p.category] += 1
   const total = proposals.length
-  const quality = proposals.filter((p) => p.qualityOutsideFocus).length
+  const outside = proposals.filter((p) => p.outsideFocus).length
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-semibold">Batas kategori</CardTitle>
+        <CardTitle className="font-semibold">Batas grade</CardTitle>
         <CardDescription>
-          Skor menentukan batas bawah tiap kategori. Proposal yang gagal salah
-          satu cek fokus masuk Tidak cocok.
+          Skor minimal untuk tiap grade. Grade hanya ditentukan oleh skor; cek
+          fokus tidak mengubahnya.
         </CardDescription>
         {onEdit ? (
           <CardAction>
@@ -61,13 +61,13 @@ export function ThresholdsCard({
               Sebaran skor {total} proposal yang sudah dinilai
             </p>
             <p className="text-xs text-muted-foreground">
-              Warna batang = kategori yang diterima proposal
+              Warna batang = grade yang diterima proposal
             </p>
           </div>
           <Scale thresholds={rules.thresholds} points={proposals} />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {CATEGORIES.map((category) => {
             const { range, rule } = categoryRule(category, rules.thresholds)
             const count = counts[category]
@@ -77,23 +77,17 @@ export function ThresholdsCard({
                 href={`/proposal?kategori=${category}`}
                 className="group flex flex-col gap-3 rounded-xl border p-4 transition-colors outline-none hover:border-primary/40 hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50"
               >
-                <div className="flex items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 font-semibold">
-                    <span
-                      aria-hidden
-                      className={cn(
-                        'size-2.5 rounded-full',
-                        CATEGORY_DOT[category],
-                      )}
-                    />
-                    {CATEGORY_LABEL[category]}
-                  </span>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <GradeBadge category={category} />
                   <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-medium tabular-nums">
                     {range}
                   </span>
                 </div>
-                <p className="text-[13px] leading-snug text-muted-foreground">
-                  {rule}
+                <p className="text-[13px] leading-snug">
+                  <span className="font-medium">
+                    {CATEGORY_ACTION[category]}
+                  </span>
+                  <span className="block text-muted-foreground">{rule}</span>
                 </p>
                 <div className="mt-auto flex items-end justify-between gap-2 border-t pt-3">
                   <p>
@@ -117,15 +111,16 @@ export function ThresholdsCard({
 
         <div className="flex flex-col gap-3 rounded-xl bg-muted/50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
-            <GemIcon className="mt-0.5 size-4 shrink-0 text-primary" />
+            <CompassIcon className="mt-0.5 size-4 shrink-0 text-primary" />
             <p className="text-[13px] leading-relaxed">
               <span className="font-medium">
-                Proposal bagus di luar fokus tidak hilang.
+                Proposal di luar fokus tetap mendapat grade.
               </span>{' '}
               <span className="text-muted-foreground">
-                Skor {num(rules.thresholds.qualityOutsideFocus)} ke atas yang
-                gagal salah satu cek fokus diberi tanda “
-                {QUALITY_OUTSIDE_FOCUS_LABEL}”. Saat ini ada {quality} proposal.
+                Proposal yang gagal salah satu cek fokus (sektor, tahap, atau
+                dana) diberi tanda “{OUTSIDE_FOCUS_LABEL}”: prioritas rendah
+                karena risikonya lebih tinggi untuk portofolio. Saat ini ada{' '}
+                {outside} proposal.
               </span>
             </p>
           </div>

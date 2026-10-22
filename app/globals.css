@@ -28,23 +28,31 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
-  --color-criterion-tim: var(--criterion-tim);
-  --color-criterion-pasar: var(--criterion-pasar);
-  --color-criterion-produk: var(--criterion-produk);
-  --color-criterion-traksi: var(--criterion-traksi);
-  --color-criterion-bisnis: var(--criterion-bisnis);
+  --color-criterion-manajemen: var(--criterion-manajemen);
+  --color-criterion-kinerja: var(--criterion-kinerja);
+  --color-criterion-risiko: var(--criterion-risiko);
+  --color-criterion-rencana: var(--criterion-rencana);
+  --color-criterion-dampak: var(--criterion-dampak);
   --color-category-1: var(--category-1);
   --color-category-1-soft: var(--category-1-soft);
+  --color-category-1-fill: var(--category-1-fill);
+  --color-category-1-on: var(--category-1-on);
   --color-category-2: var(--category-2);
   --color-category-2-soft: var(--category-2-soft);
+  --color-category-2-fill: var(--category-2-fill);
+  --color-category-2-on: var(--category-2-on);
   --color-category-3: var(--category-3);
   --color-category-3-soft: var(--category-3-soft);
+  --color-category-3-fill: var(--category-3-fill);
+  --color-category-3-on: var(--category-3-on);
   --color-category-4: var(--category-4);
   --color-category-4-soft: var(--category-4-soft);
-  --color-category-1-fill: var(--category-1-fill);
-  --color-category-2-fill: var(--category-2-fill);
-  --color-category-3-fill: var(--category-3-fill);
   --color-category-4-fill: var(--category-4-fill);
+  --color-category-4-on: var(--category-4-on);
+  --color-category-5: var(--category-5);
+  --color-category-5-soft: var(--category-5-soft);
+  --color-category-5-fill: var(--category-5-fill);
+  --color-category-5-on: var(--category-5-on);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
@@ -96,28 +104,40 @@
   --chart-3: oklch(0.66 0.125 250);
   --chart-4: oklch(0.78 0.095 248);
   --chart-5: oklch(0.68 0.012 250);
-  /* Kriteria penilaian: lima rona di luar hijau/biru/kuning/merah kategori. Tiap isian ≥ 3:1 terhadap card; pasangan bertetangga tetap terpisah di bawah protan/deutan/tritan */
-  --criterion-tim: oklch(0.53 0.17 285);
-  --criterion-pasar: oklch(0.53 0.15 45);
-  --criterion-produk: oklch(0.62 0.11 220);
-  --criterion-traksi: oklch(0.65 0.145 115);
-  --criterion-bisnis: oklch(0.44 0.17 330);
-  /* Kategori kecocokan: hijau, biru, kuning amber, merah. --category-N untuk teks dan
-     kontras ≥ 4.5:1 di atas -soft maupun card (WCAG AA); --category-N-fill untuk bar, titik,
-     dan isian ≥ 3:1 di atas card. Kurang cocok lebih terang dari Tidak cocok, jadi tetap
-     terbedakan tanpa membedakan merah-hijau. */
-  --category-1: oklch(0.47 0.12 155);
-  --category-1-soft: oklch(0.95 0.04 155);
-  --category-1-fill: oklch(0.63 0.15 155);
-  --category-2: oklch(0.47 0.14 255);
-  --category-2-soft: oklch(0.95 0.03 255);
-  --category-2-fill: oklch(0.49 0.15 258);
-  --category-3: oklch(0.53 0.11 85);
-  --category-3-soft: oklch(0.95 0.06 90);
-  --category-3-fill: oklch(0.66 0.14 80);
-  --category-4: oklch(0.47 0.17 25);
-  --category-4-soft: oklch(0.95 0.03 25);
-  --category-4-fill: oklch(0.53 0.19 25);
+  /* Kriteria penilaian (A–E): lima rona yang berbeda satu sama lain dan dari rona grade.
+     Tiap isian ≥ 3:1 terhadap card, dan selalu tampil di samping nama kriterianya. */
+  --criterion-manajemen: oklch(0.53 0.17 285);
+  --criterion-kinerja: oklch(0.6 0.13 125);
+  --criterion-risiko: oklch(0.5 0.17 330);
+  --criterion-rencana: oklch(0.58 0.12 215);
+  --criterion-dampak: oklch(0.44 0.08 180);
+  /* Grade: 1 hijau (Sangat layak), 2 biru-teal (Layak bersyarat), 3 kuning amber (Perlu
+     penyesuaian), 4 oranye (Risiko tinggi), 5 merah (Tidak layak). --category-N untuk teks di
+     atas card maupun -soft (≥ 4.5:1, WCAG AA); --category-N-fill untuk badge, bar, titik, dan
+     isian (≥ 3:1 di atas card); --category-N-on untuk teks di atas -fill (≥ 4.5:1). Oranye
+     lebih terang dan lebih kuning dari merah, dan badge-nya memakai teks gelap sedangkan merah
+     memakai teks putih, jadi keduanya tidak tertukar. Warna tidak pernah jadi satu-satunya
+     petunjuk: tiap badge juga membawa ikon dan kata. */
+  --category-1: oklch(0.47 0.12 150);
+  --category-1-soft: oklch(0.95 0.04 150);
+  --category-1-fill: oklch(0.54 0.14 150);
+  --category-1-on: oklch(1 0 0);
+  --category-2: oklch(0.47 0.11 235);
+  --category-2-soft: oklch(0.95 0.03 235);
+  --category-2-fill: oklch(0.52 0.11 235);
+  --category-2-on: oklch(1 0 0);
+  --category-3: oklch(0.52 0.11 80);
+  --category-3-soft: oklch(0.96 0.06 90);
+  --category-3-fill: oklch(0.66 0.15 80);
+  --category-3-on: oklch(0.22 0.04 70);
+  --category-4: oklch(0.53 0.15 50);
+  --category-4-soft: oklch(0.95 0.045 55);
+  --category-4-fill: oklch(0.65 0.18 50);
+  --category-4-on: oklch(0.2 0.04 45);
+  --category-5: oklch(0.5 0.19 27);
+  --category-5-soft: oklch(0.95 0.03 25);
+  --category-5-fill: oklch(0.53 0.2 27);
+  --category-5-on: oklch(1 0 0);
   --success: oklch(0.48 0.12 155);
   --success-soft: oklch(0.94 0.035 155);
   --warning: oklch(0.5 0.1 75);
@@ -168,23 +188,31 @@
   --chart-3: oklch(0.54 0.135 255);
   --chart-4: oklch(0.4 0.115 258);
   --chart-5: oklch(0.48 0.012 250);
-  --criterion-tim: oklch(0.64 0.17 285);
-  --criterion-pasar: oklch(0.55 0.155 45);
-  --criterion-produk: oklch(0.64 0.115 220);
-  --criterion-traksi: oklch(0.64 0.145 115);
-  --criterion-bisnis: oklch(0.55 0.17 330);
-  --category-1: oklch(0.78 0.13 155);
-  --category-1-soft: oklch(0.3 0.05 155);
-  --category-1-fill: oklch(0.76 0.15 155);
-  --category-2: oklch(0.77 0.11 250);
-  --category-2-soft: oklch(0.3 0.05 255);
-  --category-2-fill: oklch(0.6 0.14 255);
-  --category-3: oklch(0.85 0.14 88);
+  --criterion-manajemen: oklch(0.66 0.16 285);
+  --criterion-kinerja: oklch(0.7 0.13 125);
+  --criterion-risiko: oklch(0.64 0.17 330);
+  --criterion-rencana: oklch(0.68 0.11 215);
+  --criterion-dampak: oklch(0.78 0.09 175);
+  --category-1: oklch(0.78 0.13 150);
+  --category-1-soft: oklch(0.3 0.05 150);
+  --category-1-fill: oklch(0.66 0.15 150);
+  --category-1-on: oklch(0.18 0.03 150);
+  --category-2: oklch(0.78 0.1 230);
+  --category-2-soft: oklch(0.3 0.05 235);
+  --category-2-fill: oklch(0.66 0.11 235);
+  --category-2-on: oklch(0.18 0.03 235);
+  --category-3: oklch(0.86 0.14 88);
   --category-3-soft: oklch(0.32 0.055 85);
-  --category-3-fill: oklch(0.82 0.15 85);
-  --category-4: oklch(0.76 0.14 25);
-  --category-4-soft: oklch(0.32 0.06 25);
-  --category-4-fill: oklch(0.64 0.18 25);
+  --category-3-fill: oklch(0.8 0.15 85);
+  --category-3-on: oklch(0.2 0.04 70);
+  --category-4: oklch(0.78 0.14 58);
+  --category-4-soft: oklch(0.32 0.07 50);
+  --category-4-fill: oklch(0.72 0.17 52);
+  --category-4-on: oklch(0.2 0.04 45);
+  --category-5: oklch(0.74 0.15 25);
+  --category-5-soft: oklch(0.32 0.06 25);
+  --category-5-fill: oklch(0.64 0.2 27);
+  --category-5-on: oklch(0.18 0.03 27);
   --success: oklch(0.76 0.11 155);
   --success-soft: oklch(0.3 0.04 155);
   --warning: oklch(0.78 0.1 80);

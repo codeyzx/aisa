@@ -4,8 +4,8 @@ import {
   CheckCircle2Icon,
   ChevronRightIcon,
   Clock3Icon,
+  CompassIcon,
   FileWarningIcon,
-  GemIcon,
   InboxIcon,
   LayersIcon,
   type LucideIcon,
@@ -28,7 +28,7 @@ import {
   HISTORY_ACTION_LABEL,
   historyDetailText,
   labelOf,
-  QUALITY_OUTSIDE_FOCUS_LABEL,
+  OUTSIDE_FOCUS_LABEL,
   sectorLabel,
 } from '@/features/aisa/aisa.labels'
 import {
@@ -42,8 +42,9 @@ import {
   type Proposal,
   RESPONSE_KINDS,
   type Rules,
-  showsQualityOutsideFocus,
+  isOutsideFocus,
 } from '@/features/aisa/aisa.schema'
+import { compareByGrade } from '@/features/aisa/aisa.ranking'
 import { formatDate, formatTime } from '@/lib/format/date'
 import { LOCALE, TIME_ZONE } from '@/lib/format/locale'
 import { formatDecimal, formatNumber, formatScore } from '@/lib/format/number'
@@ -51,8 +52,9 @@ import { cn } from '@/lib/utils'
 
 import {
   CATEGORY_FILL,
-  CategoryBadge,
   DECISION_LABEL,
+  GradeBadge,
+  OutsideFocusBadge,
   ScoreBar,
   scoreTone,
 } from '../../_components/badges'
@@ -62,8 +64,11 @@ import { ProposalTrendChart } from './proposal-trend-chart'
 import { Timeline } from './timeline'
 import { TREND_WEEKS, weeklyTrend } from './weekly-trend'
 
-/** The categories "Disarankan untuk Anda" and "Paling cocok" draw from. */
-const RECOMMENDED: ReadonlySet<Category> = new Set(['sangat_cocok', 'cocok'])
+/** The grades "Disarankan untuk Anda" and "Paling layak" draw from. */
+const RECOMMENDED: ReadonlySet<Category> = new Set([
+  'sangat_layak',
+  'layak_bersyarat',
+])
 
 const TOP_COUNT = 5
 
@@ -164,7 +169,7 @@ export function DashboardOverview({
   const pending = unresponded.filter(awaitsDecision)
   const recommended = pending
     .filter((p) => p.effectiveCategory && RECOMMENDED.has(p.effectiveCategory))
-    .toSorted((a, b) => score(b) - score(a))
+    .toSorted(compareByGrade)
   const top = recommended.slice(0, TOP_COUNT)
   const counts = Object.fromEntries(
     CATEGORIES.map((category) => [
@@ -185,7 +190,7 @@ export function DashboardOverview({
     ? assessed.reduce((sum, p) => sum + score(p), 0) / assessed.length
     : null
   const outsideFocus = pending.filter(
-    (p) => p.status === 'dinilai' && showsQualityOutsideFocus(p),
+    (p) => p.status === 'dinilai' && isOutsideFocus(p),
   ).length
   const manual = pending.filter((p) => p.status === 'perlu_dicek_manual').length
   const share = (n: number) => (pending.length ? (n / pending.length) * 100 : 0)
@@ -211,9 +216,9 @@ export function DashboardOverview({
       href: '/proposal',
     },
     {
-      icon: GemIcon,
-      title: QUALITY_OUTSIDE_FOCUS_LABEL,
-      text: `${formatNumber(outsideFocus)} proposal patut dilihat lagi`,
+      icon: CompassIcon,
+      title: OUTSIDE_FOCUS_LABEL,
+      text: `${formatNumber(outsideFocus)} proposal, prioritas rendah`,
       href: '/proposal?luarFokus=1&tanggapan=belum',
     },
     {
@@ -265,7 +270,7 @@ export function DashboardOverview({
           icon={SparklesIcon}
           label="Disarankan untuk Anda"
           value={recommended.length}
-          hint="Kategori sangat cocok dan cocok"
+          hint="Grade Sangat layak dan Layak bersyarat"
         />
         <StatCard
           href="/proposal?tanggapan=sudah"
@@ -329,9 +334,9 @@ export function DashboardOverview({
       <div className="grid gap-5 lg:grid-cols-3">
         <Card className="gap-0 pb-0 lg:col-span-2">
           <CardHeader className="border-b pb-4">
-            <CardTitle>Paling cocok untuk Anda</CardTitle>
+            <CardTitle>Paling layak untuk Anda</CardTitle>
             <CardDescription>
-              Proposal dengan skor tertinggi yang belum ditanggapi
+              Grade terbaik yang belum ditanggapi; yang sesuai fokus didahulukan
             </CardDescription>
             <CardAction>
               <Link
@@ -374,8 +379,15 @@ export function DashboardOverview({
                               {proposal.name}
                             </span>
                             {proposal.effectiveCategory ? (
-                              <CategoryBadge
+                              <GradeBadge
                                 category={proposal.effectiveCategory}
+                                className="hidden sm:inline-flex"
+                              />
+                            ) : null}
+                            {isOutsideFocus(proposal) ? (
+                              <OutsideFocusBadge
+                                fit={proposal.fit}
+                                interactive={false}
                                 className="hidden sm:inline-flex"
                               />
                             ) : null}
@@ -419,7 +431,7 @@ export function DashboardOverview({
               <div className="flex flex-col items-start gap-3 p-6">
                 <p className="font-medium">
                   {pending.length
-                    ? 'Belum ada proposal yang sangat cocok atau cocok.'
+                    ? 'Belum ada proposal Sangat layak atau Layak bersyarat.'
                     : 'Semua proposal sudah ditanggapi.'}
                 </p>
                 <Link
@@ -444,13 +456,12 @@ export function DashboardOverview({
           <CardHeader>
             <CardTitle>Menunggu keputusan</CardTitle>
             <CardDescription>
-              {formatNumber(pending.length)} proposal, dikelompokkan per
-              kategori
+              {formatNumber(pending.length)} proposal, dikelompokkan per grade
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-4">
-            {/* The 2px gaps show the card, so neighbouring kategori fills never
-                touch; proposals without a kategori are their own muted segment. */}
+            {/* The 2px gaps show the card, so neighbouring grade fills never
+                touch; proposals without a grade are their own muted segment. */}
             <div className="flex h-3 gap-0.5 overflow-hidden rounded-full">
               {CATEGORIES.filter((category) => counts[category] > 0).map(
                 (category) => (
@@ -467,10 +478,7 @@ export function DashboardOverview({
                 <span className="flex-1 bg-muted" />
               ) : null}
             </div>
-            <ul
-              className="space-y-1"
-              aria-label="Menunggu keputusan per kategori"
-            >
+            <ul className="space-y-1" aria-label="Menunggu keputusan per grade">
               {CATEGORIES.map((category) => (
                 <li key={category}>
                   <Link

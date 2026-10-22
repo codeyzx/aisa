@@ -24,7 +24,7 @@ import { type ProposalRow } from './proposal-row'
 
 /**
  * The floating bar for the checked rows. `aisa-api` has no "respond to these
- * ids" call — its bulk call takes a whole kategori — so each checked proposal
+ * ids" call — its bulk call takes a whole grade — so each checked proposal
  * is answered through the single-proposal action, one after another. Every one
  * leaves its own history row, exactly as answering them one by one would.
  * Proposals that failed stay checked, and the toast names the API's reason.

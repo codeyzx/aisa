@@ -44,7 +44,7 @@ export default async function AturanPage() {
         proposals={proposals}
         canConfigure={can(session, AISA_CONFIGURE)}
       />
-      <BaselineCard />
+      <BaselineCard rules={rules} />
       <Kalibrasi calibration={calibrate(reviewed)} />
     </div>
   )

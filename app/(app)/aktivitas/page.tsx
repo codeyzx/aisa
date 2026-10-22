@@ -57,7 +57,7 @@ export default async function AktivitasPage({
   // The penilaian tokens are spent on proposals the model scored; a deck that
   // never reached the model (too little text) costs none, so dividing by every
   // proposal that came in would understate the cost of one assessment. A scored
-  // proposal is one that got a kategori, which `byCategory` counts per day.
+  // proposal is one that got a grade, which `byCategory` counts per day.
   const modelAssessed = sum((d) =>
     Object.values(d.stats?.byCategory ?? {}).reduce((a, b) => a + b, 0),
   )

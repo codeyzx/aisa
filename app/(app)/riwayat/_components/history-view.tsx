@@ -62,7 +62,7 @@ const STAT_LABEL: Record<EventStat['kind'], string> = {
   keputusan: 'Keputusan dibuat',
   penilaian: 'Dinilai AI',
   whatsapp: 'Ringkasan terkirim',
-  koreksi: 'Koreksi kategori',
+  koreksi: 'Koreksi grade',
 }
 
 const matchesText = (event: RiwayatEvent, q: string) =>
@@ -302,10 +302,12 @@ export function HistoryView({
     return [...map]
   }, [limit, rows])
 
-  // The "Lainnya" tab only exists for an action newer than this build.
+  // The "Lainnya" tab only exists for an action newer than this build, and
+  // "Dinilai ulang" only once the grade scale change has re-graded proposals.
   const tabs = KIND_TABS.filter(
     (tab) =>
-      tab.value !== 'lainnya' || events.some((e) => e.kind === 'lainnya'),
+      (tab.value !== 'lainnya' && tab.value !== 'nilai_ulang') ||
+      events.some((e) => e.kind === tab.value),
   )
 
   const selectStat = (kind: KindFilter) => {

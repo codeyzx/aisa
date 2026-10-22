@@ -1,6 +1,7 @@
 import {
   CATEGORY_LABEL,
   CRITERION_LABEL,
+  CRITERION_LETTER,
   HISTORY_ACTION_LABEL,
   historyDetailText,
   labelOf,
@@ -16,6 +17,7 @@ import {
   type Rules,
   type Step,
   type StepStatus,
+  type Thresholds,
 } from '@/features/aisa/aisa.schema'
 import { formatScore } from '@/lib/format/number'
 
@@ -26,7 +28,7 @@ import { criterionPoints, scoreUnder } from './proposal-format'
 // own assessment job, its steps, and the manager's rows in `history`. Nothing
 // here is invented: a step's rincian is shown only for the steps whose output
 // the proposal actually stores (the criteria, the score, the fit check, the
-// category), and a step is matched by the action the API records.
+// grade), and a step is matched by the action the API records.
 
 export type LogDetail =
   | {
@@ -56,15 +58,10 @@ export type LogDetail =
       type: 'category'
       category: Category
       score: number
-      fitPassed: boolean
-      /** A criterion scored 1 keeps a proposal out of Sangat cocok. */
-      hasOne: boolean
-      qualityOutsideFocus: boolean
+      /** Failed a fit check: same grade, lower priority. */
+      outsideFocus: boolean
       /** The current thresholds; null when the rules changed since scoring. */
-      thresholds: Pick<
-        Rules['thresholds'],
-        'sangatCocok' | 'cocok' | 'kurangCocok' | 'qualityOutsideFocus'
-      > | null
+      thresholds: Thresholds | null
       rulesVersion: number
     }
 
@@ -104,6 +101,10 @@ export interface AssessmentLogData {
   after: LogStep[]
 }
 
+/** "A. Tim manajemen": the criterion as the guide names it. */
+const criterionName = (criterion: (typeof CRITERIA)[number]) =>
+  `${CRITERION_LETTER[criterion]}. ${CRITERION_LABEL[criterion]}`
+
 function criteriaDetail(proposal: Proposal): LogDetail | null {
   const { assessment } = proposal
   if (!assessment) return null
@@ -114,7 +115,7 @@ function criteriaDetail(proposal: Proposal): LogDetail | null {
       return item
         ? [
             {
-              label: CRITERION_LABEL[criterion],
+              label: criterionName(criterion),
               value: item.value,
               reason: item.reason,
               notMentioned: item.notMentioned,
@@ -149,7 +150,7 @@ function stepDetail(
           const weight = rules.weights[criterion]
           return [
             {
-              label: CRITERION_LABEL[criterion],
+              label: criterionName(criterion),
               value: item.value,
               weight: weight * 100,
               points: criterionPoints(item.value, weight),
@@ -163,7 +164,7 @@ function stepDetail(
             ? null
             : [assessment.rulesVersion, rules.version],
       }
-    case 'cocok':
+    case 'fokus':
       if (!fit) return null
       return {
         type: 'fit',
@@ -177,17 +178,13 @@ function stepDetail(
           detail: check.reason,
         })),
       }
-    case 'kategori':
-      if (!assessment || !fit || !proposal.category) return null
+    case 'grade':
+      if (!assessment || !proposal.category) return null
       return {
         type: 'category',
         category: proposal.category,
         score: assessment.score,
-        fitPassed: fit.passed,
-        hasOne: CRITERIA.some(
-          (criterion) => assessment.criteria[criterion]?.value === 1,
-        ),
-        qualityOutsideFocus: proposal.qualityOutsideFocus,
+        outsideFocus: fit?.passed === false,
         thresholds:
           rules && rules.version === assessment.rulesVersion
             ? rules.thresholds
@@ -234,10 +231,10 @@ function stepResult(
     }
     case 'skor':
       return assessment ? `Skor ${formatScore(assessment.score)}` : null
-    case 'cocok':
+    case 'fokus':
       if (!fit) return null
       return `${Object.values(fit.checks).filter((c) => c.passed).length} dari 3 syarat terpenuhi`
-    case 'kategori':
+    case 'grade':
       return proposal.category ? CATEGORY_LABEL[proposal.category] : null
     default:
       return null
@@ -251,7 +248,7 @@ const MANAGER_EXPLAIN: Record<string, string> = {
   tanggapan_massal:
     'Manajer menanggapi sekelompok proposal sekaligus, termasuk yang ini.',
   koreksi:
-    'Manajer mengganti kategori. Skor dan nilai dari AI tetap disimpan apa adanya.',
+    'Manajer mengganti grade. Skor dan nilai dari AI tetap disimpan apa adanya.',
 }
 
 export function buildAssessmentLog(

@@ -25,16 +25,14 @@ test('DSB-60 Aturan penilaian and Pengaturan show a viewer every active rule, re
   await expect(main.getByText('Aturan versi 1', { exact: true })).toBeVisible()
   const weights = card(page, 'Bobot kriteria')
   for (const [label, percent] of [
-    ['Tim', '27,5%'],
-    ['Pasar & masalah', '30%'],
-    ['Produk & keunggulan', '20%'],
-    ['Traksi', '12,5%'],
-    ['Model bisnis & keuangan', '10%'],
+    ['Tim manajemen', '25%'],
+    ['Kinerja bisnis saat ini', '20%'],
+    ['Risiko bisnis & tren makro', '20%'],
+    ['Rencana bisnis & potensi imbal hasil', '25%'],
+    ['Potensi dampak', '10%'],
   ] as const) {
     await expect(
-      weights
-        .getByRole('listitem')
-        .filter({ has: page.getByText(label, { exact: true }) }),
+      weights.getByRole('listitem').filter({ hasText: label }),
       label,
     ).toContainText(percent)
   }
@@ -53,12 +51,24 @@ test('DSB-60 Aturan penilaian and Pengaturan show a viewer every active rule, re
   ]) {
     await expect(focus.getByText(value, { exact: true })).toBeVisible()
   }
-  const thresholds = card(page, 'Batas kategori')
-  for (const range of ['≥ 80', '≥ 65', '≥ 45', '< 45']) {
-    await expect(thresholds.getByText(range, { exact: true })).toBeVisible()
+  // The five grade bands of the guide (85/75/65/50), each with its grade.
+  const thresholds = card(page, 'Batas grade')
+  for (const text of [
+    'Sangat layak',
+    'Layak bersyarat',
+    'Perlu penyesuaian',
+    'Risiko tinggi',
+    'Tidak layak',
+    '85–100',
+    '75–84',
+    '65–74',
+    '50–64',
+    '< 50',
+  ]) {
+    await expect(thresholds, text).toContainText(text)
   }
   await expect(
-    thresholds.getByText(/Skor 65 ke atas yang gagal salah satu cek fokus/u),
+    thresholds.getByText(/Proposal di luar fokus tetap mendapat grade/u),
   ).toBeVisible()
   for (const model of ['Penilai', 'Pembuat ringkasan', 'Insight', 'Asisten']) {
     await expect(fact(page, model)).toContainText('gemini-3.8-flash')
@@ -98,7 +108,7 @@ test('DSB-61 a viewer gets no response, correction or delete control on a propos
     await expect(page.getByRole('button', { name })).toHaveCount(0)
   }
   await expect(page.getByLabel('Catatan (opsional)')).toHaveCount(0)
-  await expect(page.getByText('Kategori kurang pas?')).toHaveCount(0)
+  await expect(page.getByText(/kurang pas\?/u)).toHaveCount(0)
   // Reading the log is not a write.
   await expect(
     page.getByRole('button', { name: 'Lihat log penilaian' }),
@@ -110,9 +120,10 @@ test('DSB-62 a viewer gets no bulk response on a filtered list', async ({
 }) => {
   // Bulk response needs `aisa:respond`; a viewer must not be offered a panel
   // whose every button is refused by the server action.
-  await page.goto('/proposal?kategori=cocok')
+  // Perlu penyesuaian: SawahKu, plus Pasar Ikan and Panen Kita corrected to it.
+  await page.goto('/proposal?kategori=perlu_penyesuaian')
   await expect(
-    page.getByText('Menampilkan 1–5 dari 5 proposal', { exact: true }),
+    page.getByText('Menampilkan 1–3 dari 3 proposal', { exact: true }),
   ).toBeVisible()
   await expect(page.getByText(/^Tanggapi semua/u)).toHaveCount(0)
   await expect(page.getByRole('button', { name: /semua$/u })).toHaveCount(0)

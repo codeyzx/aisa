@@ -53,11 +53,11 @@ const proposal = {
   pageCount: 10,
   assessment: {
     criteria: {
-      tim: criterion(5, 2),
-      pasar: criterion(5, 3),
-      produk: criterion(4, 4),
-      traksi: criterion(5, 5),
-      bisnis: criterion(4, 6),
+      manajemen: criterion(5, 2),
+      kinerja: criterion(5, 3),
+      risiko: criterion(4, 4),
+      rencana: criterion(5, 5),
+      dampak: criterion(4, 6),
     },
     score: 92.5,
     rulesVersion: 1,
@@ -71,18 +71,23 @@ const proposal = {
       funding: { passed: true, reason: 'Rp5 M dalam rentang' },
     },
   },
-  category: 'sangat_cocok',
-  qualityOutsideFocus: false,
+  category: 'sangat_layak',
 } as unknown as Proposal
 
 const rules = {
   version: 1,
-  weights: { tim: 0.275, pasar: 0.3, produk: 0.2, traksi: 0.125, bisnis: 0.1 },
+  weights: {
+    manajemen: 0.25,
+    kinerja: 0.2,
+    risiko: 0.2,
+    rencana: 0.25,
+    dampak: 0.1,
+  },
   thresholds: {
-    sangatCocok: 80,
-    cocok: 65,
-    kurangCocok: 45,
-    qualityOutsideFocus: 75,
+    sangatLayak: 85,
+    layakBersyarat: 75,
+    perluPenyesuaian: 65,
+    risikoTinggi: 50,
   },
 } as unknown as Rules
 
@@ -113,14 +118,14 @@ function productionJob(): JobWithSteps {
       }),
       step('Hitung skor', 'kode', 23_305, 3),
       step('Cek kecocokan', 'kode', 23_310, 2),
-      step('Tentukan kategori', 'kode', 23_312, 1),
+      step('Tentukan grade', 'kode', 23_312, 1),
       step('Simpan hasil penilaian', 'firestore', 23_460, 140),
     ],
   }
 }
 
 describe('buildAssessmentLog', () => {
-  it('reads the real tool names: criteria, score, fit and category rincian render', () => {
+  it('reads the real tool names: criteria, score, fit and grade rincian render', () => {
     const log = buildAssessmentLog(productionJob(), proposal, [], rules)
     expect(log.steps.map((s) => s.detail?.type ?? null)).toEqual([
       null,
@@ -146,7 +151,7 @@ describe('buildAssessmentLog', () => {
   })
 
   it('explains each step in plain words and says what it concluded', () => {
-    const [ekstrak, cek, nilai, skor, cocok, kategori] = buildAssessmentLog(
+    const [ekstrak, cek, nilai, skor, fokus, grade] = buildAssessmentLog(
       productionJob(),
       proposal,
       [],
@@ -165,8 +170,33 @@ describe('buildAssessmentLog', () => {
     })
     expect(nilai?.explain).toContain('nilai 1–5')
     expect(skor?.result).toBe('Skor 92,5')
-    expect(cocok?.result).toBe('3 dari 3 syarat terpenuhi')
-    expect(kategori?.result).toBe('Sangat cocok')
+    expect(fokus?.result).toBe('3 dari 3 syarat terpenuhi')
+    expect(grade).toMatchObject({
+      title: 'Menentukan grade',
+      result: 'Sangat layak',
+    })
+    expect(grade?.detail).toMatchObject({
+      type: 'category',
+      category: 'sangat_layak',
+      outsideFocus: false,
+    })
+  })
+
+  it('still reads a job recorded before the step was renamed', () => {
+    const job = productionJob()
+    const old = job.steps.map((s) =>
+      s.action === 'Tentukan grade' ? { ...s, action: 'Tentukan kategori' } : s,
+    )
+    const grade = buildAssessmentLog(
+      { ...job, steps: old },
+      proposal,
+      [],
+      rules,
+    ).steps[5]
+    expect(grade).toMatchObject({
+      title: 'Menentukan grade',
+      recorded: 'Tentukan kategori · kode',
+    })
   })
 
   it('times each step from its start: recorded end minus its duration', () => {
@@ -329,7 +359,7 @@ describe('buildAssessmentLog', () => {
         action: 'koreksi',
         proposalId: 'upload-1',
         reason: 'Traksi kuat',
-        detail: 'Kategori Tani Maju dikoreksi',
+        detail: 'Grade Tani Maju dikoreksi',
       },
       {
         id: 'c',
@@ -342,11 +372,11 @@ describe('buildAssessmentLog', () => {
     ]
     const log = buildAssessmentLog(productionJob(), proposal, history, rules)
     expect(log.after.map((s) => [s.title, s.by])).toEqual([
-      ['Koreksi kategori', 'manajer'],
+      ['Koreksi grade', 'manajer'],
       ['Tanggapan', 'manajer'],
     ])
     expect(log.after[0]!.result).toBe(
-      'Kategori Tani Maju dikoreksi. Alasan: “Traksi kuat”',
+      'Grade Tani Maju dikoreksi. Alasan: “Traksi kuat”',
     )
     expect(log.counts.manajer).toBe(2)
   })

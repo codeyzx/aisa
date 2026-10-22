@@ -39,8 +39,8 @@ afterEach(() => {
 
 describe('deriveTitle', () => {
   it('keeps a short question on one line', () => {
-    expect(deriveTitle('  Fintech yang\n  sangat cocok  ')).toBe(
-      'Fintech yang sangat cocok',
+    expect(deriveTitle('  Fintech yang\n  sangat layak  ')).toBe(
+      'Fintech yang sangat layak',
     )
   })
 
@@ -98,7 +98,7 @@ describe('grouping in WIB', () => {
 
 describe('search', () => {
   it('matches the title or any message, ignoring case', () => {
-    const c = conv('a', NOW, 'Fintech yang sangat cocok')
+    const c = conv('a', NOW, 'Fintech yang sangat layak')
     c.messages.push({
       id: 'a:a',
       role: 'assistant',
@@ -133,7 +133,7 @@ describe('storage', () => {
         uid: 'u1',
         conversationId: 'old',
         messages: [
-          { id: 'x:q', role: 'user', content: 'Fintech yang sangat cocok' },
+          { id: 'x:q', role: 'user', content: 'Fintech yang sangat layak' },
           { id: 'x:a', role: 'assistant', content: 'Ada 2.' },
         ],
       }),
@@ -144,7 +144,7 @@ describe('storage', () => {
     expect(first.migratedId).toBe('old')
     expect(first.list[0]).toMatchObject({
       id: 'old',
-      title: 'Fintech yang sangat cocok',
+      title: 'Fintech yang sangat layak',
     })
     expect(sessionStorage.getItem('aisa:tanya-aisa')).toBeNull()
     expect(parseHistory(localStorage.getItem(historyKey('u1')))).toHaveLength(1)

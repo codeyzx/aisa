@@ -1,14 +1,16 @@
 /**
  * Realistic FAKE AISA data for local driving and tests, shaped per
- * docs/reference/contracts/aisa-firestore.md: proposals in every category, a
- * "perlu dicek manual" pair, a "berkualitas, di luar fokus" one, a queued
+ * docs/reference/contracts/aisa-firestore.md: proposals in every grade, a
+ * "perlu dicek manual" pair, three "di luar fokus" ones, a queued
  * upload, penilaian + ringkasan jobs with steps, history, 14 days of
- * dailyStats, the latest digest, and `settings/rules` v1 with the overview's
- * baseline weights.
+ * dailyStats, the latest digest, and `settings/rules` v1 with the guide's
+ * weights.
  *
- * Scores and categories are COMPUTED here with the overview's formula
- * (`skor = Σ bobot × (nilai − 1) / 4`, thresholds 80/65/45/65) rather than typed
- * in, so the seed cannot contradict the rules it ships with.
+ * Scores and grades are COMPUTED here with the overview's formula
+ * (`skor = Σ bobot × (nilai − 1) / 4`, grade bands 85/75/65/50) rather than typed
+ * in, so the seed cannot contradict the rules it ships with. History also keeps
+ * rows from before the grade scale changed (old kategori values and a
+ * `dinilai_ulang` row), so the dashboard's legacy rendering is exercised.
  *
  * NO SAFETY GATE HERE and no top-level side effects: the only `firebase-admin`
  * import is `import type`. It writes to whatever `Firestore` the caller hands
@@ -33,22 +35,41 @@ import {
 
 const PROPOSAL_TEXTS_COLLECTION = 'proposalTexts'
 const MODEL = 'gemini-3.8-flash'
-const CRITERIA = ['tim', 'pasar', 'produk', 'traksi', 'bisnis'] as const
+const CRITERIA = [
+  'manajemen',
+  'kinerja',
+  'risiko',
+  'rencana',
+  'dampak',
+] as const
 type Criterion = (typeof CRITERIA)[number]
-type Category = 'sangat_cocok' | 'cocok' | 'kurang_cocok' | 'tidak_cocok'
+type Category =
+  | 'sangat_layak'
+  | 'layak_bersyarat'
+  | 'perlu_penyesuaian'
+  | 'risiko_tinggi'
+  | 'tidak_layak'
+
+const GRADE_LABEL: Record<Category, string> = {
+  sangat_layak: 'Sangat layak',
+  layak_bersyarat: 'Layak bersyarat',
+  perlu_penyesuaian: 'Perlu penyesuaian',
+  risiko_tinggi: 'Risiko tinggi',
+  tidak_layak: 'Tidak layak',
+}
 
 const WEIGHTS: Record<Criterion, number> = {
-  tim: 0.275,
-  pasar: 0.3,
-  produk: 0.2,
-  traksi: 0.125,
-  bisnis: 0.1,
+  manajemen: 0.25,
+  kinerja: 0.2,
+  risiko: 0.2,
+  rencana: 0.25,
+  dampak: 0.1,
 }
 const THRESHOLDS = {
-  sangatCocok: 80,
-  cocok: 65,
-  kurangCocok: 45,
-  qualityOutsideFocus: 65,
+  sangatLayak: 85,
+  layakBersyarat: 75,
+  perluPenyesuaian: 65,
+  risikoTinggi: 50,
 }
 // Same values as `default_rules()` in services/api/aisa/models.py, so a seeded
 // emulator and a freshly provisioned project score the same way.
@@ -58,10 +79,33 @@ const FIT = {
   fundingMinIdr: 1_000_000_000,
   fundingMaxIdr: 20_000_000_000,
 }
-const ANCHOR = {
-  '1': 'Tidak ada bukti, atau bukti bertentangan',
-  '3': 'Ada bukti sebagian',
-  '5': 'Bukti kuat: data, perilaku pelanggan, atau rekam jejak',
+// Same text as `DEFAULT_ANCHORS` in services/api/aisa/models.py.
+const ANCHORS: Record<Criterion, Record<'1' | '3' | '5', string>> = {
+  manajemen: {
+    '1': 'Tim tidak dikenalkan, atau hanya disebut tanpa latar belakang',
+    '3': 'Tim disebut dengan peran dan pengalaman umum, tanpa rekam jejak yang bisa dicek',
+    '5': 'Rekam jejak spesifik dan relevan (tempat kerja, jabatan, capaian berangka) dan peran kunci lengkap',
+  },
+  kinerja: {
+    '1': 'Belum ada bukti bisnis berjalan, atau angkanya saling bertentangan',
+    '3': 'Ada pengguna atau pendapatan awal, tetapi angkanya tanpa periode atau tanpa nama pelanggan',
+    '5': 'Pendapatan, pengguna, dan pertumbuhan berperiode, dengan pelanggan atau mitra yang disebut namanya',
+  },
+  risiko: {
+    '1': 'Ada risiko besar yang tidak dibahas, informasinya bertentangan, atau risiko tidak dibahas sama sekali',
+    '3': 'Sebagian risiko disebut, tetapi mitigasinya umum atau tren pasar tidak didukung data',
+    '5': 'Risiko utama (persaingan, regulasi, ketergantungan) disebut beserta mitigasinya, dan tren makro/pasar yang mendukung dibuktikan data bersumber',
+  },
+  rencana: {
+    '1': 'Tidak ada rencana penggunaan dana atau proyeksi keuangan',
+    '3': 'Ada rencana penggunaan dana atau proyeksi, tetapi tanpa dasar data atau unit ekonomi',
+    '5': 'Penggunaan dana rinci, proyeksi berdasar data aktual, unit ekonomi, dan potensi imbal hasil bagi investor dijelaskan',
+  },
+  dampak: {
+    '1': 'Dampak sosial atau lingkungan tidak disebut',
+    '3': "Dampak disebut tetapi belum diukur (mis. 'membantu petani')",
+    '5': 'Dampak terukur dengan angka (mis. lapangan kerja, inklusi, emisi) dan cara mengukurnya',
+  },
 }
 
 const HOUR = 3_600_000
@@ -100,7 +144,7 @@ const SEEDS: Seed[] = [
     stage: 'seed',
     funding: 5_000_000_000,
     oneLiner: 'Platform pembiayaan dan input pertanian untuk petani padi.',
-    values: { tim: 5, pasar: 5, produk: 4, traksi: 5, bisnis: 4 },
+    values: { manajemen: 5, kinerja: 5, risiko: 4, rencana: 5, dampak: 4 },
     hoursAgo: 5,
     source: 'form',
   },
@@ -111,12 +155,12 @@ const SEEDS: Seed[] = [
     stage: 'seed',
     funding: 3_000_000_000,
     oneLiner: 'Pasar daring hasil panen langsung dari petani ke restoran.',
-    values: { tim: 5, pasar: 4, produk: 4, traksi: 4, bisnis: 4 },
+    values: { manajemen: 5, kinerja: 4, risiko: 4, rencana: 4, dampak: 4 },
     hoursAgo: 30,
     source: 'form',
     response: { kind: 'undang', note: 'Jadwalkan pitching minggu depan' },
     correction: {
-      category: 'cocok',
+      category: 'perlu_penyesuaian',
       reason: 'Restoran yang dilayani baru di satu kota',
     },
   },
@@ -127,7 +171,7 @@ const SEEDS: Seed[] = [
     stage: 'pre-seed',
     funding: 1_500_000_000,
     oneLiner: 'Sensor kelembapan tanah murah untuk sawah tadah hujan.',
-    values: { tim: 4, pasar: 4, produk: 4, traksi: 3, bisnis: 3 },
+    values: { manajemen: 4, kinerja: 4, risiko: 4, rencana: 3, dampak: 3 },
     hoursAgo: 8,
     source: 'form',
   },
@@ -138,7 +182,7 @@ const SEEDS: Seed[] = [
     stage: 'seed',
     funding: 4_000_000_000,
     oneLiner: 'Telemedisin untuk puskesmas pembantu di desa.',
-    values: { tim: 4, pasar: 5, produk: 4, traksi: 3, bisnis: 3 },
+    values: { manajemen: 4, kinerja: 5, risiko: 4, rencana: 4, dampak: 3 },
     hoursAgo: 12,
     source: 'upload',
   },
@@ -149,7 +193,7 @@ const SEEDS: Seed[] = [
     stage: 'seed',
     funding: 6_000_000_000,
     oneLiner: 'Kredit modal kerja berbasis data transaksi QRIS.',
-    values: { tim: 5, pasar: 5, produk: 5, traksi: 5, bisnis: 1 },
+    values: { manajemen: 5, kinerja: 5, risiko: 5, rencana: 5, dampak: 1 },
     hoursAgo: 20,
     source: 'form',
   },
@@ -160,7 +204,7 @@ const SEEDS: Seed[] = [
     stage: 'pre-seed',
     funding: 1_200_000_000,
     oneLiner: 'Kelas persiapan UTBK lewat WhatsApp.',
-    values: { tim: 3, pasar: 4, produk: 3, traksi: 3, bisnis: 3 },
+    values: { manajemen: 3, kinerja: 4, risiko: 3, rencana: 3, dampak: 3 },
     hoursAgo: 26,
     source: 'form',
   },
@@ -171,12 +215,12 @@ const SEEDS: Seed[] = [
     stage: 'seed',
     funding: 2_000_000_000,
     oneLiner: 'Lelang ikan daring untuk nelayan kecil.',
-    values: { tim: 3, pasar: 3, produk: 3, traksi: 3, bisnis: 3 },
+    values: { manajemen: 3, kinerja: 3, risiko: 3, rencana: 3, dampak: 3 },
     hoursAgo: 50,
     source: 'form',
     correction: {
-      category: 'cocok',
-      reason: 'Traksi di Muncar lebih kuat dari yang terbaca di deck',
+      category: 'perlu_penyesuaian',
+      reason: 'Penjualan di Muncar lebih kuat dari yang terbaca di deck',
     },
   },
   {
@@ -186,7 +230,7 @@ const SEEDS: Seed[] = [
     stage: 'seed',
     funding: 2_500_000_000,
     oneLiner: 'Aplikasi dompet digital umum.',
-    values: { tim: 2, pasar: 2, produk: 2, traksi: 1, bisnis: 2 },
+    values: { manajemen: 2, kinerja: 2, risiko: 2, rencana: 1, dampak: 2 },
     hoursAgo: 70,
     source: 'form',
     response: { kind: 'arsipkan' },
@@ -198,7 +242,7 @@ const SEEDS: Seed[] = [
     stage: 'seed',
     funding: 3_000_000_000,
     oneLiner: 'Jaringan kedai kopi susu di kota tier-2.',
-    values: { tim: 5, pasar: 4, produk: 4, traksi: 5, bisnis: 3 },
+    values: { manajemen: 5, kinerja: 4, risiko: 4, rencana: 5, dampak: 3 },
     hoursAgo: 16,
     source: 'form',
   },
@@ -209,8 +253,8 @@ const SEEDS: Seed[] = [
     stage: 'seri-b',
     funding: 25_000_000_000,
     oneLiner: 'Merek busana muslim daring.',
-    values: { tim: 2, pasar: 3, produk: 2, traksi: 3, bisnis: 2 },
-    unverified: ['produk'],
+    values: { manajemen: 2, kinerja: 3, risiko: 2, rencana: 3, dampak: 2 },
+    unverified: ['risiko'],
     hoursAgo: 40,
     source: 'form',
   },
@@ -221,7 +265,7 @@ const SEEDS: Seed[] = [
     stage: null,
     funding: null,
     oneLiner: 'Aplikasi pencatatan ternak sapi perah.',
-    values: { tim: 3, pasar: 4, produk: 3, traksi: 1, bisnis: 1 },
+    values: { manajemen: 3, kinerja: 4, risiko: 3, rencana: 1, dampak: 1 },
     hoursAgo: 3,
     source: 'form',
   },
@@ -271,24 +315,13 @@ function scoreOf(values: Record<Criterion, number>): number {
   return Math.round(raw * 1000) / 10
 }
 
-function categoryOf(
-  score: number,
-  fitPassed: boolean,
-  values: Record<Criterion, number>,
-) {
-  if (!fitPassed)
-    return {
-      category: 'tidak_cocok' as Category,
-      outside: score >= THRESHOLDS.qualityOutsideFocus,
-    }
-  const anyOne = CRITERIA.some((c) => values[c] === 1)
-  if (score >= THRESHOLDS.sangatCocok && !anyOne)
-    return { category: 'sangat_cocok' as Category, outside: false }
-  if (score >= THRESHOLDS.cocok)
-    return { category: 'cocok' as Category, outside: false }
-  if (score >= THRESHOLDS.kurangCocok)
-    return { category: 'kurang_cocok' as Category, outside: false }
-  return { category: 'tidak_cocok' as Category, outside: false }
+/** The grade from the score alone, as `categorize` in services/api/aisa/scoring.py. */
+function categoryOf(score: number): Category {
+  if (score >= THRESHOLDS.sangatLayak) return 'sangat_layak'
+  if (score >= THRESHOLDS.layakBersyarat) return 'layak_bersyarat'
+  if (score >= THRESHOLDS.perluPenyesuaian) return 'perlu_penyesuaian'
+  if (score >= THRESHOLDS.risikoTinggi) return 'risiko_tinggi'
+  return 'tidak_layak'
 }
 
 function rp(n: number) {
@@ -357,40 +390,40 @@ function fitOf(seed: Seed) {
 }
 
 const REASONS: Record<Criterion, Record<number, string>> = {
-  tim: {
+  manajemen: {
     1: 'Deck tidak menyebut susunan tim.',
     2: 'Tim baru, belum ada rekam jejak di bidang ini.',
     3: 'Pendiri punya pengalaman sebagian di industri.',
     4: 'Tim inti berpengalaman dan lengkap.',
     5: 'Pendiri pernah membangun dan keluar dari startup serupa.',
   },
-  pasar: {
-    1: 'Ukuran pasar tidak disebut.',
-    2: 'Masalah kurang tajam, pasar sangat umum.',
-    3: 'Masalah jelas, ukuran pasar perkiraan kasar.',
-    4: 'Masalah tajam dengan data pasar sekunder.',
-    5: 'Masalah tervalidasi dengan riset lapangan dan data pasar.',
-  },
-  produk: {
-    1: 'Produk belum dijelaskan.',
-    2: 'Produk mirip banyak pesaing.',
-    3: 'Prototipe berjalan, keunggulan belum jelas.',
-    4: 'Produk berjalan dengan keunggulan yang jelas.',
-    5: 'Produk berjalan dengan teknologi yang sulit ditiru.',
-  },
-  traksi: {
+  kinerja: {
     1: 'Tidak ada data pengguna atau pendapatan.',
     2: 'Baru uji coba kecil.',
     3: 'Ada pengguna awal, pertumbuhan belum konsisten.',
     4: 'Pendapatan tumbuh beberapa bulan berturut-turut.',
-    5: 'Pendapatan tumbuh tiap kuartal dengan retensi tinggi.',
+    5: 'Pendapatan tumbuh tiap kuartal dengan pelanggan yang disebut namanya.',
   },
-  bisnis: {
-    1: 'Model bisnis dan kebutuhan dana tidak disebut.',
-    2: 'Model pendapatan belum jelas.',
-    3: 'Model pendapatan jelas, unit economics belum ada.',
-    4: 'Unit economics positif di satu wilayah.',
-    5: 'Unit economics positif dan rencana dana rinci.',
+  risiko: {
+    1: 'Risiko utama tidak dibahas sama sekali.',
+    2: 'Pesaing banyak dan bergantung pada satu pemasok.',
+    3: 'Risiko disebut, mitigasinya belum jelas.',
+    4: 'Risiko utama terkendali dan tren pasar mendukung.',
+    5: 'Risiko rendah dengan regulasi dan tren makro yang mendukung.',
+  },
+  rencana: {
+    1: 'Rencana bisnis dan kebutuhan dana tidak disebut.',
+    2: 'Penggunaan dana belum jelas.',
+    3: 'Rencana dana jelas, proyeksi belum berdasar data.',
+    4: 'Unit ekonomi positif di satu wilayah.',
+    5: 'Unit ekonomi positif dan proyeksi imbal hasil rinci.',
+  },
+  dampak: {
+    1: 'Dampak sosial atau lingkungan tidak disebut.',
+    2: 'Dampak disebut tanpa angka.',
+    3: 'Dampak terukur untuk sebagian kecil pengguna.',
+    4: 'Membuka lapangan kerja lokal dengan angka yang jelas.',
+    5: 'Dampak inklusi dan lingkungan terukur dan dilaporkan rutin.',
   },
 }
 
@@ -418,13 +451,7 @@ export async function seedAisa(
   const rules = {
     version: 1,
     weights: WEIGHTS,
-    anchors: {
-      tim: ANCHOR,
-      pasar: ANCHOR,
-      produk: ANCHOR,
-      traksi: ANCHOR,
-      bisnis: ANCHOR,
-    },
+    anchors: ANCHORS,
     fit: FIT,
     thresholds: THRESHOLDS,
     models: {
@@ -436,8 +463,7 @@ export async function seedAisa(
     minCharsPerPage: 200,
     retentionDays: 90,
     changedAt: rulesChangedAt,
-    reason:
-      'Aturan awal dari baseline (rata-rata Scorecard Method dan Hustle Fund)',
+    reason: 'Skala penilaian baru: 5 kriteria (A–E) dan 5 grade',
   }
   batch.set(db.collection(SETTINGS_COLLECTION).doc(RULES_DOC_ID), rules)
   batch.set(db.collection(RULES_VERSIONS_COLLECTION).doc('1'), rules)
@@ -485,13 +511,10 @@ export async function seedAisa(
     let assessment = null
     let fit = null
     let category: Category | null = null
-    let outside = false
     if (seed.values) {
       const score = scoreOf(seed.values)
       fit = fitOf(seed)
-      const result = categoryOf(score, fit.passed, seed.values)
-      category = result.category
-      outside = result.outside
+      category = categoryOf(score)
       const values = seed.values
       assessment = {
         criteria: Object.fromEntries(
@@ -562,7 +585,6 @@ export async function seedAisa(
       assessment,
       fit,
       category,
-      qualityOutsideFocus: outside,
       correction,
       effectiveCategory: correction?.category ?? category,
       response,
@@ -600,7 +622,7 @@ export async function seedAisa(
         before: category,
         after: correction.category,
         reason: correction.reason,
-        detail: `Kategori ${seed.name} dikoreksi`,
+        detail: `Grade ${seed.name} dipindahkan ke ${GRADE_LABEL[correction.category]}`,
       })
     if (response)
       history(`seed-tanggapan-${seed.key}`, {
@@ -642,7 +664,7 @@ export async function seedAisa(
             },
             code('Hitung skor', 'kode', 3, { read: 'settings/rules v1' }),
             code('Cek kecocokan', 'kode', 2, { read: 'settings/rules v1' }),
-            code('Tentukan kategori', 'kode', 1),
+            code('Tentukan grade', 'kode', 1),
             code('Simpan hasil penilaian', 'firestore', 140, {
               wrote: `proposals/${id}`,
             }),
@@ -696,13 +718,16 @@ export async function seedAisa(
   const digestText = [
     'Selamat pagi, Bu Rina. Sejak kemarin pukul 17.00 masuk 6 proposal baru. Ada 11 proposal yang belum Ibu tanggapi.',
     '',
-    '*Sangat cocok (1)*',
-    '1. Tani Maju (agritech, Rp5 M) · 93. Pendapatannya tumbuh tiap kuartal dan timnya berpengalaman.',
-    '*Cocok (3):* Dana UMKM (90), Klinik Desa (77), Pasar Ikan (dikoreksi)',
-    '*Kurang cocok (2):* SawahKu, BelajarYuk',
-    '*Tidak cocok (3)*',
-    '*Berkualitas, di luar fokus (1):* Kopi Rakyat (83) · F&B di luar sektor fokus',
-    '*Perlu dicek manual (2):* Bengkel Online, Rumah Belajar',
+    '*Sangat layak (3)*',
+    '1. Tani Maju (agritech, Rp5 M) · 92,5. Pendapatannya tumbuh tiap kuartal dan timnya berpengalaman.',
+    '2. Dana UMKM (fintech, Rp6 M) · 90. Pendiri pernah membangun dan keluar dari startup serupa.',
+    '3. Kopi Rakyat (F&B, Rp3 M) · 85 (di luar fokus). Tim inti berpengalaman dan lengkap.',
+    '*Layak bersyarat (1)*: Klinik Desa (77,5)',
+    '*Perlu penyesuaian (2)*: SawahKu (66,3), Pasar Ikan (50)',
+    '*Risiko tinggi (1)*',
+    '*Tidak layak (2)*',
+    '3 di antaranya di luar fokus (sektor, tahap, atau dana): prioritas rendah.',
+    '*Perlu dicek manual (2)*: Bengkel Online, Rumah Belajar',
     '',
     `Yang menarik: ${digestInsight}`,
   ].join('\n')
@@ -712,11 +737,12 @@ export async function seedAisa(
     sentAt: digestAt,
     text: digestText,
     counts: {
-      sangat_cocok: 1,
-      cocok: 3,
-      kurang_cocok: 2,
-      tidak_cocok: 3,
-      kualitasLuarFokus: 1,
+      sangat_layak: 3,
+      layak_bersyarat: 1,
+      perlu_penyesuaian: 2,
+      risiko_tinggi: 1,
+      tidak_layak: 2,
+      luarFokus: 3,
       perluDicekManual: 2,
       belumDitanggapi: 11,
       baruMasuk: 6,
@@ -727,6 +753,44 @@ export async function seedAisa(
     jobId: digestJobId,
     gowaMessageIds: ['seed-gowa-1'],
   })
+  // A ringkasan sent before the grade scale changed: its text and count keys
+  // stay on the old four-step scale, as production keeps them.
+  const legacyDigestAt = new Date(digestAt.getTime() - 16 * HOUR)
+  batch.set(
+    db
+      .collection(DIGESTS_COLLECTION)
+      .doc(`seed-${wibDate.format(legacyDigestAt)}-1700`),
+    {
+      slot: '17.00',
+      windowStart: new Date(legacyDigestAt.getTime() - 8 * HOUR),
+      sentAt: legacyDigestAt,
+      text: [
+        'Selamat sore, Bu Rina. Sejak pukul 09.00 masuk 2 proposal baru. Ada 7 proposal yang belum Ibu tanggapi.',
+        '',
+        '*Sangat cocok (1)*',
+        '1. Dana UMKM (fintech, Rp6 M) · 90.',
+        '*Cocok (2):* Klinik Desa (77), SawahKu (71)',
+        '*Kurang cocok (1):* BelajarYuk',
+        '*Tidak cocok (2)*',
+        '*Berkualitas, di luar fokus (1):* Kopi Rakyat (83)',
+      ].join('\n'),
+      counts: {
+        sangat_cocok: 1,
+        cocok: 2,
+        kurang_cocok: 1,
+        tidak_cocok: 2,
+        kualitasLuarFokus: 1,
+        perluDicekManual: 1,
+        belumDitanggapi: 7,
+        baruMasuk: 2,
+      },
+      proposalIds: [],
+      usedTemplate: true,
+      insight: null,
+      jobId: null,
+      gowaMessageIds: ['seed-gowa-0'],
+    },
+  )
   const digestSteps = [
     {
       action: 'Ambil proposal belum ditanggapi',
@@ -767,7 +831,7 @@ export async function seedAisa(
       tool: 'ringkasan.compose',
       actor: 'model',
       model: MODEL,
-      read: 'data ringkasan per kategori',
+      read: 'data ringkasan per grade',
       wrote: 'teks ringkasan',
       tokensIn: 2600,
       tokensOut: 540,
@@ -779,7 +843,7 @@ export async function seedAisa(
       tool: 'verify_numbers',
       actor: 'kode',
       read: 'teks ringkasan + data',
-      wrote: 'cocok',
+      wrote: 'sesuai',
       tokensIn: 0,
       tokensOut: 0,
       durationMs: 4,
@@ -890,6 +954,34 @@ export async function seedAisa(
     detail: 'Data proposal dihapus (diarsipkan lebih dari 90 hari)',
   })
 
+  // --- history from before the grade scale changed ---
+  // A koreksi on the old four-step scale, and the migration's re-grade row:
+  // both keep the old kategori values as written, so Riwayat must show them
+  // as "(skala lama)" rather than fail or pass them off as a current grade.
+  history('seed-koreksi-lama-klinikdesa', {
+    at: at(240),
+    via: 'wa',
+    action: 'koreksi',
+    proposalId: 'upload-seedklinikdesa',
+    proposalName: 'Klinik Desa',
+    before: 'cocok',
+    after: 'sangat_cocok',
+    reason: 'Sudah dipakai di tiga kabupaten',
+    detail: 'Kategori Klinik Desa dikoreksi',
+  })
+  history('seed-dinilai-ulang-tanimaju', {
+    at: at(4.5),
+    via: 'sistem',
+    action: 'dinilai_ulang',
+    proposalId: 'form-seedtanimaju',
+    proposalName: 'Tani Maju',
+    before: 'sangat_cocok',
+    after: 'sangat_layak',
+    reason: 'Skala penilaian baru: 5 kriteria (A–E) dan 5 grade',
+    detail:
+      'Tani Maju dinilai ulang dengan skala baru: skor 92,5, Sangat layak',
+  })
+
   // --- 14 days of dailyStats (deterministic, WIB dates) ---
   const sectors = [
     'agritech',
@@ -905,8 +997,9 @@ export async function seedAisa(
     const manual = d % 4 === 0 ? 1 : 0
     const scored = proposalsIn - manual
     const sangat = Math.floor(scored * 0.1)
-    const cocok = Math.floor(scored * 0.2)
-    const kurang = Math.floor(scored * 0.35)
+    const bersyarat = Math.floor(scored * 0.15)
+    const penyesuaian = Math.floor(scored * 0.25)
+    const risiko = Math.floor(scored * 0.25)
     const bySector: Record<string, number> = {}
     for (let i = 0; i < scored; i += 1) {
       const sector =
@@ -923,10 +1016,11 @@ export async function seedAisa(
       date,
       proposalsIn,
       byCategory: {
-        sangat_cocok: sangat,
-        cocok,
-        kurang_cocok: kurang,
-        tidak_cocok: scored - sangat - cocok - kurang,
+        sangat_layak: sangat,
+        layak_bersyarat: bersyarat,
+        perlu_penyesuaian: penyesuaian,
+        risiko_tinggi: risiko,
+        tidak_layak: scored - sangat - bersyarat - penyesuaian - risiko,
       },
       bySector,
       perluDicekManual: manual,

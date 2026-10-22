@@ -39,6 +39,8 @@ import { isCorrected } from '@/features/aisa/aisa.calibration'
 import {
   CATEGORY_LABEL,
   CRITERION_LABEL,
+  CRITERION_LETTER,
+  CRITERION_MEANING,
   sectorLabel,
   VIA_LABEL,
 } from '@/features/aisa/aisa.labels'
@@ -51,7 +53,7 @@ import {
 } from '@/features/aisa/aisa.repo'
 import {
   CRITERIA,
-  showsQualityOutsideFocus,
+  isOutsideFocus,
   type Proposal,
 } from '@/features/aisa/aisa.schema'
 import { requireCapability } from '@/lib/auth/guards'
@@ -61,12 +63,12 @@ import { formatDecimal, formatNumber, formatScore } from '@/lib/format/number'
 import { cn } from '@/lib/utils'
 
 import {
-  CategoryBadge,
   DECISION_LABEL,
   DecisionBadge,
+  GradeBadge,
+  OutsideFocusBadge,
   ScoreBar,
   scoreTone,
-  OutsideFocusBadge,
   StatusBadge,
 } from '../../_components/badges'
 import { AskAisaCard } from '../_components/ask-aisa-card'
@@ -81,6 +83,7 @@ import {
   DeckPreviewProvider,
 } from '../_components/deck-preview'
 import { DeleteProposalButton } from '../_components/delete-proposal-button'
+import { GradeCard } from '../_components/grade-card'
 import { proposalHistoryEntries } from '../_components/proposal-history'
 import {
   compactNumber,
@@ -121,7 +124,7 @@ function strengthsAndChecks(proposal: Proposal) {
   for (const criterion of CRITERIA) {
     const item = criteria[criterion]
     if (!item) continue
-    const line = `${CRITERION_LABEL[criterion]}: ${item.reason}`
+    const line = `${CRITERION_LETTER[criterion]}. ${CRITERION_LABEL[criterion]}: ${item.reason}`
     if (item.notMentioned || item.citationsUnverified || item.value <= 2)
       checks.push(line)
     else if (item.value >= 4) strengths.push(line)
@@ -196,7 +199,6 @@ export default async function ProposalDetailPage({
   return (
     <DetailPanels
       log={log}
-      thresholds={thresholds}
       deck={
         hasDeck
           ? {
@@ -268,7 +270,7 @@ export default async function ProposalDetailPage({
                 </div>
                 <div className="flex flex-wrap items-center gap-2 pt-1">
                   {proposal.effectiveCategory ? (
-                    <CategoryBadge category={proposal.effectiveCategory} />
+                    <GradeBadge category={proposal.effectiveCategory} />
                   ) : null}
                   {proposal.status !== 'dinilai' ? (
                     <StatusBadge status={proposal.status} />
@@ -277,8 +279,8 @@ export default async function ProposalDetailPage({
                   {isCorrected(proposal) ? (
                     <Badge variant="outline">dikoreksi</Badge>
                   ) : null}
-                  {showsQualityOutsideFocus(proposal) ? (
-                    <OutsideFocusBadge />
+                  {isOutsideFocus(proposal) ? (
+                    <OutsideFocusBadge fit={fit} />
                   ) : null}
                 </div>
                 {proposal.statusReason ? (
@@ -323,7 +325,7 @@ export default async function ProposalDetailPage({
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
                     {proposal.status === 'perlu_dicek_manual'
-                      ? 'Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori.'
+                      ? 'Tidak dinilai: deck perlu dicek manual, tanpa skor dan grade.'
                       : 'Belum ada penilaian.'}
                   </p>
                 </>
@@ -344,6 +346,8 @@ export default async function ProposalDetailPage({
 
         <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_22rem]">
           <div className="flex min-w-0 flex-col gap-5">
+            <GradeCard proposal={proposal} thresholds={thresholds} />
+
             {assessment ? (
               <Card className="gap-4 border-primary/25 bg-gradient-to-b from-primary/[0.06] to-transparent">
                 <CardHeader>
@@ -426,8 +430,8 @@ export default async function ProposalDetailPage({
               <CardHeader className="border-b pb-4">
                 <CardTitle>Nilai per kriteria</CardTitle>
                 <CardDescription>
-                  AI memberi nilai 1–5 beserta kutipan dari pitch deck. Skor
-                  akhir dihitung dari bobotnya.
+                  Lima kriteria A–E. AI memberi nilai 1–5 beserta kutipan dari
+                  pitch deck; skor akhir dihitung dari bobotnya.
                   {assessment
                     ? ` Aturan v${assessment.rulesVersion} · model ${assessment.model}.`
                     : ''}
@@ -445,12 +449,23 @@ export default async function ProposalDetailPage({
                         <li
                           key={criterion}
                           data-criterion={criterion}
-                          className="grid gap-3 border-b px-6 py-4 last:border-0 md:grid-cols-[10rem_minmax(0,1fr)] md:gap-6"
+                          className="grid gap-3 border-b px-6 py-4 last:border-0 md:grid-cols-[14rem_minmax(0,1fr)] md:gap-6"
                         >
                           <div>
-                            <div className="flex items-baseline justify-between gap-2">
-                              <p className="font-medium">
-                                {CRITERION_LABEL[criterion]}
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="flex items-start gap-2 font-medium">
+                                <span
+                                  aria-hidden
+                                  className="grid size-5 shrink-0 place-items-center rounded-md bg-muted text-[11px] font-semibold text-muted-foreground"
+                                >
+                                  {CRITERION_LETTER[criterion]}
+                                </span>
+                                <span>
+                                  <span className="sr-only">
+                                    {CRITERION_LETTER[criterion]}.{' '}
+                                  </span>
+                                  {CRITERION_LABEL[criterion]}
+                                </span>
                               </p>
                               <p className="text-sm font-semibold tabular-nums">
                                 {item ? item.value : '–'}
@@ -459,20 +474,22 @@ export default async function ProposalDetailPage({
                                 </span>
                               </p>
                             </div>
+                            {/* A 1–5 value is not a score band, so its bar stays
+                                neutral rather than wearing a grade colour. */}
                             <ScoreBar
                               score={(item?.value ?? 0) * 20}
-                              thresholds={thresholds}
+                              thresholds={null}
                               className="mt-2"
                             />
-                            {rules ? (
-                              <p className="mt-1.5 text-xs text-muted-foreground">
-                                Bobot{' '}
-                                {formatDecimal(rules.weights[criterion] * 100, {
-                                  max: 1,
-                                })}
-                                %
-                              </p>
-                            ) : null}
+                            <p className="mt-1.5 text-xs text-muted-foreground">
+                              {rules
+                                ? `Bobot ${formatDecimal(
+                                    rules.weights[criterion] * 100,
+                                    { max: 1 },
+                                  )}% · `
+                                : ''}
+                              {CRITERION_MEANING[criterion]}
+                            </p>
                           </div>
                           {!item ? (
                             <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
@@ -524,7 +541,7 @@ export default async function ProposalDetailPage({
                 ) : (
                   <p className="px-6 py-6 text-sm text-muted-foreground">
                     {proposal.status === 'perlu_dicek_manual'
-                      ? 'Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori.'
+                      ? 'Tidak dinilai: deck perlu dicek manual, tanpa skor dan grade.'
                       : 'Belum ada penilaian.'}
                   </p>
                 )}
@@ -535,7 +552,8 @@ export default async function ProposalDetailPage({
               <CardHeader>
                 <CardTitle>Sesuai fokus investasi?</CardTitle>
                 <CardDescription>
-                  Dicek otomatis dari aturan penilaian, tanpa AI.
+                  Dicek otomatis dari aturan penilaian, tanpa AI. Tidak mengubah
+                  grade; yang di luar fokus diberi prioritas rendah.
                 </CardDescription>
                 <CardAction>
                   <Link
@@ -743,11 +761,11 @@ export default async function ProposalDetailPage({
             proposal.correction ? (
               <Card>
                 <CardHeader>
-                  <CardTitle>Kategori kurang pas?</CardTitle>
+                  <CardTitle>Grade kurang pas?</CardTitle>
                   <CardDescription>
                     {proposal.correction
                       ? `AI menilai ${proposal.category ? CATEGORY_LABEL[proposal.category] : '—'}, lalu dikoreksi ke ${CATEGORY_LABEL[proposal.correction.category]} (${dateTime(proposal.correction.at)}, ${VIA_LABEL[proposal.correction.via]}): “${proposal.correction.reason}”.`
-                      : 'Ubah kategorinya. Skor dari AI tetap disimpan.'}
+                      : 'Pilih grade yang menurut Anda lebih tepat. Skor dari AI tetap disimpan.'}
                   </CardDescription>
                 </CardHeader>
                 {canRespond && proposal.status === 'dinilai' ? (

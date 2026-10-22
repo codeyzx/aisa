@@ -48,7 +48,7 @@ export default async function TrenPage() {
     today > maxBefore
       ? `Hari ini ${formatNumber(today)} proposal, terbanyak dalam dua minggu`
       : `Hari ini ${formatNumber(today)} proposal · rata-rata 14 hari ${average} per hari`
-  const veryFit = days.reduce((sum, d) => sum + d.sangat_cocok, 0)
+  const veryFit = days.reduce((sum, d) => sum + d.sangat_layak, 0)
   const manual = days.reduce((sum, d) => sum + d.manual, 0)
 
   // The mean score reads the newest PROPOSAL_WINDOW proposals; when that
@@ -69,7 +69,7 @@ export default async function TrenPage() {
       <ul className="a-ins">
         <Insight>{dailySub}.</Insight>
         <Insight>
-          {formatNumber(veryFit)} proposal sangat cocok dari{' '}
+          {formatNumber(veryFit)} proposal Sangat layak dari{' '}
           {formatNumber(total)} proposal masuk ·{' '}
           {total ? Math.round((veryFit / total) * 100) : 0}% dari 14 hari
           terakhir.

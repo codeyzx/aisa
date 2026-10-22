@@ -4,6 +4,7 @@ import { adminDb } from '@/lib/firebase/admin-db'
 import { requireEmulatorOrSkip } from '@/test/emulator'
 import { seedAisa } from '@/scripts/_seed-aisa'
 
+import { isOutsideFocus } from '@/features/aisa/aisa.schema'
 import {
   getLatestDigest,
   getLatestInsightDigest,
@@ -32,32 +33,36 @@ describe.skipIf(!reachable)('aisa repo', () => {
     await seedAisa(adminDb())
   })
 
-  it('parses every seeded proposal and computes categories per the rules', async () => {
+  it('parses every seeded proposal and grades it by score alone', async () => {
     const proposals = await listRecentProposals()
     expect(proposals.length).toBeGreaterThanOrEqual(14)
     const byName = new Map(proposals.map((p) => [p.name, p]))
-    expect(byName.get('Tani Maju')?.category).toBe('sangat_cocok')
-    // A criterion at 1 caps a ≥ 80 score at Cocok.
-    expect(byName.get('Dana UMKM')?.category).toBe('cocok')
+    expect(byName.get('Tani Maju')?.category).toBe('sangat_layak')
+    // A criterion at 1 no longer caps the grade: 90 is Sangat layak.
+    expect(byName.get('Dana UMKM')?.category).toBe('sangat_layak')
+    // Out of focus keeps its grade; only `fit` says it is out of focus.
     const kopi = byName.get('Kopi Rakyat')
-    expect(kopi?.category).toBe('tidak_cocok')
-    expect(kopi?.qualityOutsideFocus).toBe(true)
+    expect(kopi?.category).toBe('sangat_layak')
+    expect(kopi && isOutsideFocus(kopi)).toBe(true)
+    expect(kopi).not.toHaveProperty('qualityOutsideFocus')
     const manual = byName.get('Bengkel Online')
     expect(manual?.status).toBe('perlu_dicek_manual')
     expect(manual?.assessment ?? null).toBeNull()
     const fashion = byName.get('Fashionista')
-    expect(fashion?.assessment?.criteria.produk?.citationsUnverified).toBe(true)
-    expect(fashion?.assessment?.criteria.tim?.citationsUnverified).toBe(false)
+    expect(fashion?.assessment?.criteria.risiko?.citationsUnverified).toBe(true)
+    expect(fashion?.assessment?.criteria.manajemen?.citationsUnverified).toBe(
+      false,
+    )
   })
 
-  it('keeps the AI category when a correction changes the effective one', async () => {
+  it('keeps the AI grade when a correction changes the effective one', async () => {
     const pasar = (await listRecentProposals()).find(
       (p) => p.name === 'Pasar Ikan',
     )
-    expect(pasar?.category).toBe('kurang_cocok')
-    expect(pasar?.effectiveCategory).toBe('cocok')
+    expect(pasar?.category).toBe('risiko_tinggi')
+    expect(pasar?.effectiveCategory).toBe('perlu_penyesuaian')
     expect(await getProposal(pasar?.id ?? '')).toMatchObject({
-      correction: { category: 'cocok' },
+      correction: { category: 'perlu_penyesuaian' },
     })
   })
 
@@ -74,7 +79,9 @@ describe.skipIf(!reachable)('aisa repo', () => {
     expect(rules?.models).not.toHaveProperty('orchestrator')
     expect((await getLatestInsightDigest())?.insight).toBeTruthy()
     expect((await getRuntime())?.paused).toBe(false)
-    expect((await getLatestDigest())?.slot).toBe('09.00')
+    const digest = await getLatestDigest()
+    expect(digest?.slot).toBe('09.00')
+    expect(digest?.counts).toMatchObject({ sangat_layak: 3, luarFokus: 3 })
     const stats = await listDailyStats(14)
     expect(stats).toHaveLength(14)
     expect(stats[0]!.date < stats[13]!.date).toBe(true)
@@ -92,6 +99,10 @@ describe.skipIf(!reachable)('aisa repo', () => {
     expect(retensi?.steps).toHaveLength(1)
     const history = await listHistory(200)
     expect(history.some((row) => row.action === 'proposal_dihapus')).toBe(true)
+    // Rows from before the grade scale changed still parse, old values intact.
+    expect(history.find((row) => row.action === 'dinilai_ulang')).toMatchObject(
+      { before: 'sangat_cocok', after: 'sangat_layak' },
+    )
   })
 
   it('reads one proposal’s history newest first', async () => {

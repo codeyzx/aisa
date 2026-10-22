@@ -42,7 +42,7 @@ import { simulate, type ScoredProposal } from './scoring'
 
 const TABS: { value: RulesTab; label: string; short: string }[] = [
   { value: 'bobot', label: 'Bobot kriteria', short: 'Bobot' },
-  { value: 'batas', label: 'Batas kategori', short: 'Batas' },
+  { value: 'batas', label: 'Batas grade', short: 'Batas' },
   { value: 'fokus', label: 'Fokus investasi', short: 'Fokus' },
   { value: 'patokan', label: 'Patokan nilai', short: 'Patokan' },
   { value: 'lanjutan', label: 'Model', short: 'Model' },

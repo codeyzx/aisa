@@ -33,13 +33,13 @@ function Delta({ value }: { value: number }) {
 function heldNote(sim: Simulation): string | null {
   if (!sim.held) return null
   return sim.held === sim.moves.length
-    ? 'Semuanya tetap pada kategori koreksi manajer.'
-    : `${sim.held} di antaranya tetap pada kategori koreksi manajer.`
+    ? 'Semuanya tetap pada grade koreksi manajer.'
+    : `${sim.held} di antaranya tetap pada grade koreksi manajer.`
 }
 
 /**
  * The draft rules simulated on the proposals already scored. It compares the
- * AI's kategori under both rule sets; a manager koreksi is never rewritten by
+ * AI's grade under both rule sets; a manager koreksi is never rewritten by
  * a rule change, so a move it holds is marked rather than counted as visible.
  * A preview only: saving does not re-score them.
  */
@@ -78,7 +78,7 @@ export function ImpactPreview({
             <SparklesIcon className="size-4 shrink-0 text-primary" />
             <span>
               <span className="font-semibold">{sim.moves.length} proposal</span>{' '}
-              pindah kategori AI
+              pindah grade AI
               {sim.moves.length > 0 && (
                 <span className="text-muted-foreground">
                   {' '}
@@ -102,7 +102,7 @@ export function ImpactPreview({
         </p>
         <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
           {sim
-            ? `Simulasi kategori AI pada ${sim.total} proposal yang sudah dinilai. Hanya pratinjau, skor lama tidak diubah.`
+            ? `Simulasi grade AI pada ${sim.total} proposal yang sudah dinilai. Hanya pratinjau, skor lama tidak diubah.`
             : 'Simulasi menunggu semua isian benar.'}
         </p>
       </div>
@@ -130,8 +130,8 @@ export function ImpactPreview({
                 </p>
                 <p className="mt-1 text-[13px]">
                   {sim.moves.length
-                    ? 'proposal akan pindah kategori AI'
-                    : 'Tidak ada proposal yang pindah kategori AI'}
+                    ? 'proposal akan pindah grade AI'
+                    : 'Tidak ada proposal yang pindah grade AI'}
                 </p>
                 {heldNote(sim) && (
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -156,13 +156,13 @@ export function ImpactPreview({
 
           <table className="w-full text-[13px]">
             <caption className="pb-2 text-left text-xs leading-relaxed text-muted-foreground">
-              Kategori dari AI, dihitung ulang dengan aturan sekarang dan aturan
+              Grade dari AI, dihitung ulang dengan aturan sekarang dan aturan
               baru. Koreksi manajer tidak ikut berubah, jadi angka ini bisa
-              berbeda dari kartu Batas kategori.
+              berbeda dari kartu Batas grade.
             </caption>
             <thead className="text-[11px] text-muted-foreground">
               <tr>
-                <th className="pb-1.5 text-left font-medium">Kategori</th>
+                <th className="pb-1.5 text-left font-medium">Grade</th>
                 <th className="pb-1.5 text-right font-medium">AI sekarang</th>
                 <th className="pb-1.5 text-right font-medium">Aturan baru</th>
                 <th className="w-8 pb-1.5">
@@ -202,7 +202,7 @@ export function ImpactPreview({
           {sim.moves.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <p className="text-[11px] font-medium text-muted-foreground">
-                Contoh yang pindah kategori AI
+                Contoh yang pindah grade AI
               </p>
               <ul className="flex flex-col gap-1">
                 {sim.moves.slice(0, 5).map((move) => (

@@ -2,22 +2,30 @@
  * Aturan penilaian → Kalibrasi against the shard's emulator. The expected numbers are
  * recounted here from `proposals`, with the rule the section states on screen:
  * a proposal is "ditinjau manajer" when it has a tanggapan or a koreksi, and the
- * AI agrees unless the koreksi moved it to another kategori.
+ * AI agrees unless the koreksi moved it to another grade.
  *
  * The seed (`scripts/_seed-aisa.ts`) gives 3 reviewed — Panen Kita (undang,
- * corrected Sangat cocok → Cocok), AplikasiX (arsipkan, no koreksi) and Pasar
- * Ikan (corrected Kurang cocok → Cocok) — so 1 of 3 agreed, one koreksi each way.
+ * corrected Layak bersyarat → Perlu penyesuaian), AplikasiX (arsipkan, no
+ * koreksi) and Pasar Ikan (corrected Risiko tinggi → Perlu penyesuaian) — so 1
+ * of 3 agreed, one koreksi each way.
  */
 import { PROPOSALS_COLLECTION } from '../../features/aisa/aisa.path.ts'
 import { emulatorDb, expect, signInAs, test } from './fixtures.ts'
 import { card, fact } from './locators.ts'
 
-const SCALE = ['sangat_cocok', 'cocok', 'kurang_cocok', 'tidak_cocok']
+const SCALE = [
+  'sangat_layak',
+  'layak_bersyarat',
+  'perlu_penyesuaian',
+  'risiko_tinggi',
+  'tidak_layak',
+]
 const LABEL: Record<string, string> = {
-  sangat_cocok: 'Sangat cocok',
-  cocok: 'Cocok',
-  kurang_cocok: 'Kurang cocok',
-  tidak_cocok: 'Tidak cocok',
+  sangat_layak: 'Sangat layak',
+  layak_bersyarat: 'Layak bersyarat',
+  perlu_penyesuaian: 'Perlu penyesuaian',
+  risiko_tinggi: 'Risiko tinggi',
+  tidak_layak: 'Tidak layak',
 }
 const percent = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 1 })
 const score = new Intl.NumberFormat('id-ID', {
@@ -93,7 +101,7 @@ test('DSB-99 Kalibrasi counts manager reviews and lists every koreksi', async ({
     String(want.rows.length),
   )
   await expect(fact(kalibrasi, 'Arah koreksi')).toHaveText(
-    `Naik kategori ${want.naik} · Turun kategori ${want.turun}`,
+    `Naik grade ${want.naik} · Turun grade ${want.turun}`,
   )
   await expect(
     kalibrasi.getByText(
@@ -106,7 +114,7 @@ test('DSB-99 Kalibrasi counts manager reviews and lists every koreksi', async ({
   ).toHaveCount(0)
 
   const table = kalibrasi.getByRole('table', {
-    name: 'Koreksi kategori oleh manajer',
+    name: 'Koreksi grade oleh manajer',
   })
   const body = table.locator('tbody')
   await expect(body.getByRole('row')).toHaveCount(want.rows.length)

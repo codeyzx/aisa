@@ -10,7 +10,7 @@ describe('AssistantAnswer', () => {
   it('renders WhatsApp bold and italic, leaving snake_case and arithmetic alone', () => {
     const { container } = render(
       <AssistantAnswer
-        text={'*Tani Maju* (agritech) · _seed_ · sangat_cocok_x 2*3*4'}
+        text={'*Tani Maju* (agritech) · _seed_ · sangat_layak_x 2*3*4'}
       />,
     )
     expect(
@@ -19,7 +19,7 @@ describe('AssistantAnswer', () => {
     expect(
       [...container.querySelectorAll('em')].map((n) => n.textContent),
     ).toEqual(['seed'])
-    expect(container.textContent).toContain('sangat_cocok_x 2*3*4')
+    expect(container.textContent).toContain('sangat_layak_x 2*3*4')
   })
 
   it('sets the Saran AI section apart from the facts above it', () => {

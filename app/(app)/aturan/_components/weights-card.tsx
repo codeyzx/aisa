@@ -9,17 +9,19 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { CRITERION_LABEL } from '@/features/aisa/aisa.labels'
+import {
+  CRITERION_LABEL,
+  CRITERION_LETTER,
+  CRITERION_MEANING,
+} from '@/features/aisa/aisa.labels'
 import {
   CRITERIA,
   type Criterion,
   type Rules,
 } from '@/features/aisa/aisa.schema'
-import { cn } from '@/lib/utils'
 
-import { CRITERION_COLOR } from '../../_components/badges'
-
-import { CRITERION_EVIDENCE, num, toPercent } from './helpers'
+import { CriterionName } from './criterion-name'
+import { num, toPercent } from './helpers'
 import { WeightBar } from './weight-bar'
 
 export function WeightsCard({
@@ -39,8 +41,8 @@ export function WeightsCard({
       <CardHeader>
         <CardTitle className="font-semibold">Bobot kriteria</CardTitle>
         <CardDescription>
-          Seberapa besar pengaruh tiap kriteria terhadap skor. Totalnya selalu
-          100%.
+          Lima kriteria (A–E) dan seberapa besar pengaruh tiap kriteria terhadap
+          skor. Totalnya selalu 100%.
         </CardDescription>
         {onEdit ? (
           <CardAction>
@@ -57,16 +59,14 @@ export function WeightsCard({
           {CRITERIA.map((c) => (
             <li
               key={c}
-              className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-3 py-3"
+              className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-3"
             >
-              <span
-                aria-hidden
-                className={cn('mt-1 size-3 rounded-[4px]', CRITERION_COLOR[c])}
-              />
               <div className="min-w-0">
-                <p className="font-medium">{CRITERION_LABEL[c]}</p>
-                <p className="text-[13px] leading-snug text-muted-foreground">
-                  {CRITERION_EVIDENCE[c]}
+                <p className="font-medium">
+                  <CriterionName criterion={c} />
+                </p>
+                <p className="mt-0.5 text-[13px] leading-snug text-muted-foreground">
+                  {CRITERION_MEANING[c]}
                 </p>
               </div>
               <div className="text-right">
@@ -82,7 +82,7 @@ export function WeightsCard({
         </ul>
         <p className="rounded-lg bg-muted/60 px-3 py-2 text-[13px] text-muted-foreground">
           <span className="font-medium text-foreground">
-            {CRITERION_LABEL[top]}
+            {CRITERION_LETTER[top]}. {CRITERION_LABEL[top]}
           </span>{' '}
           paling berpengaruh: nilai sempurna di kriteria ini menyumbang{' '}
           {num(percent[top])} dari 100 poin.

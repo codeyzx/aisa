@@ -16,21 +16,74 @@ const row = (fields: Partial<History>): History => ({
 })
 
 describe('toEvents', () => {
-  it('reads an intake with a kategori as a penilaian by AISA', () => {
+  it('reads an intake with a grade as a penilaian by AISA', () => {
     const [e] = toEvents(
-      [row({ after: 'cocok', proposalId: 'p1', proposalName: 'Tani' })],
+      [
+        row({
+          after: 'layak_bersyarat',
+          proposalId: 'p1',
+          proposalName: 'Tani',
+        }),
+      ],
       [],
       [],
     )
     expect(e).toMatchObject({
       kind: 'penilaian',
       actor: 'ai',
-      categoryTo: 'cocok',
+      categoryTo: 'layak_bersyarat',
     })
     expect(e!.proposal).toMatchObject({ name: 'Tani', linkable: true })
   })
 
-  it('reads an intake without a kategori as proposal masuk, flagged manual', () => {
+  it('keeps an old-scale intake kategori as written', () => {
+    const [e] = toEvents([row({ after: 'cocok' })], [], [])
+    expect(e).toMatchObject({ kind: 'penilaian', categoryTo: 'cocok' })
+  })
+
+  it('reads a re-grade row as nilai ulang by the system, old kategori before', () => {
+    const [e] = toEvents(
+      [
+        row({
+          action: 'dinilai_ulang',
+          before: 'sangat_cocok',
+          after: 'sangat_layak',
+          proposalId: 'p1',
+          proposalName: 'Tani',
+        }),
+      ],
+      [],
+      [],
+    )
+    expect(e).toMatchObject({
+      kind: 'nilai_ulang',
+      actor: 'sistem',
+      categoryFrom: 'sangat_cocok',
+      categoryTo: 'sangat_layak',
+    })
+  })
+
+  it('keeps a legacy koreksi pair as written', () => {
+    const [e] = toEvents(
+      [
+        row({
+          action: 'koreksi',
+          via: 'wa',
+          before: 'cocok',
+          after: 'sangat_cocok',
+        }),
+      ],
+      [],
+      [],
+    )
+    expect(e).toMatchObject({
+      kind: 'koreksi',
+      categoryFrom: 'cocok',
+      categoryTo: 'sangat_cocok',
+    })
+  })
+
+  it('reads an intake without a grade as proposal masuk, flagged manual', () => {
     const [e] = toEvents(
       [row({ after: 'perlu_dicek_manual', proposalId: 'p1' })],
       [],
@@ -42,14 +95,14 @@ describe('toEvents', () => {
   it('falls back to the proposal when the row carries no outcome', () => {
     const p = {
       id: 'p1',
-      category: 'tidak_cocok',
+      category: 'tidak_layak',
       tokens: { in: 3, out: 2 },
       source: { kind: 'form' },
     } as unknown as Proposal
     const [e] = toEvents([row({ proposalId: 'p1' })], [p], [])
     expect(e).toMatchObject({
       kind: 'penilaian',
-      categoryTo: 'tidak_cocok',
+      categoryTo: 'tidak_layak',
       tokens: 5,
     })
   })
@@ -132,6 +185,8 @@ describe('toEvents display words', () => {
       [],
       [],
     )
-    expect(e!.detail).toBe('Proposal Tani masuk: skor 63,1, Tidak cocok')
+    expect(e!.detail).toBe(
+      'Proposal Tani masuk: skor 63,1, Tidak cocok (skala lama)',
+    )
   })
 })

@@ -7,10 +7,10 @@ import { LOCALE, TIME_ZONE } from '@/lib/format/locale'
 
 import {
   buildDigestPreview,
-  COCOK_INLINE_MAX,
   digestLines,
+  INLINE_MAX,
   MANUAL_MAX,
-  QOF_MAX,
+  OUT_OF_FOCUS_MARK,
   SANGAT_DETAIL_MAX,
 } from './digest-preview'
 import { SettingsTabLink } from './settings-dirty'
@@ -60,17 +60,17 @@ export function DigestTab({
 
   const contents = [
     {
-      label: 'Sangat cocok',
+      label: 'Sangat layak',
       text: `Ditulis lengkap: nama, sektor, dana, skor, dan alasan singkat. Paling banyak ${SANGAT_DETAIL_MAX} proposal.`,
     },
     {
-      label: 'Cocok',
-      text: `Nama dan skor dalam satu baris. Paling banyak ${COCOK_INLINE_MAX} proposal.`,
+      label: 'Layak bersyarat, Perlu penyesuaian',
+      text: `Nama dan skor dalam satu baris per grade. Paling banyak ${INLINE_MAX} proposal per grade.`,
     },
-    { label: 'Kurang cocok, Tidak cocok', text: 'Jumlahnya saja.' },
+    { label: 'Risiko tinggi, Tidak layak', text: 'Jumlahnya saja.' },
     {
-      label: 'Berkualitas, di luar fokus',
-      text: `Nama, skor, dan cek fokus yang gagal. Paling banyak ${QOF_MAX} proposal.`,
+      label: 'Di luar fokus',
+      text: `Tetap di grade-nya, diberi tanda “${OUT_OF_FOCUS_MARK}” dan ditaruh setelah yang sesuai fokus. Jumlahnya ditulis satu baris: prioritas rendah.`,
     },
     {
       label: 'Perlu dicek manual',
@@ -116,7 +116,7 @@ export function DigestTab({
 
         <SettingsPanel
           title="Isi pesan"
-          description="Proposal dengan skor tertinggi ditulis lengkap. Sisanya cukup dihitung per kategori agar pesan tetap pendek."
+          description="Proposal dengan skor tertinggi ditulis lengkap. Sisanya cukup dihitung per grade agar pesan tetap pendek."
         >
           {contents.map((row) => (
             <SettingsRow key={row.label} label={row.label}>

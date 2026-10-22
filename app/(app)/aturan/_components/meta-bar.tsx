@@ -63,7 +63,7 @@ export function MetaBar({
         <InfoIcon className="mt-0.5 size-3.5 shrink-0" />
         <p>
           Perubahan hanya berlaku untuk proposal yang masuk setelah disimpan.
-          Skor dan kategori proposal lama tidak dihitung ulang.
+          Skor dan grade proposal lama tidak dihitung ulang.
         </p>
       </div>
     </Card>

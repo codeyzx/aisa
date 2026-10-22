@@ -25,11 +25,21 @@ const response = (
 
 describe('proposalHistoryEntries', () => {
   it('shows the rows with display words', () => {
-    const [entry] = proposalHistoryEntries([row({})], null)
+    const [entry] = proposalHistoryEntries(
+      [row({ detail: 'Proposal Tani masuk: skor 63.1, perlu_penyesuaian' })],
+      null,
+    )
     expect(entry).toMatchObject({
       title: 'Proposal masuk',
-      detail: 'Proposal Tani masuk: skor 63,1, Tidak cocok',
+      detail: 'Proposal Tani masuk: skor 63,1, Perlu penyesuaian',
     })
+  })
+
+  it('marks a kategori of the old scale as such', () => {
+    const [entry] = proposalHistoryEntries([row({})], null)
+    expect(entry?.detail).toBe(
+      'Proposal Tani masuk: skor 63,1, Tidak cocok (skala lama)',
+    )
   })
 
   it('adds a response no proposal-scoped row explains as a tanggapan massal', () => {

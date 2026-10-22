@@ -79,8 +79,8 @@ describe('deriveProgress', () => {
       ['cek_teks', 'selesai'],
       ['nilai', 'berjalan'],
       ['skor', 'menunggu'],
-      ['cocok', 'menunggu'],
-      ['kategori', 'menunggu'],
+      ['fokus', 'menunggu'],
+      ['grade', 'menunggu'],
       ['simpan', 'menunggu'],
     ])
     const running = view.rows[2]!
@@ -211,8 +211,8 @@ describe('deriveProgress', () => {
     expect(states(p).slice(2)).toEqual([
       ['nilai', 'dilewati'],
       ['skor', 'dilewati'],
-      ['cocok', 'dilewati'],
-      ['kategori', 'dilewati'],
+      ['fokus', 'dilewati'],
+      ['grade', 'dilewati'],
       ['simpan', 'dilewati'],
     ])
   })
@@ -241,8 +241,8 @@ describe('deriveProgress', () => {
       ['baca_gambar', 'berjalan'],
       ['nilai', 'menunggu'],
       ['skor', 'menunggu'],
-      ['cocok', 'menunggu'],
-      ['kategori', 'menunggu'],
+      ['fokus', 'menunggu'],
+      ['grade', 'menunggu'],
       ['simpan', 'menunggu'],
     ])
     expect(rows[2]).toMatchObject({
@@ -285,8 +285,8 @@ describe('deriveProgress', () => {
       ['baca_gambar', 'selesai'],
       ['nilai', 'dilewati'],
       ['skor', 'dilewati'],
-      ['cocok', 'dilewati'],
-      ['kategori', 'dilewati'],
+      ['fokus', 'dilewati'],
+      ['grade', 'dilewati'],
       ['simpan', 'dilewati'],
     ])
   })

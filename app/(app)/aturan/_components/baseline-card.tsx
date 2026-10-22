@@ -5,88 +5,85 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { CRITERION_LABEL } from '@/features/aisa/aisa.labels'
-import { CRITERIA, type Criterion } from '@/features/aisa/aisa.schema'
+import { CRITERION_MEANING } from '@/features/aisa/aisa.labels'
+import {
+  CRITERIA,
+  type Criterion,
+  type Rules,
+} from '@/features/aisa/aisa.schema'
+import { cn } from '@/lib/utils'
 
-/** The "Dasar bobot (baseline)" table from overview-project.md, verbatim. */
-const BASELINE: Record<
-  Criterion,
-  { scorecard: string; hustle: string; baseline: string }
-> = {
-  tim: { scorecard: 'Tim 30', hustle: 'Tim 25', baseline: '27,5%' },
-  pasar: {
-    scorecard: 'Peluang 25',
-    hustle: 'Pasar 25 + insight 10',
-    baseline: '30%',
-  },
-  produk: {
-    scorecard: 'Produk 15 + persaingan 10',
-    hustle: 'Produk 10 + keunggulan 5',
-    baseline: '20%',
-  },
-  traksi: {
-    scorecard: 'Kanal penjualan & kemitraan 10',
-    hustle: 'Traksi 10 + go-to-market 5',
-    baseline: '12,5%',
-  },
-  bisnis: {
-    scorecard: 'Kebutuhan dana 5 + lainnya 5',
-    hustle: 'Unit economics 5 + kesiapan dana 3 + risiko 2',
-    baseline: '10%',
-  },
+import { CriterionName } from './criterion-name'
+import { num, toPercent } from './helpers'
+
+/**
+ * The weights of the scoring guide the manager adopted (A–E: 25/20/20/25/10),
+ * the same values `default_rules()` in services/api/aisa/models.py starts from.
+ * Shown beside the active weights so an edit away from the guide is visible.
+ */
+const GUIDE_PERCENT: Record<Criterion, number> = {
+  manajemen: 25,
+  kinerja: 20,
+  risiko: 20,
+  rencana: 25,
+  dampak: 10,
 }
 
-export function BaselineCard() {
+export function BaselineCard({ rules }: { rules: Pick<Rules, 'weights'> }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-semibold">Dasar bobot (baseline)</CardTitle>
+        <CardTitle className="font-semibold">Bobot dari panduan</CardTitle>
         <CardDescription>
-          Bobot baseline adalah rata-rata dua benchmark, dengan rujukan tambahan
-          dari survei Gompers dkk. (885 VC, 47% menyebut tim sebagai faktor
-          terpenting).
+          Bobot awal kelima kriteria berasal dari panduan penilaian yang dipakai
+          tim investasi. Kolom “Sekarang” adalah bobot yang sedang berlaku.
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-col gap-3">
+      <CardContent>
         <div className="overflow-x-auto rounded-lg border">
           <table className="w-full min-w-[36rem] text-[13px]">
             <thead className="bg-muted/50 text-xs text-muted-foreground">
               <tr>
                 <th className="px-3 py-2 text-left font-medium">Kriteria</th>
                 <th className="px-3 py-2 text-left font-medium">
-                  Scorecard Method
+                  Yang dilihat
                 </th>
-                <th className="px-3 py-2 text-left font-medium">
-                  Hustle Fund (pre-seed)
-                </th>
-                <th className="px-3 py-2 text-right font-medium">Baseline</th>
+                <th className="px-3 py-2 text-right font-medium">Panduan</th>
+                <th className="px-3 py-2 text-right font-medium">Sekarang</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {CRITERIA.map((c) => (
-                <tr key={c}>
-                  <td className="px-3 py-2 font-medium">
-                    {CRITERION_LABEL[c]}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground">
-                    {BASELINE[c].scorecard}
-                  </td>
-                  <td className="px-3 py-2 text-muted-foreground">
-                    {BASELINE[c].hustle}
-                  </td>
-                  <td className="px-3 py-2 text-right font-mono font-medium tabular-nums">
-                    {BASELINE[c].baseline}
-                  </td>
-                </tr>
-              ))}
+              {CRITERIA.map((c) => {
+                const now = toPercent(rules.weights[c])
+                const differs = Math.abs(now - GUIDE_PERCENT[c]) > 0.005
+                return (
+                  <tr key={c} className="align-top">
+                    <td className="px-3 py-2 font-medium whitespace-nowrap">
+                      <CriterionName criterion={c} />
+                    </td>
+                    <td className="px-3 py-2 leading-snug text-muted-foreground">
+                      {CRITERION_MEANING[c]}
+                    </td>
+                    <td className="px-3 py-2 text-right font-mono tabular-nums">
+                      {num(GUIDE_PERCENT[c])}%
+                    </td>
+                    <td
+                      className={cn(
+                        'px-3 py-2 text-right font-mono font-medium tabular-nums',
+                        differs && 'text-warning',
+                      )}
+                    >
+                      {num(now)}%
+                      {differs ? (
+                        <span className="sr-only"> (berbeda dari panduan)</span>
+                      ) : null}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Keterbatasan: kedua sumber adalah metode angel dan investor tahap
-          awal, bukan standar resmi VC, dan pemetaan ke 5 kriteria AISA adalah
-          interpretasi tim.
-        </p>
       </CardContent>
     </Card>
   )

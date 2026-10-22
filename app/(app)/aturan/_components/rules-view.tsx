@@ -7,6 +7,7 @@ import type { Rules } from '@/features/aisa/aisa.schema'
 import { AnchorsCard } from './anchors-card'
 import { ExampleCard } from './example-card'
 import { FocusCard, focusOptions } from './focus-card'
+import { GradeGuideCard } from './grade-guide-card'
 import type { RulesTab } from './helpers'
 import { HowItWorks } from './how-it-works'
 import { MetaBar } from './meta-bar'
@@ -52,6 +53,7 @@ export function RulesView({
     <div className="flex w-full flex-col gap-6">
       <MetaBar rules={rules} onEdit={edit('bobot')} />
       <HowItWorks rules={rules} />
+      <GradeGuideCard rules={rules} />
 
       <div className="grid items-start gap-5 lg:grid-cols-5">
         <div className="lg:col-span-3">

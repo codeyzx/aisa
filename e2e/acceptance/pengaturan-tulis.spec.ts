@@ -66,8 +66,8 @@ test('DSB-90 weights that do not total 100% are refused before sending', async (
   aisaApi,
 }) => {
   const dialog = await openRulesDialog(page)
-  await dialog.getByLabel('Tim', { exact: true }).fill('30')
-  await expect(dialog.getByText('· lebih 2,5%')).toBeVisible()
+  await dialog.getByLabel('Tim manajemen', { exact: true }).fill('30')
+  await expect(dialog.getByText('· lebih 5%')).toBeVisible()
   await dialog.getByLabel('Alasan perubahan (wajib)').fill('Uji bobot')
   await saveButton(dialog).click()
 
@@ -82,8 +82,8 @@ test('DSB-91 a rules change without a reason is refused before sending', async (
   aisaApi,
 }) => {
   const dialog = await openRulesDialog(page)
-  await dialog.getByLabel('Tim', { exact: true }).fill('30')
-  await dialog.getByLabel('Pasar & masalah', { exact: true }).fill('27.5')
+  await dialog.getByLabel('Tim manajemen', { exact: true }).fill('30')
+  await dialog.getByLabel('Kinerja bisnis saat ini', { exact: true }).fill('15')
   await expect(dialog.getByText('· sudah pas')).toBeVisible()
   await dialog.getByLabel('Alasan perubahan (wajib)').fill('   ')
   await saveButton(dialog).click()
@@ -149,22 +149,23 @@ test('DSB-92 a retention change needs a reason, then sends the stored rules with
   })
 })
 
-test('DSB-93 category thresholds that do not descend are refused before sending', async ({
+test('DSB-93 grade thresholds that do not descend are refused before sending', async ({
   page,
   aisaApi,
 }) => {
   const dialog = await openRulesDialog(page)
-  await dialog.getByRole('tab', { name: 'Batas kategori' }).click()
-  await dialog.getByLabel('Cocok', { exact: true }).fill('85')
+  await dialog.getByRole('tab', { name: 'Batas grade' }).click()
+  await dialog.getByLabel('Layak bersyarat', { exact: true }).fill('85')
+  // The row says what is wrong as soon as it is typed, before any save.
+  const problem = alertIn(
+    dialog,
+    'Batas Sangat layak harus lebih tinggi dari batas Layak bersyarat (85).',
+  )
+  await expect(problem).toBeVisible()
   await dialog.getByLabel('Alasan perubahan (wajib)').fill('Uji batas')
   await saveButton(dialog).click()
 
-  await expect(
-    alertIn(
-      dialog,
-      'Batas harus berurutan: Sangat cocok > Cocok > Kurang cocok.',
-    ),
-  ).toBeVisible()
+  await expect(problem).toBeVisible()
   expect(aisaApi.calls).toEqual([])
 })
 
@@ -175,8 +176,8 @@ test('DSB-94 a valid save sends the stored rules plus the edits, Asisten unchang
   const stored = await storedRules()
   const dialog = await openRulesDialog(page)
 
-  await dialog.getByLabel('Tim', { exact: true }).fill('30')
-  await dialog.getByLabel('Pasar & masalah', { exact: true }).fill('27.5')
+  await dialog.getByLabel('Tim manajemen', { exact: true }).fill('30')
+  await dialog.getByLabel('Kinerja bisnis saat ini', { exact: true }).fill('15')
   await expect(dialog.getByText('· sudah pas')).toBeVisible()
   await dialog
     .getByLabel('Alasan perubahan (wajib)')
@@ -194,7 +195,7 @@ test('DSB-94 a valid save sends the stored rules plus the edits, Asisten unchang
   expect(call?.key).toBe(EXPECTED_KEY)
   expect(call?.body).toStrictEqual({
     rules: {
-      weights: { ...stored.weights, tim: 0.3, pasar: 0.275 },
+      weights: { ...stored.weights, manajemen: 0.3, kinerja: 0.15 },
       anchors: stored.anchors,
       fit: stored.fit,
       thresholds: stored.thresholds,
@@ -221,8 +222,8 @@ test('DSB-95 a rules save aisa-api refuses shows its message verbatim', async ({
   })
   const dialog = await openRulesDialog(page)
   // The save button stays off until the draft changes something.
-  await dialog.getByRole('tab', { name: 'Batas kategori' }).click()
-  await dialog.getByLabel('Kurang cocok', { exact: true }).fill('40')
+  await dialog.getByRole('tab', { name: 'Batas grade' }).click()
+  await dialog.getByLabel('Risiko tinggi', { exact: true }).fill('40')
   await dialog.getByLabel('Alasan perubahan (wajib)').fill('Uji penolakan')
   await saveButton(dialog).click()
 

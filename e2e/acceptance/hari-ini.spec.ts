@@ -4,11 +4,13 @@
  * worked out from the seed's proposals with the overview's rules, not read off
  * the page: 14 proposals, 2 responded (Panen Kita undang, AplikasiX arsipkan),
  * so 12 belum ditanggapi — of which 9 are scored, 2 perlu dicek manual, 1
- * antre; the 11 that can be decided on are "Menunggu keputusan". By KATEGORI EFEKTIF: Sangat cocok 1 (Tani Maju), Cocok 4 (SawahKu,
- * Klinik Desa, Dana UMKM, and Pasar Ikan corrected from Kurang cocok), Kurang
- * cocok 1 (BelajarYuk), Tidak cocok 3 (Kopi Rakyat, Fashionista, Ternak
- * Pintar), and 2 perlu dicek manual without a kategori; Berkualitas, di luar fokus 1 (Kopi Rakyat,
- * 82,5 and outside the sectors).
+ * antre; the 11 that can be decided on are "Menunggu keputusan". By EFFECTIVE
+ * grade (score bands 85/75/65/50 alone): Sangat layak 3 (Tani Maju, Dana UMKM,
+ * Kopi Rakyat), Layak bersyarat 1 (Klinik Desa), Perlu penyesuaian 2 (SawahKu,
+ * and Pasar Ikan corrected from Risiko tinggi), Risiko tinggi 1 (BelajarYuk),
+ * Tidak layak 2 (Fashionista, Ternak Pintar), and 2 perlu dicek manual without
+ * a grade. Di luar fokus 3 (Kopi Rakyat, Fashionista, Ternak Pintar): a failed
+ * fit check lowers the priority, never the grade.
  */
 import type { Locator, Page } from '@playwright/test'
 
@@ -20,16 +22,17 @@ import { emulatorDb, expect, signInAs, test, withRuntime } from './fixtures.ts'
 
 const STATS = [
   ['Menunggu keputusan', 11, /\/proposal\?tanggapan=belum$/u],
-  ['Disarankan untuk Anda', 5, /\/proposal\?kategori=atas&tanggapan=belum$/u],
+  ['Disarankan untuk Anda', 4, /\/proposal\?kategori=atas&tanggapan=belum$/u],
   ['Sudah ditanggapi', 2, /\/proposal\?tanggapan=sudah$/u],
   ['Total proposal', 14, /\/proposal$/u],
 ] as const
 
 const CATEGORY_ROWS = [
-  ['Sangat cocok', 1, 'sangat_cocok'],
-  ['Cocok', 4, 'cocok'],
-  ['Kurang cocok', 1, 'kurang_cocok'],
-  ['Tidak cocok', 3, 'tidak_cocok'],
+  ['Sangat layak', 3, 'sangat_layak'],
+  ['Layak bersyarat', 1, 'layak_bersyarat'],
+  ['Perlu penyesuaian', 2, 'perlu_penyesuaian'],
+  ['Risiko tinggi', 1, 'risiko_tinggi'],
+  ['Tidak layak', 2, 'tidak_layak'],
 ] as const
 
 const PAUSED_BANNER =
@@ -44,10 +47,10 @@ function linkWith(page: Page, text: string) {
 }
 
 function categoryRows(page: Page) {
-  return page.getByRole('list', { name: 'Menunggu keputusan per kategori' })
+  return page.getByRole('list', { name: 'Menunggu keputusan per grade' })
 }
 
-test('DSB-01 the Dashboard counts every unresponded proposal by kategori efektif', async ({
+test('DSB-01 the Dashboard counts every unresponded proposal by effective grade', async ({
   page,
 }) => {
   await signInAs(page)
@@ -76,9 +79,7 @@ test('DSB-01 the Dashboard counts every unresponded proposal by kategori efektif
   ).toBeVisible()
 
   await expect(
-    linkWith(page, 'Berkualitas, di luar fokus').getByText(
-      '1 proposal patut dilihat lagi',
-    ),
+    linkWith(page, 'Di luar fokus').getByText('3 proposal, prioritas rendah'),
   ).toBeVisible()
   await expect(
     linkWith(page, 'Perlu dicek manual').getByText(
@@ -161,7 +162,7 @@ test('DSB-03 every Dashboard count opens the proposal list filtered the same way
       new RegExp(`/proposal\\?kategori=${category}&tanggapan=belum$`, 'u'),
     ]),
     [
-      linkWith(page, 'Berkualitas, di luar fokus'),
+      linkWith(page, 'Di luar fokus'),
       /\/proposal\?luarFokus=1&tanggapan=belum$/u,
     ],
     [

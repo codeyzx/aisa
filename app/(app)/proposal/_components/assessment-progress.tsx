@@ -106,7 +106,7 @@ function headline(
     case 'selesai':
       return 'Menampilkan hasilnya…'
     case 'perlu_dicek_manual':
-      return `${reason ? `Alasannya: ${reason}. ` : ''}AI tidak memberi skor atau kategori; buka deck dan tinjau sendiri.`
+      return `${reason ? `Alasannya: ${reason}. ` : ''}AI tidak memberi skor atau grade; buka deck dan tinjau sendiri.`
     case 'dihentikan':
       return 'STOP aktif, jadi penilaian berhenti. Proposal ini dinilai ulang dari awal setelah LANJUT.'
     case 'gagal':

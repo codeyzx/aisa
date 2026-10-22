@@ -15,9 +15,9 @@ import {
 import { useApiAction } from '../../_components/use-api-action'
 
 /**
- * Tanggapan massal for the filtered category — the dashboard twin of
- * "arsipkan semua tidak cocok". Asks once more before sending, since it touches
- * every unresponded proposal in the category.
+ * Tanggapan massal for the filtered grade — the dashboard twin of
+ * "arsipkan semua tidak layak". Asks once more before sending, since it touches
+ * every unresponded proposal in the grade.
  */
 export function BulkRespond({
   category,

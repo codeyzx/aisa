@@ -10,7 +10,7 @@ export interface ShellProposal {
   name: string
   founder: string | null
   sector: string | null
-  /** The effective kategori label, or null while it is not yet scored. */
+  /** The effective grade label, or null while it is not yet scored. */
   categoryLabel: string | null
 }
 

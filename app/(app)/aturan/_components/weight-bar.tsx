@@ -1,4 +1,8 @@
-import { CRITERION_LABEL } from '@/features/aisa/aisa.labels'
+import {
+  CRITERION_LABEL,
+  CRITERION_LETTER,
+  CRITERION_SHORT,
+} from '@/features/aisa/aisa.labels'
 import { CRITERIA, type Criterion } from '@/features/aisa/aisa.schema'
 import { cn } from '@/lib/utils'
 
@@ -23,7 +27,8 @@ export function WeightBar({
     <div className={cn('flex flex-col gap-2', className)}>
       <span className="sr-only">
         {CRITERIA.map(
-          (c) => `${CRITERION_LABEL[c]} ${num(percent[c] || 0)}%`,
+          (c) =>
+            `${CRITERION_LETTER[c]}. ${CRITERION_LABEL[c]} ${num(percent[c] || 0)}%`,
         ).join(', ')}
       </span>
       <div
@@ -59,7 +64,10 @@ export function WeightBar({
                 aria-hidden
                 className={cn('size-2.5 rounded-[3px]', CRITERION_COLOR[c])}
               />
-              {CRITERION_LABEL[c]}
+              <span className="font-mono font-semibold">
+                {CRITERION_LETTER[c]}
+              </span>
+              {CRITERION_SHORT[c]}
               <span className="font-mono font-medium text-foreground tabular-nums">
                 {num(percent[c] || 0)}%
               </span>

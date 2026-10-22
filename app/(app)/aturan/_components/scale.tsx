@@ -1,4 +1,4 @@
-import { CATEGORY_LABEL } from '@/features/aisa/aisa.labels'
+import { CATEGORY_LABEL, gradeBands } from '@/features/aisa/aisa.labels'
 import {
   CATEGORIES,
   type Category,
@@ -13,15 +13,16 @@ import { num } from './helpers'
 const BIN = 4
 
 const SOFT: Record<Category, string> = {
-  sangat_cocok: 'bg-category-1-fill/15 border-category-1-fill',
-  cocok: 'bg-category-2-fill/15 border-category-2-fill',
-  kurang_cocok: 'bg-category-3-fill/15 border-category-3-fill',
-  tidak_cocok: 'bg-category-4-fill/20 border-category-4-fill',
+  sangat_layak: 'bg-category-1-fill/15 border-category-1-fill',
+  layak_bersyarat: 'bg-category-2-fill/15 border-category-2-fill',
+  perlu_penyesuaian: 'bg-category-3-fill/20 border-category-3-fill',
+  risiko_tinggi: 'bg-category-4-fill/20 border-category-4-fill',
+  tidak_layak: 'bg-category-5-fill/15 border-category-5-fill',
 }
 
 /**
- * The 0–100 score scale with the kategori bands. With `points`, a histogram of
- * the proposals' scores (coloured by the kategori each one carries) sits above.
+ * The 0–100 score scale with the five grade bands. With `points`, a histogram of
+ * the proposals' scores (coloured by the grade each one carries) sits above.
  */
 export function Scale({
   thresholds,
@@ -32,14 +33,16 @@ export function Scale({
   points?: readonly { score: number; category: Category }[]
   className?: string
 }) {
-  const t = thresholds
-  const bands: { category: Category; from: number; to: number }[] = [
-    { category: 'tidak_cocok', from: 0, to: t.kurangCocok },
-    { category: 'kurang_cocok', from: t.kurangCocok, to: t.cocok },
-    { category: 'cocok', from: t.cocok, to: t.sangatCocok },
-    { category: 'sangat_cocok', from: t.sangatCocok, to: 100 },
-  ]
-  const marks = [t.kurangCocok, t.cocok, t.sangatCocok]
+  // Worst band on the left, so the bar reads like the 0–100 axis under it.
+  const bands = gradeBands(thresholds)
+    .toReversed()
+    .map((band) => ({
+      category: band.category,
+      text: band.text,
+      from: band.min,
+      to: band.below ?? 100,
+    }))
+  const marks = bands.slice(1).map((band) => band.from)
 
   const bins = points
     ? Array.from({ length: 100 / BIN }, (_, i) => {
@@ -76,7 +79,7 @@ export function Scale({
                       <div
                         key={part.category}
                         className={cn(
-                          // A card-coloured edge between stacked kategori fills.
+                          // A card-coloured edge between stacked grade fills.
                           'w-full border-card not-last:border-t-2 first:rounded-b-[2px] last:rounded-t-[3px]',
                           CATEGORY_DOT[part.category],
                         )}
@@ -101,13 +104,14 @@ export function Scale({
         {bands.map((band) => (
           <div
             key={band.category}
+            title={`${CATEGORY_LABEL[band.category]}: skor ${band.text}`}
             className={cn(
               'flex min-w-0 items-center justify-center border-t-[3px] px-1 transition-[width] duration-300',
               SOFT[band.category],
             )}
             style={{ width: `${Math.max(0, band.to - band.from)}%` }}
           >
-            <span className="hidden truncate text-xs font-medium sm:block">
+            <span className="hidden truncate text-xs font-medium md:block">
               {CATEGORY_LABEL[band.category]}
             </span>
           </div>

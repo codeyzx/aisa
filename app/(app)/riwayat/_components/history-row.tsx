@@ -21,12 +21,15 @@ import {
 } from '@/components/ui/collapsible'
 import {
   CATEGORY_LABEL,
-  QUALITY_OUTSIDE_FOCUS_LABEL,
+  categoryText,
+  LEGACY_CATEGORY_LABEL,
   RESPONSE_LABEL,
   VIA_LABEL,
 } from '@/features/aisa/aisa.labels'
 import {
   CATEGORIES,
+  type Category,
+  LEGACY_CATEGORIES,
   type ResponseKind,
   type Rules,
 } from '@/features/aisa/aisa.schema'
@@ -35,7 +38,8 @@ import { cn } from '@/lib/utils'
 
 import {
   CATEGORY_DOT,
-  CategoryBadge,
+  GradeBadge,
+  OutsideFocusBadge,
   scoreTone,
 } from '../../_components/badges'
 import { ACTOR_LABEL, type ActorType, type RiwayatEvent } from './events'
@@ -44,6 +48,43 @@ import { eventTone, formatClock, formatFull } from './metrics'
 export type Thresholds = Rules['thresholds'] | null
 
 const proposalHref = (id: string) => `/proposal/${encodeURIComponent(id)}`
+
+const isGrade = (value: string): value is Category =>
+  (CATEGORIES as readonly string[]).includes(value)
+
+/**
+ * A grade as the row stored it: a current grade as its badge, an old-scale
+ * value ("Cocok (skala lama)") as a plain muted badge, so it never passes for
+ * one of today's grades.
+ */
+function StoredGrade({
+  value,
+  className,
+}: {
+  value: string
+  className?: string
+}) {
+  if (isGrade(value))
+    return <GradeBadge category={value} className={className} />
+  return (
+    <Badge variant="outline" className={cn('text-muted-foreground', className)}>
+      {categoryText(value)}
+    </Badge>
+  )
+}
+
+function GradeChange({ from, to }: { from: string; to: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <StoredGrade value={from} className="opacity-80" />
+      <ArrowRightIcon
+        className="size-3.5 text-muted-foreground"
+        aria-label="menjadi"
+      />
+      <StoredGrade value={to} />
+    </div>
+  )
+}
 
 export function EventIcon({
   event,
@@ -173,7 +214,13 @@ function Title({ event }: { event: RiwayatEvent }) {
     case 'koreksi':
       return (
         <>
-          Kategori <Startup event={event} /> dikoreksi
+          Grade <Startup event={event} /> dikoreksi
+        </>
+      )
+    case 'nilai_ulang':
+      return (
+        <>
+          <Startup event={event} /> dinilai ulang dengan skala baru
         </>
       )
     case 'aturan':
@@ -212,6 +259,14 @@ function DigestDetails({ event }: { event: RiwayatEvent }) {
   if (!digest)
     return <p className="text-[13px] text-muted-foreground">{event.detail}</p>
   const pending = digest.counts.belumDitanggapi
+  // A ringkasan sent before the grade scale changed kept its old count keys.
+  const legacy = LEGACY_CATEGORIES.some((key) =>
+    Object.hasOwn(digest.counts, key),
+  )
+  const countOf = (key: string) => {
+    const value = (digest.counts as Record<string, unknown>)[key]
+    return typeof value === 'number' ? value : 0
+  }
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <p className="text-[13px] text-muted-foreground">
@@ -233,21 +288,44 @@ function DigestDetails({ event }: { event: RiwayatEvent }) {
       <CollapsibleContent>
         <div className="mt-2 space-y-2 rounded-lg border bg-muted/50 p-3 text-[13px]">
           <div className="flex flex-wrap gap-x-4 gap-y-1">
-            {CATEGORIES.map((category) => (
-              <span key={category} className="inline-flex items-center gap-1.5">
-                <span
-                  aria-hidden
-                  className={cn(
-                    'size-1.5 rounded-full',
-                    CATEGORY_DOT[category],
-                  )}
-                />
-                {CATEGORY_LABEL[category]}
+            {legacy
+              ? LEGACY_CATEGORIES.map((category) => (
+                  <span
+                    key={category}
+                    className="inline-flex items-center gap-1.5"
+                  >
+                    {LEGACY_CATEGORY_LABEL[category]}
+                    <b className="font-mono font-semibold tabular-nums">
+                      {countOf(category)}
+                    </b>
+                  </span>
+                ))
+              : CATEGORIES.map((category) => (
+                  <span
+                    key={category}
+                    className="inline-flex items-center gap-1.5"
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        'size-1.5 rounded-full',
+                        CATEGORY_DOT[category],
+                      )}
+                    />
+                    {CATEGORY_LABEL[category]}
+                    <b className="font-mono font-semibold tabular-nums">
+                      {digest.counts[category]}
+                    </b>
+                  </span>
+                ))}
+            {!legacy && digest.counts.luarFokus ? (
+              <span className="inline-flex items-center gap-1.5">
+                Di luar fokus
                 <b className="font-mono font-semibold tabular-nums">
-                  {digest.counts[category]}
+                  {digest.counts.luarFokus}
                 </b>
               </span>
-            ))}
+            ) : null}
             {digest.counts.perluDicekManual ? (
               <span className="inline-flex items-center gap-1.5">
                 Perlu dicek manual
@@ -302,12 +380,8 @@ function Details({
               /100
             </span>
           ) : null}
-          {event.categoryTo ? (
-            <CategoryBadge category={event.categoryTo} />
-          ) : null}
-          {p?.qualityOutsideFocus ? (
-            <Badge variant="outline">{QUALITY_OUTSIDE_FOCUS_LABEL}</Badge>
-          ) : null}
+          {event.categoryTo ? <StoredGrade value={event.categoryTo} /> : null}
+          {p?.outsideFocus ? <OutsideFocusBadge fit={p.fit} /> : null}
           {p?.sector || p?.source ? (
             <span className="text-muted-foreground">
               {[p.sector, p.source ? SOURCE_WORD[p.source] : null]
@@ -327,21 +401,20 @@ function Details({
       return (
         <div className="space-y-1.5 text-[13px]">
           {event.categoryFrom && event.categoryTo ? (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <CategoryBadge
-                category={event.categoryFrom}
-                className="opacity-70"
-              />
-              <ArrowRightIcon
-                className="size-3.5 text-muted-foreground"
-                aria-label="menjadi"
-              />
-              <CategoryBadge category={event.categoryTo} />
-            </div>
+            <GradeChange from={event.categoryFrom} to={event.categoryTo} />
           ) : (
             <p className="text-muted-foreground">{event.detail}</p>
           )}
           {event.reason ? <Quote text={event.reason} /> : null}
+        </div>
+      )
+    case 'nilai_ulang':
+      return (
+        <div className="space-y-1.5 text-[13px]">
+          {event.categoryFrom && event.categoryTo ? (
+            <GradeChange from={event.categoryFrom} to={event.categoryTo} />
+          ) : null}
+          <p className="text-muted-foreground">{event.detail}</p>
         </div>
       )
     case 'keputusan':

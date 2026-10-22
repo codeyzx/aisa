@@ -4,9 +4,10 @@ shadcn primitives — style **`base-nova`** on **Base UI** (`@base-ui/react`, no
 Radix). Config in `components.json`; add more with
 `pnpm dlx shadcn@latest add <name>`. Tokens: `app/globals.css`, which imports the
 AISA workspace styles in `app/artifact.css`. `--criterion-*` paints the five scoring
-criteria (one hue each, read through `CRITERION_COLOR` in `app/(app)/_components/badges.tsx`).
-Each kategori has `--category-N` for text (≥ 4.5:1 on its `-soft` background and on the
-card) and `--category-N-fill` for dots, bars and chart fills (≥ 3:1 on the card).
+criteria A–E (one hue each, read through `CRITERION_COLOR` in `app/(app)/_components/badges.tsx`).
+Each of the five grades (1 Sangat layak … 5 Tidak layak) has `--category-N` for text
+(≥ 4.5:1 on its `-soft` background and on the card), `--category-N-fill` for badges, dots,
+bars and chart fills (≥ 3:1 on the card), and `--category-N-on` for text on that fill.
 Decision badges (`DecisionBadge`) carry no hue: icon and word tell them apart, and
 "Belum ditanggapi" alone has a dashed outline and bold text.
 Vendored primitives relax a few extra-strict a11y lint rules (`.oxlintrc.json`

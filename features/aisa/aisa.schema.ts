@@ -11,18 +11,40 @@ import * as z from 'zod'
 
 import { TimestampSchema } from '@/lib/data/timestamp'
 
-export const CRITERIA = ['tim', 'pasar', 'produk', 'traksi', 'bisnis'] as const
+/** Criteria A–E, in the order every list, chart and prompt shows them. */
+export const CRITERIA = [
+  'manajemen',
+  'kinerja',
+  'risiko',
+  'rencana',
+  'dampak',
+] as const
 export const CriterionSchema = z.enum(CRITERIA)
 export type Criterion = z.infer<typeof CriterionSchema>
 
+/** The five grades, best first. The grade follows from the score alone. */
 export const CATEGORIES = [
+  'sangat_layak',
+  'layak_bersyarat',
+  'perlu_penyesuaian',
+  'risiko_tinggi',
+  'tidak_layak',
+] as const
+export const CategorySchema = z.enum(CATEGORIES)
+export type Category = z.infer<typeof CategorySchema>
+
+/**
+ * The kategori values of the earlier four-step scale. Proposals were re-graded, but
+ * history rows and sent ringkasan keep these as written; they render as
+ * "… (skala lama)" and are never parsed as a current grade.
+ */
+export const LEGACY_CATEGORIES = [
   'sangat_cocok',
   'cocok',
   'kurang_cocok',
   'tidak_cocok',
 ] as const
-export const CategorySchema = z.enum(CATEGORIES)
-export type Category = z.infer<typeof CategorySchema>
+export type LegacyCategory = (typeof LEGACY_CATEGORIES)[number]
 
 export const PROPOSAL_STATUSES = [
   'antre',
@@ -78,11 +100,11 @@ export type StepStatus = z.infer<typeof StepStatusSchema>
 /** A record with exactly one entry per criterion. */
 function perCriterion<T extends z.ZodType>(value: T) {
   return z.object({
-    tim: value,
-    pasar: value,
-    produk: value,
-    traksi: value,
-    bisnis: value,
+    manajemen: value,
+    kinerja: value,
+    risiko: value,
+    rencana: value,
+    dampak: value,
   })
 }
 
@@ -151,7 +173,6 @@ export const ProposalSchema = z.object({
   assessment: AssessmentSchema.nullish(),
   fit: FitSchema.nullish(),
   category: CategorySchema.nullish(),
-  qualityOutsideFocus: z.boolean().default(false),
   correction: z
     .object({
       category: CategorySchema,
@@ -179,15 +200,12 @@ export const ProposalSchema = z.object({
 export type Proposal = z.infer<typeof ProposalSchema>
 
 /**
- * The "Berkualitas, di luar fokus" mark as the manager sees it: the stored flag only counts
- * while the effective kategori is still Tidak cocok. A kategori correction keeps the flag
- * (the AI result is never rewritten) but the mark no longer describes the proposal. The
- * ringkasan in `services/api/aisa/digest.py` applies the same rule.
+ * "Di luar fokus": the proposal failed at least one fit check (sector, stage,
+ * funding). It never changes the grade, only the priority — derived from `fit`, as
+ * the ringkasan in `services/api/aisa/digest.py` does, with no stored flag.
  */
-export function showsQualityOutsideFocus(
-  p: Pick<Proposal, 'qualityOutsideFocus' | 'effectiveCategory'>,
-): boolean {
-  return p.qualityOutsideFocus && p.effectiveCategory === 'tidak_cocok'
+export function isOutsideFocus(p: Pick<Proposal, 'fit'>): boolean {
+  return p.fit?.passed === false
 }
 
 /**
@@ -205,6 +223,25 @@ export function awaitsDecision(
   )
 }
 
+/**
+ * The lowest score of each grade above Tidak layak, strictly descending; a score below
+ * `risikoTinggi` is Tidak layak.
+ */
+export const ThresholdsSchema = z.object({
+  sangatLayak: z.number(),
+  layakBersyarat: z.number(),
+  perluPenyesuaian: z.number(),
+  risikoTinggi: z.number(),
+})
+export type Thresholds = z.infer<typeof ThresholdsSchema>
+/** Threshold keys, best grade first; `THRESHOLD_KEYS[i]` is the floor of `CATEGORIES[i]`. */
+export const THRESHOLD_KEYS = [
+  'sangatLayak',
+  'layakBersyarat',
+  'perluPenyesuaian',
+  'risikoTinggi',
+] as const satisfies readonly (keyof Thresholds)[]
+
 export const RulesSchema = z.object({
   id: z.string(),
   version: z.number().int(),
@@ -218,12 +255,7 @@ export const RulesSchema = z.object({
     fundingMinIdr: z.number(),
     fundingMaxIdr: z.number(),
   }),
-  thresholds: z.object({
-    sangatCocok: z.number(),
-    cocok: z.number(),
-    kurangCocok: z.number(),
-    qualityOutsideFocus: z.number(),
-  }),
+  thresholds: ThresholdsSchema,
   models: z.object({
     penilai: z.string(),
     ringkasan: z.string(),
@@ -322,6 +354,7 @@ export const HISTORY_ACTIONS = [
   'ringkasan_terkirim',
   'proposal_masuk',
   'proposal_dihapus',
+  'dinilai_ulang',
 ] as const
 export type HistoryAction = (typeof HISTORY_ACTIONS)[number]
 export const HistoryActionSchema = openEnum(HISTORY_ACTIONS)
@@ -352,16 +385,22 @@ export const DigestSchema = z.object({
   windowStart: TimestampSchema,
   sentAt: TimestampSchema,
   text: z.string(),
-  counts: z.object({
-    sangat_cocok: z.number().default(0),
-    cocok: z.number().default(0),
-    kurang_cocok: z.number().default(0),
-    tidak_cocok: z.number().default(0),
-    kualitasLuarFokus: z.number().default(0),
-    perluDicekManual: z.number().default(0),
-    belumDitanggapi: z.number().default(0),
-    baruMasuk: z.number().default(0),
-  }),
+  // A ringkasan sent before the grade scale changed keeps its old count keys
+  // (`sangat_cocok`, `kualitasLuarFokus`, …); `.loose()` keeps them instead of
+  // failing the read, and the current keys default to 0 there.
+  counts: z
+    .object({
+      sangat_layak: z.number().default(0),
+      layak_bersyarat: z.number().default(0),
+      perlu_penyesuaian: z.number().default(0),
+      risiko_tinggi: z.number().default(0),
+      tidak_layak: z.number().default(0),
+      luarFokus: z.number().default(0),
+      perluDicekManual: z.number().default(0),
+      belumDitanggapi: z.number().default(0),
+      baruMasuk: z.number().default(0),
+    })
+    .loose(),
   proposalIds: z.array(z.string()),
   usedTemplate: z.boolean(),
   /** The "Yang menarik" sentence the ringkasan carried, if one was written. */

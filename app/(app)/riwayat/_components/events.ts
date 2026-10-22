@@ -5,11 +5,12 @@
 
 import { historyDetailText, sectorLabel } from '@/features/aisa/aisa.labels'
 import {
-  type Category,
   CATEGORIES,
   DELETED_PROPOSAL_NAME,
   type Digest,
   type History,
+  isOutsideFocus,
+  LEGACY_CATEGORIES,
   type Proposal,
   RESPONSE_KINDS,
   type ResponseKind,
@@ -19,6 +20,7 @@ import {
 export const EVENT_KINDS = [
   'keputusan',
   'penilaian',
+  'nilai_ulang',
   'masuk',
   'whatsapp',
   'koreksi',
@@ -46,7 +48,9 @@ export interface EventProposal {
   sector?: string
   source?: 'form' | 'upload'
   score?: number
-  qualityOutsideFocus?: boolean
+  /** Failed a fit check ("Di luar fokus"); `fit` says which. */
+  outsideFocus?: boolean
+  fit?: Proposal['fit']
   statusReason?: string
 }
 
@@ -77,10 +81,15 @@ export interface RiwayatEvent {
   decision?: ResponseKind
   /** The response it replaced, when the manager changed their mind. */
   previousDecision?: ResponseKind
-  categoryFrom?: Category
-  categoryTo?: Category
+  /**
+   * A grade as the row stored it: a current grade, or a value of the old
+   * four-step scale on rows written before the re-grade. Render through
+   * `categoryText`, never as a `Category`.
+   */
+  categoryFrom?: string
+  categoryTo?: string
   rulesVersion?: number
-  /** An intake that reached no kategori and waits for the manager. */
+  /** An intake that reached no grade and waits for the manager. */
   manual?: boolean
   paused?: boolean
   digest?: EventDigest
@@ -88,8 +97,13 @@ export interface RiwayatEvent {
   tokens?: number
 }
 
-const isCategory = (v: unknown): v is Category =>
-  typeof v === 'string' && (CATEGORIES as readonly string[]).includes(v)
+const GRADE_VALUES: ReadonlySet<string> = new Set([
+  ...CATEGORIES,
+  ...LEGACY_CATEGORIES,
+])
+/** A grade value of either scale: current, or legacy on older rows. */
+const isCategory = (v: unknown): v is string =>
+  typeof v === 'string' && GRADE_VALUES.has(v)
 const isResponse = (v: unknown): v is ResponseKind =>
   typeof v === 'string' && (RESPONSE_KINDS as readonly string[]).includes(v)
 
@@ -111,7 +125,7 @@ function pairDigest(at: Date, digests: Digest[]): Digest | undefined {
 }
 
 /**
- * aisa-api writes the intake's outcome into `after` (a kategori, or
+ * aisa-api writes the intake's outcome into `after` (a grade, or
  * `perlu_dicek_manual`); a row without it falls back to the proposal's state.
  * Intake writes the row only after the assessment, so a scored proposal's row
  * is its penilaian.
@@ -145,6 +159,8 @@ function kindOf(row: History, p: Proposal | undefined): EventKind {
       return 'whatsapp'
     case 'koreksi':
       return 'koreksi'
+    case 'dinilai_ulang':
+      return 'nilai_ulang'
     case 'aturan_diubah':
       return 'aturan'
     case 'stop':
@@ -187,7 +203,8 @@ export function toEvents(
             : undefined,
           source: p?.source.kind,
           score: p?.assessment?.score,
-          qualityOutsideFocus: p?.qualityOutsideFocus,
+          outsideFocus: p ? isOutsideFocus(p) : undefined,
+          fit: p?.fit,
           statusReason: p?.statusReason ?? undefined,
         }
       : undefined
@@ -213,11 +230,14 @@ export function toEvents(
           ? row.before
           : undefined,
       categoryFrom:
-        kind === 'koreksi' && isCategory(row.before) ? row.before : undefined,
+        (kind === 'koreksi' || kind === 'nilai_ulang') && isCategory(row.before)
+          ? row.before
+          : undefined,
       categoryTo:
         kind === 'penilaian'
           ? intakeCategory(row, p)
-          : kind === 'koreksi' && isCategory(row.after)
+          : (kind === 'koreksi' || kind === 'nilai_ulang') &&
+              isCategory(row.after)
             ? row.after
             : undefined,
       manual:

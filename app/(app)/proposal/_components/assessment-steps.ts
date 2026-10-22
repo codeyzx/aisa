@@ -15,8 +15,8 @@ export type StepKey =
   | 'baca_gambar'
   | 'nilai'
   | 'skor'
-  | 'cocok'
-  | 'kategori'
+  | 'fokus'
+  | 'grade'
   | 'simpan'
   | 'stop'
 
@@ -24,6 +24,8 @@ export interface StepInfo {
   key: StepKey
   /** The `action` the API records, without a retry's " (ulang)". */
   action: string
+  /** Older names the API recorded for the same step, on jobs from before a rename. */
+  formerActions?: readonly string[]
   /** Plain-language name, in the present tense of the work. */
   title: string
   /** One sentence: what happens in this step and why it matters. */
@@ -89,27 +91,27 @@ export const PIPELINE: readonly StepInfo[] = [
     by: 'sistem',
   },
   {
-    key: 'cocok',
+    key: 'fokus',
     action: 'Cek kecocokan',
     title: 'Mencocokkan dengan fokus investasi',
     explain:
-      'Sektor, tahap, dan besar dana dari deck dibandingkan dengan fokus di aturan penilaian.',
+      'Sektor, tahap, dan besar dana dari deck dibandingkan dengan fokus di aturan penilaian. Hasilnya tidak mengubah grade; yang di luar fokus hanya diberi prioritas lebih rendah.',
     by: 'sistem',
   },
   {
-    key: 'kategori',
-    action: 'Tentukan kategori',
-    title: 'Menentukan kategori',
+    key: 'grade',
+    action: 'Tentukan grade',
+    formerActions: ['Tentukan kategori'],
+    title: 'Menentukan grade',
     explain:
-      'Kategori dipilih dari skor dan hasil cek fokus, dengan ambang yang sama untuk semua proposal.',
+      'Grade dipilih dari skor saja, dengan batas skor yang sama untuk semua proposal.',
     by: 'sistem',
   },
   {
     key: 'simpan',
     action: 'Simpan hasil penilaian',
     title: 'Menyimpan hasil',
-    explain:
-      'Skor, kategori, dan kutipan disimpan, lalu proposal siap ditinjau.',
+    explain: 'Skor, grade, dan kutipan disimpan, lalu proposal siap ditinjau.',
     by: 'sistem',
   },
 ]
@@ -140,7 +142,9 @@ export function describeStep(
   const action = retry
     ? step.action.slice(0, -RETRY_SUFFIX.length)
     : step.action
-  const info = [...PIPELINE, STOP].find((entry) => entry.action === action)
+  const info = [...PIPELINE, STOP].find(
+    (entry) => entry.action === action || entry.formerActions?.includes(action),
+  )
   if (!info)
     return {
       key: null,
@@ -150,12 +154,14 @@ export function describeStep(
       by: step.actor === 'model' ? 'ai' : 'sistem',
       retry,
     }
+  // `action` stays as recorded, so a former name still shows as the job wrote it.
   return retry
     ? {
         ...info,
+        action,
         title: `${info.title} (ulang)`,
         explain: RETRY_EXPLAIN,
         retry,
       }
-    : { ...info, retry }
+    : { ...info, action, retry }
 }

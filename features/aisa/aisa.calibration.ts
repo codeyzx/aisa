@@ -1,20 +1,20 @@
 // Manager review as calibration material: how often the manager left the AI's
-// kategori standing. Pure functions over proposals the repo already parsed, so
+// grade standing. Pure functions over proposals the repo already parsed, so
 // the rule is unit-tested here and the page only renders it.
 
 import { CATEGORIES, type Category, type Proposal } from './aisa.schema'
 
 /**
  * Reviewed by the manager: the proposal carries a tanggapan or a koreksi
- * kategori. A proposal with neither has no manager verdict to compare with.
+ * grade. A proposal with neither has no manager verdict to compare with.
  */
 export function isReviewed(p: Pick<Proposal, 'response' | 'correction'>) {
   return p.response != null || p.correction != null
 }
 
 /**
- * A koreksi that disagrees with the AI: its kategori differs from the one the
- * code assigned. A koreksi back to the AI's own kategori is agreement, which is
+ * A koreksi that disagrees with the AI: its grade differs from the one the
+ * code assigned. A koreksi back to the AI's own grade is agreement, which is
  * also why the list badge "dikoreksi" uses this test.
  */
 export function isCorrected(
@@ -23,12 +23,12 @@ export function isCorrected(
   return p.correction != null && p.correction.category !== p.category
 }
 
-/** `naik` moves toward Sangat cocok, `turun` toward Tidak cocok. */
+/** `naik` moves toward Sangat layak, `turun` toward Tidak layak. */
 export type CorrectionDirection = 'naik' | 'turun'
 
 /**
  * Direction of a koreksi on the `CATEGORIES` scale (best first). `null` when
- * the AI gave no kategori to move from.
+ * the AI gave no grade to move from.
  */
 export function correctionDirection(
   from: Category | null | undefined,

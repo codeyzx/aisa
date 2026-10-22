@@ -3,14 +3,17 @@
 // body `updateRulesAction` sends. The server action re-validates everything;
 // this check exists so the impact preview only runs on rules that could save.
 
+import { CATEGORY_LABEL } from '@/features/aisa/aisa.labels'
 import {
+  CATEGORIES,
   CRITERIA,
+  THRESHOLD_KEYS,
   type Criterion,
   type EditableRules,
   type Rules,
 } from '@/features/aisa/aisa.schema'
 
-import { toPercent, type RulesTab } from './helpers'
+import { num, toPercent, type RulesTab } from './helpers'
 
 export type ThresholdKey = keyof Rules['thresholds']
 export type ModelKey = keyof EditableRules['models']
@@ -35,12 +38,9 @@ export function draftFromRules(rules: Rules): RulesDraft {
     percent: Object.fromEntries(
       CRITERIA.map((c) => [c, String(toPercent(rules.weights[c]))]),
     ) as Record<Criterion, string>,
-    thresholds: {
-      sangatCocok: String(rules.thresholds.sangatCocok),
-      cocok: String(rules.thresholds.cocok),
-      kurangCocok: String(rules.thresholds.kurangCocok),
-      qualityOutsideFocus: String(rules.thresholds.qualityOutsideFocus),
-    },
+    thresholds: Object.fromEntries(
+      THRESHOLD_KEYS.map((k) => [k, String(rules.thresholds[k])]),
+    ) as Record<ThresholdKey, string>,
     sectors: [...rules.fit.sectors],
     stages: [...rules.fit.stages],
     fundingMin: String(rules.fit.fundingMinIdr / MILIAR),
@@ -68,6 +68,43 @@ export function livePercent(draft: RulesDraft): Record<Criterion, number> {
 export const percentTotal = (percent: Record<Criterion, number>) =>
   Math.round(CRITERIA.reduce((sum, c) => sum + percent[c], 0) * 100) / 100
 
+/** The grade whose lowest score a threshold sets. */
+export const thresholdGrade = (key: ThresholdKey) =>
+  CATEGORIES[THRESHOLD_KEYS.indexOf(key)]!
+
+/** The typed thresholds as numbers; blank text is NaN. */
+export const parseThresholds = (draft: RulesDraft): Rules['thresholds'] =>
+  Object.fromEntries(
+    THRESHOLD_KEYS.map((k) => [k, parse(draft.thresholds[k])]),
+  ) as Rules['thresholds']
+
+/**
+ * What is wrong with each threshold, in plain words: every one filled in,
+ * above 0 and at most 100, and each higher than the one below it — the order
+ * `Thresholds` in services/api/aisa/models.py enforces. Empty when they can save.
+ */
+export function thresholdProblems(
+  t: Rules['thresholds'],
+): Partial<Record<ThresholdKey, string>> {
+  const problems: Partial<Record<ThresholdKey, string>> = {}
+  THRESHOLD_KEYS.forEach((key, i) => {
+    const value = t[key]
+    const label = CATEGORY_LABEL[thresholdGrade(key)]
+    if (!Number.isFinite(value) || value <= 0 || value > 100) {
+      problems[key] =
+        `Isi batas ${label} dengan angka lebih dari 0 dan paling tinggi 100.`
+      return
+    }
+    const lowerKey = THRESHOLD_KEYS[i + 1]
+    if (!lowerKey) return
+    const lower = t[lowerKey]
+    if (Number.isFinite(lower) && value <= lower)
+      problems[key] =
+        `Batas ${label} harus lebih tinggi dari batas ${CATEGORY_LABEL[thresholdGrade(lowerKey)]} (${num(lower)}).`
+  })
+  return problems
+}
+
 export type DraftErrors = Partial<Record<RulesTab, string[]>>
 
 export interface DraftCheck {
@@ -93,16 +130,9 @@ export function checkDraft(
   else if (Math.abs(percentTotal(percent) - 100) > 0.05)
     add('bobot', 'Total bobot lima kriteria harus tepat 100%.')
 
-  const t = Object.fromEntries(
-    (Object.keys(draft.thresholds) as ThresholdKey[]).map((k) => [
-      k,
-      parse(draft.thresholds[k]),
-    ]),
-  ) as Rules['thresholds']
-  if (Object.values(t).some((n) => !Number.isFinite(n) || n < 0 || n > 100))
-    add('batas', 'Setiap batas wajib diisi, antara 0 dan 100.')
-  else if (!(t.sangatCocok > t.cocok && t.cocok > t.kurangCocok))
-    add('batas', 'Batas harus berurutan: Sangat cocok > Cocok > Kurang cocok.')
+  const t = parseThresholds(draft)
+  for (const message of Object.values(thresholdProblems(t)))
+    add('batas', message)
 
   const min = parse(draft.fundingMin)
   const max = parse(draft.fundingMax)
@@ -162,12 +192,7 @@ const scoringKey = (r: ScoringPart) => [
   r.fit.stages,
   r.fit.fundingMinIdr,
   r.fit.fundingMaxIdr,
-  [
-    r.thresholds.sangatCocok,
-    r.thresholds.cocok,
-    r.thresholds.kurangCocok,
-    r.thresholds.qualityOutsideFocus,
-  ],
+  THRESHOLD_KEYS.map((k) => r.thresholds[k]),
 ]
 
 const rulesKey = (r: EditableRules | Rules) =>

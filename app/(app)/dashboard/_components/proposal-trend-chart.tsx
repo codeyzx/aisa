@@ -26,7 +26,7 @@ import type { WeeklyTrend } from './weekly-trend'
 
 const config = {
   total: { label: 'Proposal masuk', color: 'var(--chart-2)' },
-  sangatCocok: { label: 'Sangat cocok', color: 'var(--category-1-fill)' },
+  sangatLayak: { label: 'Sangat layak', color: 'var(--category-1-fill)' },
 } satisfies ChartConfig
 
 const angka = (value: number) => formatDecimal(value, { max: 1 })
@@ -97,11 +97,11 @@ export function ProposalTrendChart({
             }
           />
           <Summary
-            label="Sangat cocok"
-            value={angka(current.sangatCocok)}
+            label="Sangat layak"
+            value={angka(current.sangatLayak)}
             change={
               previous
-                ? percentChange(current.sangatCocok, previous.sangatCocok)
+                ? percentChange(current.sangatLayak, previous.sangatLayak)
                 : undefined
             }
           />
@@ -136,12 +136,12 @@ export function ProposalTrendChart({
                 <linearGradient id="trend-top" x1="0" y1="0" x2="0" y2="1">
                   <stop
                     offset="0%"
-                    stopColor="var(--color-sangatCocok)"
+                    stopColor="var(--color-sangatLayak)"
                     stopOpacity={0.4}
                   />
                   <stop
                     offset="100%"
-                    stopColor="var(--color-sangatCocok)"
+                    stopColor="var(--color-sangatLayak)"
                     stopOpacity={0.04}
                   />
                 </linearGradient>
@@ -174,9 +174,9 @@ export function ProposalTrendChart({
                 activeDot={{ r: 4 }}
               />
               <Area
-                dataKey="sangatCocok"
+                dataKey="sangatLayak"
                 type="monotone"
-                stroke="var(--color-sangatCocok)"
+                stroke="var(--color-sangatLayak)"
                 strokeWidth={2}
                 fill="url(#trend-top)"
                 activeDot={{ r: 4 }}

@@ -9,6 +9,7 @@ import {
   PauseIcon,
   PencilLineIcon,
   PlayIcon,
+  RefreshCwIcon,
   SlidersHorizontalIcon,
   SparklesIcon,
   Trash2Icon,
@@ -41,6 +42,7 @@ export const KIND_TABS: { value: KindFilter; label: string }[] = [
   { value: 'semua', label: 'Semua' },
   { value: 'keputusan', label: 'Keputusan' },
   { value: 'penilaian', label: 'Penilaian AI' },
+  { value: 'nilai_ulang', label: 'Dinilai ulang' },
   { value: 'masuk', label: 'Proposal masuk' },
   { value: 'whatsapp', label: 'Ringkasan WA' },
   { value: 'koreksi', label: 'Koreksi' },
@@ -53,9 +55,10 @@ export const KIND_TABS: { value: KindFilter; label: string }[] = [
 export const KIND_LABEL: Record<EventKind, string> = {
   keputusan: 'Keputusan',
   penilaian: 'Penilaian AI',
+  nilai_ulang: 'Penilaian ulang (skala baru)',
   masuk: 'Proposal masuk',
   whatsapp: 'Ringkasan WhatsApp',
-  koreksi: 'Koreksi kategori',
+  koreksi: 'Koreksi grade',
   aturan: 'Perubahan aturan',
   jeda: 'STOP/LANJUT',
   dihapus: 'Proposal dihapus',
@@ -69,6 +72,8 @@ export function eventTone(
   switch (event.kind) {
     case 'penilaian':
       return { icon: SparklesIcon, tone: 'var(--agent-1)' }
+    case 'nilai_ulang':
+      return { icon: RefreshCwIcon, tone: 'var(--agent-1)' }
     case 'masuk':
       return event.manual
         ? { icon: FileWarningIcon, tone: 'var(--warning)' }
@@ -190,7 +195,7 @@ export function eventStats(events: RiwayatEvent[], now: number): EventStat[] {
         ? assessed.length
           ? `${Math.round((corrections / assessed.length) * 100)}% dari penilaian minggu ini`
           : `${corrections} koreksi minggu ini`
-        : 'Kategori AI belum perlu dikoreksi',
+        : 'Grade AI belum perlu dikoreksi',
     ),
   ]
 }

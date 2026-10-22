@@ -318,8 +318,8 @@ MB, mis. deck rekaan startup "UJI Tani Cabai". AISA sedang tidak dijeda.
 
 **Yang seharusnya terlihat:**
 
-- Dialog bertuliskan "PDF dinilai lewat alur yang sama dengan Form. Hanya teks yang dikirim ke
-  model."
+- Dialog bertuliskan "PDF dinilai lewat alur yang sama dengan Form. Hanya teksnya yang dikirim
+  ke model, kecuali deck hasil pindai: PDF-nya dibaca AI sebagai gambar."
 - Saat mengirim, tombol berubah menjadi **Mengunggah…**.
 - Lalu toast "Pitch deck diterima dan sedang diproses.", dialog tertutup, dan Anda dibawa ke detail
   proposal baru itu dengan badge **Antre** atau **Sedang dinilai** dan skor "—".
@@ -825,8 +825,9 @@ dihapus, catat di mana tepatnya.
 - Di daftar: badge kuning **Perlu dicek manual** di kolom Kategori, Dana "—", Skor "—". Baris ini
   ada di bawah saat diurutkan menurut skor.
 - Di detail: sektor, tahap, dana tertulis "… tidak disebut". Badge **Perlu dicek manual** dengan
-  alasan di bawahnya, mis. "teks terlalu sedikit (0 karakter di 10 halaman)" (deck hasil
-  pindai).
+  alasan di bawahnya, mis. "teks terlalu sedikit (0 karakter di 10 halaman)". Lumbung Ikan
+  Pesisir adalah deck hasil pindai yang dinilai sebelum AISA bisa membaca deck sebagai gambar;
+  deck hasil pindai yang masuk sekarang biasanya tetap dinilai (lihat UC-FRM-05).
 - **Skor kualitas** "—" dan "Tidak dinilai: deck perlu dicek manual, tanpa skor dan kategori."
   Kalimat yang sama ada di **Nilai per kriteria**. Kartu **Ringkasan AI** tidak ada.
   **Sesuai fokus investasi?** bertuliskan "Belum ada cek kecocokan."

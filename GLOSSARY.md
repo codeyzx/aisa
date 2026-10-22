@@ -9,7 +9,7 @@ Satu pengajuan startup beserta pitch deck-nya, masuk lewat Form atau unggahan PD
 _Avoid_: deck (untuk proposal), submission, lead
 
 **Pitch deck**:
-Berkas PDF yang dilampirkan founder; yang dinilai hanya teks per halamannya.
+Berkas PDF yang dilampirkan founder; yang dinilai hanya teks per halamannya (untuk deck hasil pindai, teks yang disalin AI dari gambarnya).
 _Avoid_: dokumen, file
 
 **Skor kualitas**:

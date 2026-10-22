@@ -28,7 +28,7 @@ Founder mengisi Google Form yang hanya meminta data yang diperlukan, membaca pem
 
 ### 2. Ekstraksi teks
 
-Teks diambil di server **per halaman** dengan penanda `[hal. n]`. Hanya teks yang dikirim ke model; gambar dan PDF tidak. Deck dengan teks terlalu sedikit (scan atau gambar) berstatus **Perlu dicek manual**, tanpa OCR dan tanpa skor.
+Teks diambil di server **per halaman** dengan penanda `[hal. n]`. Biasanya hanya teks yang dikirim ke model. Deck dengan teks terlalu sedikit (scan atau gambar) dibaca AI sebagai gambar: PDF-nya dikirim ke model untuk menyalin teks yang terlihat di tiap halaman, lalu dinilai seperti biasa. Deck yang tetap tidak terbaca, atau lebih dari 15 MB atau 50 halaman, berstatus **Perlu dicek manual** tanpa skor.
 
 ### 3. Penilaian: kualitas dulu, baru kecocokan
 
@@ -163,7 +163,7 @@ Bobot berasal dari **rata-rata dua benchmark**, dengan rujukan tambahan dari sur
 | Sudah dirancang  | g     | Hapus atas permintaan founder (dashboard atau CLI, alasan wajib) dan retensi harian: proposal yang diarsipkan lebih lama dari periode retensi (default 90 hari) dihapus otomatis. Yang dihapus: proposal, teks deck, file deck, log pekerjaannya, dan konfirmasi tertunda; baris Riwayat disamarkan dan penghapusan tercatat |
 | Sudah dirancang  | h     | Log Aktivitas AI dan Riwayat sebagai jejak audit                                                                                                                                                                                                                                                                             |
 | Rencana lanjutan | c     | Hak akses, perbaikan, dan penghapusan data; keputusan akhir tetap manusia (Pasal 10)                                                                                                                                                                                                                                         |
-| Sebagian         | e     | Hanya teks yang dikirim ke model sudah berjalan; masking dan pembatasan akses berikutnya                                                                                                                                                                                                                                     |
+| Sebagian         | e     | Hanya teks yang dikirim ke model (kecuali deck hasil pindai, yang PDF-nya dibaca sebagai gambar) sudah berjalan; masking dan pembatasan akses berikutnya                                                                                                                                                                     |
 | Rencana lanjutan | f     | Pemberitahuan privasi dan notifikasi kebocoran maksimal 3×24 jam (Pasal 46)                                                                                                                                                                                                                                                  |
 
 ## Teknologi
@@ -172,4 +172,4 @@ Google Forms dan Drive (dipicu Apps Script) · ekstraksi teks di Cloud Run · Go
 
 ## Batasan hackathon
 
-**Tidak termasuk:** saran tindak lanjut otomatis, analisis mendalam dan memo, due diligence, banyak pengguna, audio, OCR, masking dokumen (dikerjakan terpisah), pencarian internet, pengiriman pesan ke founder, serta butir PDP c, e (sebagian), dan f.
+**Tidak termasuk:** saran tindak lanjut otomatis, analisis mendalam dan memo, due diligence, banyak pengguna, audio, masking dokumen (dikerjakan terpisah), pencarian internet, pengiriman pesan ke founder, serta butir PDP c, e (sebagian), dan f.

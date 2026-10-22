@@ -578,7 +578,8 @@ beda dengan lonceng.
 
 **Yang seharusnya terlihat:** baris **Pitch deck tidak lewat Form? Unggah agar ikut dinilai.**
 dengan tombol **Unggah pitch deck**. Tombol membuka jendela **Unggah pitch deck** dengan
-keterangan **PDF dinilai lewat alur yang sama dengan Form. Hanya teks yang dikirim ke model.**
+keterangan **PDF dinilai lewat alur yang sama dengan Form. Hanya teksnya yang dikirim ke model,
+kecuali deck hasil pindai: PDF-nya dibaca AI sebagai gambar.**
 Untuk benar-benar mengunggah (⚠️ menambah proposal), ikuti panduan Proposal di folder ini dan
 pakai deck uji bernama "UJI …". Akun dengan peran **Pengguna** (baca saja) tidak melihat baris
 dan tombol ini sama sekali.

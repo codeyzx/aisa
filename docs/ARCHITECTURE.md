@@ -63,11 +63,18 @@ flowchart TD
     A[Deck masuk<br/>dari Form atau unggahan] --> B[Ambil berkas PDF]
     B --> C[Ambil teks tiap halaman]
     C --> D{Teksnya cukup?}
-    D -- tidak --> X[Tandai: Perlu dicek manual]
+    D -- tidak --> G[AI membaca deck sebagai gambar]
+    G --> G2{Teksnya cukup?}
+    G2 -- tidak --> X[Tandai: Perlu dicek manual]
+    G2 -- ya --> E
     D -- ya --> E[Agent Penilai membaca<br/>dan memberi nilai 1–5 per kriteria]
     E --> H[Kode menghitung skor,<br/>cek kecocokan fokus, dan kategori]
     H --> I[Simpan ke Firestore<br/>dan tampil di dashboard]
 ```
+
+Deck hasil pindai yang hampir tanpa teks tidak langsung ditolak: AI menyalin dulu teks yang
+terlihat di tiap halamannya, lalu deck dinilai seperti biasa. Hanya deck yang tetap tidak
+terbaca, atau yang lebih dari 15 MB atau 50 halaman, yang ditandai _Perlu dicek manual_.
 
 Pembagian kerjanya disengaja:
 

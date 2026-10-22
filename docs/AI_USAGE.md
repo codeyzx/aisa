@@ -61,7 +61,8 @@ tertulis di `GLOSSARY.md`, `tech.md`, dan kontrak Firestore, lalu ditegakkan ole
   nama ada di data dan tidak ada kata saran; bila tidak, template kode yang dikirim.
 - **Asisten hanya punya tools baca.** Tidak ada tool tulis, dan data yang tidak ada dijawab
   "tidak tersedia".
-- **Pelindungan data.** Hanya teks deck yang dikirim ke model (bukan gambar atau PDF). Kontak
+- **Pelindungan data.** Hanya teks deck yang dikirim ke model, kecuali deck hasil pindai yang
+  hampir tanpa teks: PDF-nya dikirim agar model menyalin teks yang terlihat. Kontak
   founder tidak masuk prompt dan tidak dikirim ke WhatsApp. Memory Bank hanya menyimpan
   preferensi manajer, bukan data proposal.
 - **Model stabil dulu.** Semua agent memakai `gemini-3.8-flash`. Nama model disimpan di
@@ -126,4 +127,5 @@ keluar.
   deck dinilai sekali dan hasil aslinya disimpan.
 - Deck sintetis yang rapi cenderung mendapat 5/5 di semua kriteria. Kalibrasi terhadap
   penilaian analis manusia belum dilakukan, karena data deck lama berlabel belum tersedia.
-- Tidak ada OCR: deck hasil scan selalu menjadi _Perlu dicek manual_.
+- Deck hasil scan lebih dari 15 MB atau 50 halaman tidak dibaca sebagai gambar dan langsung
+  menjadi _Perlu dicek manual_.

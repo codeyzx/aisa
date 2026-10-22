@@ -74,7 +74,7 @@ ditanggapi" lagi, jadi jangan jalankan perintah ⚠️ ke proposal sungguhan.
 - [UC-FRM-02 · Persetujuan wajib di form](#uc-frm-02--persetujuan-wajib-di-form)
 - [UC-FRM-03 · File yang sama dikirim ulang ⚠️](#uc-frm-03--file-yang-sama-dikirim-ulang-️)
 - [UC-FRM-04 · Melihat proposal yang perlu dicek manual](#uc-frm-04--melihat-proposal-yang-perlu-dicek-manual)
-- [UC-FRM-05 · Deck hasil scan menjadi Perlu dicek manual ⚠️](#uc-frm-05--deck-hasil-scan-menjadi-perlu-dicek-manual-️)
+- [UC-FRM-05 · Deck hasil scan dibaca sebagai gambar ⚠️](#uc-frm-05--deck-hasil-scan-dibaca-sebagai-gambar-️)
 - [UC-FRM-06 · Proposal masuk saat AISA dijeda ⚠️](#uc-frm-06--proposal-masuk-saat-aisa-dijeda-️)
 
 ---
@@ -875,22 +875,30 @@ ada kartu **Kategori kurang pas?**. Proposal ini tetap muncul di ringkasan WA pa
 **Perlu dicek manual**.
 **Kalau berbeda:** bila proposal ini punya skor atau kategori, catat.
 
-### UC-FRM-05 · Deck hasil scan menjadi Perlu dicek manual ⚠️
+### UC-FRM-05 · Deck hasil scan dibaca sebagai gambar ⚠️
 
 **Situasi:** founder mengirim deck hasil scan (gambar saja, tanpa teks yang bisa dipilih).
 **Sebelum mulai:** buat PDF berisi gambar saja, mis. foto/tangkapan layar slide yang disimpan
-sebagai PDF, sehingga teksnya tidak bisa diblok di pembaca PDF.
+sebagai PDF, sehingga teksnya tidak bisa diblok di pembaca PDF. Jaga ukurannya paling besar
+15 MB dan 50 halaman.
 **Langkah:**
 
 1. Kirim lewat Google Form dengan **Nama startup** `UJI Scan` (atau lewat **Unggah pitch deck**
    di dashboard dengan nama yang sama).
 2. Di dashboard, buka **Proposal** dan tunggu sekitar satu menit, lalu klik **UJI Scan**.
 
-**Yang seharusnya terlihat:** status akhir **Perlu dicek manual**, bukan **Dinilai**, dengan
-alasan "teks terlalu sedikit (_X_ karakter di _N_ halaman)". Seperti UC-FRM-04: tanpa skor dan
-kategori. Di **Riwayat**: "UJI Scan **masuk, perlu dicek manual**". AISA tidak membaca gambar;
-proposal ini harus Anda baca sendiri. Hapus dengan **Hapus data** setelah selesai.
-**Kalau berbeda:** bila deck scan tetap mendapat skor, catat; skor itu tidak berdasar isi deck.
+**Yang seharusnya terlihat:** karena teksnya tidak bisa diambil, AI membaca deck sebagai
+gambar dan menyalin teks yang terlihat di tiap halaman. Bila slide-nya terbaca, status akhirnya
+**Dinilai** dengan skor dan kategori seperti deck biasa, dan kutipannya berasal dari teks
+salinan itu. Di **Log penilaian** muncul langkah **AI membaca deck sebagai gambar** (bertanda
+**AI**) di antara **Memeriksa deck bisa dibaca** dan **AI menilai 5 kriteria**. Status
+**Perlu dicek manual** (tanpa skor dan kategori, seperti UC-FRM-04) hanya muncul bila deck
+tetap tidak terbaca, dengan alasan "teks terlalu sedikit, juga setelah dibaca sebagai gambar
+(…)", atau bila deck lebih dari 15 MB atau 50 halaman, dengan alasan "… terlalu besar untuk
+dibaca sebagai gambar (maks. 15 MB dan 50 halaman)". Hapus dengan **Hapus data** setelah
+selesai.
+**Kalau berbeda:** bila deck kecil yang slide-nya jelas terbaca tetap menjadi Perlu dicek
+manual, atau bila kutipan di **Nilai per kriteria** tidak ada di slide, catat.
 
 ### UC-FRM-06 · Proposal masuk saat AISA dijeda ⚠️
 
